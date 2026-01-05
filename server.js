@@ -76,6 +76,9 @@ class Server {
 
         // front en LAN (cambia la IP del front)
         if (/^http:\/\/192\.168\.\d+\.\d+:5173$/.test(origin)) return cb(null, true);
+        if (origin === "https://zumafitapp.netlify.app") return cb(null, true);
+        if (/^https:\/\/.*--zumafitapp\.netlify\.app$/.test(origin)) return cb(null, true);
+
 
         return cb(new Error("CORS: origin no permitido -> " + origin), false);
       },
@@ -106,7 +109,7 @@ class Server {
       res.json({ message: "Esto en produ no falla" });
     });
 
-    // ✅ Rutas
+
     this.app.use("/api/alimentos", new RouterAlimentos(this.persistencia).start());
     this.app.use("/api/usuarios", new RouterUsuarios(this.persistencia).start());
     this.app.use("/api/comidas", new RouterComidas(this.persistencia).start());
