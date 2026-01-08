@@ -1,29 +1,34 @@
-// server.js
+// src/server.js
 import express from "express";
 import os from "os";
+import path from "path";
+import { fileURLToPath } from "url";
+import morgan from "morgan";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+
 import CnxMongoDB from "./model/DBMongo.js";
 import RouterAlimentos from "./router/alimentos.js";
 import RouterUsuarios from "./router/usuarios.js";
-import morgan from "morgan";
-import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
-import cookieParser from "cookie-parser";
 import RouterComidas from "./router/comidas.js";
+
+import passport from "./auth/google.js";
+import { setupGoogleAuth } from "./auth/google.js";
+
+// ✅ Modelos para índices
+import ModelMongoDBUsuarios from "./model/DAO/usuariosMongoDB.js";
+import ModelMongoDBPendingUsers from "./model/DAO/pendingUsersMongoDB.js";
+import ModelMongoDBPasswordResets from "./model/DAO/passwordResetMongoDB.js";
 
 function getLanIPv4s() {
   const nets = os.networkInterfaces();
   const ips = [];
-
   for (const name of Object.keys(nets)) {
     for (const net of nets[name] || []) {
-      // net.family puede venir como "IPv4" o 4 según versión
       const isV4 = net.family === "IPv4" || net.family === 4;
       if (isV4 && !net.internal) ips.push(net.address);
     }
   }
-
-  // quitar duplicados
   return [...new Set(ips)];
 }
 
@@ -39,102 +44,94 @@ class Server {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
 
-    // ✅ Evita 304 por ETag (a veces rompe auth/me en mobile)
+      this.app.set("trust proxy", 1);
+
+    // ✅ Evita 304 por ETag
     this.app.set("etag", false);
 
-    // ✅ Anti-cache global (respuesta)
+    // ✅ Anti-cache global
     this.app.use((req, res, next) => {
       res.setHeader("Cache-Control", "no-store");
       res.setHeader("Pragma", "no-cache");
       next();
     });
 
-    // ✅ Conectar a MongoDB ANTES de rutas/listen si corresponde
+    // ✅ Conectar Mongo
     if (this.persistencia === "MONGODB") {
       await CnxMongoDB.conectar();
-      console.log("Mongo conectado:", CnxMongoDB.connection);
-      if (!CnxMongoDB.connection) {
-        throw new Error("MongoDB no conectó (connection=false)");
+      if (!CnxMongoDB.connection) throw new Error("MongoDB no conectó");
+
+      // ✅ Índices
+      try {
+        await new ModelMongoDBUsuarios().ensureIndexes();
+        await new ModelMongoDBPendingUsers().ensureIndexes();
+        await new ModelMongoDBPasswordResets().ensureIndexes();
+        console.log("✅ Índices asegurados (usuarios + pending + resets)");
+      } catch (e) {
+        console.log("⚠️ No se pudieron asegurar índices:", e?.message || e);
       }
-    } else {
-      console.log("Persistencia:", this.persistencia, "(no conecta Mongo)");
     }
 
-    /**
-     * ✅ CORS robusto:
-     * - permite localhost
-     * - permite cualquier IP LAN 192.168.x.x en :5173 (tu front puede cambiar de .38 a .37, etc.)
-     * - permite headers que manda tu front (Cache-Control / Pragma) para evitar el preflight error
-     */
+    // ✅ CORS robusto
     const corsOptions = {
       origin: (origin, cb) => {
-        // requests sin Origin (Postman/curl)
-        if (!origin) return cb(null, true);
+        if (!origin) return cb(null, true); // postman/mobile/webview
 
-        // front local
         if (origin === "http://localhost:5173") return cb(null, true);
-
-        // front en LAN (cambia la IP del front)
         if (/^http:\/\/192\.168\.\d+\.\d+:5173$/.test(origin)) return cb(null, true);
+
         if (origin === "https://zumafitapp.netlify.app") return cb(null, true);
         if (/^https:\/\/.*--zumafitapp\.netlify\.app$/.test(origin)) return cb(null, true);
 
-
-        return cb(new Error("CORS: origin no permitido -> " + origin), false);
+        return cb(new Error("CORS origin no permitido -> " + origin), false);
       },
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "Cache-Control", "Pragma"],
       credentials: true,
     };
 
-    // ✅ CORS antes que cookies
     this.app.use(cors(corsOptions));
-    // ✅ Preflight (Express 5) -> usamos regexp, no "*"
     this.app.options(/.*/, cors(corsOptions));
 
-    // ✅ Cookies
     this.app.use(cookieParser());
-
-    // ✅ Body
     this.app.use(express.json());
-
-    // ✅ Logs
     this.app.use(morgan("dev"));
 
-    // ✅ Static
+    // ✅ TRACE GLOBAL (con host) para debug de cookies / google auth
+    this.app.use((req, res, next) => {
+      const hasCookieHeader = !!req.headers.cookie;
+      const hasParsedAccessToken = !!req.cookies?.access_token;
+
+      console.log(
+        `[TRACE] host:${req.headers.host} ${req.method} ${req.originalUrl} | origin:${req.headers.origin || "-"} | referer:${req.headers.referer || "-"} | cookieHeader:${hasCookieHeader ? "SI" : "NO"} | access_token_cookie:${hasParsedAccessToken ? "SI" : "NO"}`
+      );
+
+      next();
+    });
+
     this.app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
     this.app.use(express.static("public"));
 
-    this.app.get("/", (req, res) => {
-      res.json({ message: "Esto en produ no falla" });
-    });
+    // ✅ Google OAuth (UNA SOLA VEZ)
+    setupGoogleAuth();
+    this.app.use(passport.initialize());
 
+    this.app.get("/", (req, res) => res.json({ ok: true }));
 
     this.app.use("/api/alimentos", new RouterAlimentos(this.persistencia).start());
     this.app.use("/api/usuarios", new RouterUsuarios(this.persistencia).start());
     this.app.use("/api/comidas", new RouterComidas(this.persistencia).start());
 
-    // 404
-    this.app.use((req, res) => {
-      res.status(404).json({ status: false, errors: "not found" });
-    });
+    this.app.use((req, res) => res.status(404).json({ status: false, errors: "not found" }));
 
-    // ✅ Iniciar servidor (escucha en LAN y también funciona en localhost)
     this.server = this.app.listen(this.port, "0.0.0.0", () => {
       console.log(`Servidor express escuchando en:`);
       console.log(`- Local: http://localhost:${this.port}`);
-
       const ips = getLanIPv4s();
-      if (ips.length) {
-        ips.forEach((ip) => console.log(`- Red:   http://${ip}:${this.port}`));
-      } else {
-        console.log(`- Red:   (no se encontró IPv4 LAN)`);
-      }
+      ips.forEach((ip) => console.log(`- Red:   http://${ip}:${this.port}`));
     });
 
-    this.server.on("error", (error) => {
-      console.log(`Error en servidor: ${error.message}`);
-    });
+    this.server.on("error", (error) => console.log(`Error en servidor: ${error.message}`));
 
     return this.app;
   }
@@ -142,9 +139,7 @@ class Server {
   async stop() {
     if (this.server) {
       this.server.close(() => console.log("Servidor cerrado"));
-      if (this.persistencia === "MONGODB") {
-        await CnxMongoDB.desconectar();
-      }
+      if (this.persistencia === "MONGODB") await CnxMongoDB.desconectar();
       this.server = null;
     }
   }

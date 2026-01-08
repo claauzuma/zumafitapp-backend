@@ -1,3 +1,4 @@
+// model/DAO/usuariosMongoDB.js
 import { ObjectId } from "mongodb";
 import CnxMongoDB from "../DBMongo.js";
 
@@ -22,7 +23,7 @@ class ModelMongoDBUsuarios {
 
   obtenerPorEmail = async (email) => {
     if (!email) return null;
-    return await this._col().findOne({ email: email.toLowerCase().trim() });
+    return await this._col().findOne({ email: String(email).toLowerCase().trim() });
   };
 
   obtenerPorRol = async (role) => {
@@ -34,42 +35,33 @@ class ModelMongoDBUsuarios {
   registrarUsuario = async (usuario) => {
     const col = this._col();
 
-    // Normalizar email
     const doc = {
       ...usuario,
       email: usuario.email?.toLowerCase().trim(),
     };
 
     const r = await col.insertOne(doc);
-
-    // Devolver el usuario con _id real
     return { ...doc, _id: r.insertedId };
   };
 
-  // Alias (por si tu servicio usa crearUsuario)
   crearUsuario = async (usuario) => {
     return await this.registrarUsuario(usuario);
   };
 
-  // Updates genéricos
   updateById = async (id, updates) => {
     const col = this._col();
     const _id = new ObjectId(id);
 
-    // Evitar que intenten pisar _id
     if (updates?._id) delete updates._id;
 
     await col.updateOne({ _id }, { $set: { ...updates, updatedAt: new Date() } });
-
     return await col.findOne({ _id });
   };
 
-  // Alias para compatibilidad si lo llamabas así
   actualizarPerfil = async (id, updates) => {
     return await this.updateById(id, updates);
   };
 
-  // Borrar usuario
   borrarUsuario = async (id) => {
     const col = this._col();
     const _id = new ObjectId(id);
@@ -77,6 +69,20 @@ class ModelMongoDBUsuarios {
     const r = await col.deleteOne({ _id });
     return { deletedCount: r.deletedCount };
   };
+
+  // ✅ Índices
+  async ensureIndexes() {
+    const col = this._col();
+
+    // Versión simple (recomendada si querés cero quilombos)
+    await col.createIndex({ email: 1 }, { unique: true });
+
+    // Versión PRO (case-insensitive). Si te tira error en Atlas, dejá la simple.
+    // await col.createIndex(
+    //   { email: 1 },
+    //   { unique: true, collation: { locale: "en", strength: 2 } }
+    // );
+  }
 }
 
 export default ModelMongoDBUsuarios;
