@@ -1,23 +1,48 @@
 // servicio/mailer.js
 import nodemailer from "nodemailer";
 
-export function createTransporter() {
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
+let _transporter = null;
 
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
-    throw new Error("Faltan SMTP_HOST/SMTP_USER/SMTP_PASS en .env");
-  }
+function mustGetEnv(name) {
+  const v = process.env[name];
+  if (!v) throw new Error(`Falta ${name} en .env`);
+  return v;
+}
 
-  return nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: Number(SMTP_PORT || 587),
-    secure: Number(SMTP_PORT) === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
+export function getTransporter() {
+  if (_transporter) return _transporter;
+
+  const host = mustGetEnv("SMTP_HOST");
+  const user = mustGetEnv("SMTP_USER");
+  const pass = mustGetEnv("SMTP_PASS");
+  const port = Number(process.env.SMTP_PORT || 587);
+  const secure = port === 465;
+
+  _transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+
+    // ✅ evita hangs infinitos
+    connectionTimeout: 10_000, // 10s para conectar
+    greetingTimeout: 10_000,   // 10s esperando saludo
+    socketTimeout: 20_000,     // 20s total socket
   });
+
+  return _transporter;
+}
+
+async function sendMailSafe(mailOptions) {
+  const transporter = getTransporter();
+
+  // ✅ verify opcional (solo una vez al boot sería ideal)
+  // await transporter.verify();
+
+  return transporter.sendMail(mailOptions);
 }
 
 export async function sendVerifyCodeEmail({ to, code }) {
-  const transporter = createTransporter();
   const from = process.env.MAIL_FROM || process.env.SMTP_USER;
   const ttl = Number(process.env.OTP_TTL_MIN || 10);
 
@@ -38,11 +63,10 @@ export async function sendVerifyCodeEmail({ to, code }) {
     </div>
   </div>`;
 
-  await transporter.sendMail({ from, to, subject, text, html });
+  return sendMailSafe({ from, to, subject, text, html });
 }
 
 export async function sendPasswordResetCodeEmail({ to, code }) {
-  const transporter = createTransporter();
   const from = process.env.MAIL_FROM || process.env.SMTP_USER;
   const ttl = Number(process.env.OTP_TTL_MIN || 10);
 
@@ -66,5 +90,5 @@ export async function sendPasswordResetCodeEmail({ to, code }) {
     </div>
   </div>`;
 
-  await transporter.sendMail({ from, to, subject, text, html });
+  return sendMailSafe({ from, to, subject, text, html });
 }

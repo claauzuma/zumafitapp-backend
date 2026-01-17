@@ -126,35 +126,46 @@ class ControladorUsuarios {
     }
   };
 
-  registerCliente = async (req, res) => {
-    try {
-      let { email, password, nombre, apellido, fechaNacimiento } = req.body || {};
-      email = normalizeEmail(email);
+registerCliente = async (req, res) => {
+  try {
+    let { email, password, nombre, apellido, fechaNacimiento } = req.body || {};
+    email = normalizeEmail(email);
 
-      if (!email || !password) {
-        return res.status(400).json({ error: "Email y contraseña son requeridos" });
-      }
-
-      await this.servicio.registerCliente({
-        email,
-        password,
-        profile: { nombre, apellido, fechaNacimiento },
-      });
-
-      return res.status(200).json({
-        pending: true,
-        message: "Te enviamos un código al email. Ingresalo para activar tu cuenta.",
-      });
-    } catch (error) {
-      const msg = String(error?.message || "");
-      console.error("Error register cliente:", error);
-
-      if (isDuplicateEmailError(error)) return res.status(409).json({ error: "Ese email ya está registrado" });
-      if (msg === "EMAIL_PENDIENTE") return res.status(409).json({ error: "Ya hay una verificación pendiente. Reenviá el código." });
-
-      return res.status(500).json({ error: "Error en el servidor" });
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email y contraseña son requeridos" });
     }
-  };
+
+    const result = await this.servicio.registerCliente({
+      email,
+      password,
+      profile: { nombre, apellido, fechaNacimiento },
+    });
+
+    // ✅ respondemos YA
+    res.status(200).json({
+      pending: true,
+      message: "Te enviamos un código al email. Ingresalo para activar tu cuenta.",
+    });
+
+    // ✅ mail async (sin colgar el endpoint)
+    const code = result?.code;
+    if (code) {
+      this.servicio
+        .sendVerifyEmail(email, code)
+        .then(() => console.log("[MAIL] register ok ->", email))
+        .catch((e) => console.error("[MAIL] register fail ->", email, e));
+    }
+  } catch (error) {
+    const msg = String(error?.message || "");
+    console.error("Error register cliente:", error);
+
+    if (isDuplicateEmailError(error)) return res.status(409).json({ error: "Ese email ya está registrado" });
+    if (msg === "EMAIL_PENDIENTE") return res.status(409).json({ error: "Ya hay una verificación pendiente. Reenviá el código." });
+
+    return res.status(500).json({ error: "Error en el servidor" });
+  }
+};
+
 
   verifyEmail = async (req, res) => {
     try {
@@ -180,25 +191,34 @@ class ControladorUsuarios {
     }
   };
 
-  resendVerifyCode = async (req, res) => {
-    try {
-      let { email } = req.body || {};
-      email = normalizeEmail(email);
+resendVerifyCode = async (req, res) => {
+  try {
+    let { email } = req.body || {};
+    email = normalizeEmail(email);
 
-      if (!email) return res.status(400).json({ error: "Email requerido" });
+    if (!email) return res.status(400).json({ error: "Email requerido" });
 
-      await this.servicio.resendVerifyCode(email);
-      return res.json({ ok: true, message: "Código reenviado ✅" });
-    } catch (error) {
-      const msg = String(error?.message || "");
+    // ✅ 1) el servicio debería generar/guardar un nuevo código y DEVOLVERLO
+    const code = await this.servicio.resendVerifyCode(email);
 
-      if (msg === "ESPERA_1_MIN") return res.status(429).json({ error: "Esperá 1 minuto antes de reenviar" });
-      if (msg === "SIN_PENDIENTE") return res.status(404).json({ error: "No hay verificación pendiente para ese email" });
+    // ✅ 2) respondemos YA (evita “Reenviando…” infinito)
+    res.json({ ok: true, message: "Código reenviado ✅" });
 
-      console.error("Error resendVerifyCode:", error);
-      return res.status(500).json({ error: "Error en el servidor" });
-    }
-  };
+    // ✅ 3) enviamos el mail sin bloquear (si falla, log)
+    this.servicio
+      .sendVerifyEmail(email, code)
+      .then(() => console.log("[MAIL] resend ok ->", email))
+      .catch((e) => console.error("[MAIL] resend fail ->", email, e));
+  } catch (error) {
+    const msg = String(error?.message || "");
+
+    if (msg === "ESPERA_1_MIN") return res.status(429).json({ error: "Esperá 1 minuto antes de reenviar" });
+    if (msg === "SIN_PENDIENTE") return res.status(404).json({ error: "No hay verificación pendiente para ese email" });
+
+    console.error("Error resendVerifyCode:", error);
+    return res.status(500).json({ error: "Error en el servidor" });
+  }
+};
 
   forgotPassword = async (req, res) => {
     try {

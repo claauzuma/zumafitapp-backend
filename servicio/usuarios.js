@@ -83,6 +83,17 @@ class ServicioUsuarios {
   }
 
   // -------------------------
+  // ✅ Email send wrappers (para usar async desde controlador)
+  // -------------------------
+  sendVerifyEmail = async (to, code) => {
+    return sendVerifyCodeEmail({ to, code });
+  };
+
+  sendPasswordResetEmail = async (to, code) => {
+    return sendPasswordResetCodeEmail({ to, code });
+  };
+
+  // -------------------------
   // AUTH
   // -------------------------
   login = async (email, password) => {
@@ -111,7 +122,11 @@ class ServicioUsuarios {
     const ok = await bcrypt.compare(password, hash);
     if (!ok) return null;
 
-    const token = jwt.sign({ uid: user._id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign(
+      { uid: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
     try {
       await this._updateById(user._id, { lastLoginAt: new Date() });
@@ -133,6 +148,7 @@ class ServicioUsuarios {
   // -------------------------
   // REGISTER (PENDING)
   // -------------------------
+  // ✅ AHORA: crea pending y DEVUELVE code (NO envía email acá)
   registerCliente = async ({ email, password, profile = {} }) => {
     if (!email || !password) throw new Error("Email y password requeridos");
     email = String(email).toLowerCase().trim();
@@ -162,8 +178,9 @@ class ServicioUsuarios {
       updatedAt: new Date(),
     });
 
-    await sendVerifyCodeEmail({ to: email, code });
-    return { pending: true };
+    // ❌ antes: await sendVerifyCodeEmail({ to: email, code });
+    // ✅ ahora devolvemos el código para que el controlador lo mande async
+    return { pending: true, code };
   };
 
   verifyEmail = async (email, code) => {
@@ -213,6 +230,7 @@ class ServicioUsuarios {
     return this._normalizeUser(created);
   };
 
+  // ✅ AHORA: actualiza pending y DEVUELVE code (NO envía email acá)
   resendVerifyCode = async (email) => {
     if (!email) throw new Error("Email requerido");
     email = String(email).toLowerCase().trim();
@@ -236,8 +254,9 @@ class ServicioUsuarios {
       lastSentAt: new Date(),
     });
 
-    await sendVerifyCodeEmail({ to: email, code });
-    return { ok: true };
+    // ❌ antes: await sendVerifyCodeEmail({ to: email, code });
+    // ✅ ahora: devolvemos code
+    return code;
   };
 
   // -------------------------
@@ -274,7 +293,9 @@ class ServicioUsuarios {
       requestId,
     });
 
+    // ❗ Podés dejarlo sync o hacerlo igual que verify (recomendado async desde controlador)
     await sendPasswordResetCodeEmail({ to: email, code });
+
     return { ok: true };
   };
 
@@ -338,7 +359,6 @@ class ServicioUsuarios {
     let userRaw = await this._findUserByEmail(email);
 
     if (!userRaw) {
-      // ✅ Creamos usuario nuevo con password random (para que tu schema no dependa de null)
       const randomPass = crypto.randomBytes(32).toString("hex");
       const passwordHash = await bcrypt.hash(randomPass, 10);
 
@@ -360,7 +380,6 @@ class ServicioUsuarios {
 
     const user = this._normalizeUser(userRaw);
 
-    // Vincular googleId/Avatar si faltaba
     try {
       const patch = {};
       if (!user.googleId && googleId) patch.googleId = googleId;
@@ -368,7 +387,11 @@ class ServicioUsuarios {
       if (Object.keys(patch).length) await this._updateById(user._id, patch);
     } catch {}
 
-    const token = jwt.sign({ uid: user._id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign(
+      { uid: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
     return {
       user: {
@@ -398,5 +421,5 @@ class ServicioUsuarios {
     return this._normalizeUser(updated);
   };
 }
-//hola
+
 export default ServicioUsuarios;
