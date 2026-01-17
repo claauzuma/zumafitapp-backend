@@ -1,49 +1,16 @@
-// servicio/mailer.js
-import nodemailer from "nodemailer";
+// servicio/mailer.js (Resend - sin SMTP)
+import { Resend } from "resend";
 
-let _transporter = null;
-
-function mustGetEnv(name) {
+function must(name) {
   const v = process.env[name];
   if (!v) throw new Error(`Falta ${name} en .env`);
   return v;
 }
 
-export function getTransporter() {
-  if (_transporter) return _transporter;
-
-  const host = mustGetEnv("SMTP_HOST");
-  const user = mustGetEnv("SMTP_USER");
-  const pass = mustGetEnv("SMTP_PASS");
-  const port = Number(process.env.SMTP_PORT || 587);
-  const secure = port === 465;
-
-  _transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: { user, pass },
-
-    // ✅ evita hangs infinitos
-    connectionTimeout: 10_000, // 10s para conectar
-    greetingTimeout: 10_000,   // 10s esperando saludo
-    socketTimeout: 20_000,     // 20s total socket
-  });
-
-  return _transporter;
-}
-
-async function sendMailSafe(mailOptions) {
-  const transporter = getTransporter();
-
-  // ✅ verify opcional (solo una vez al boot sería ideal)
-  // await transporter.verify();
-
-  return transporter.sendMail(mailOptions);
-}
+const resend = new Resend(must("RESEND_API_KEY"));
 
 export async function sendVerifyCodeEmail({ to, code }) {
-  const from = process.env.MAIL_FROM || process.env.SMTP_USER;
+  const from = must("MAIL_FROM");
   const ttl = Number(process.env.OTP_TTL_MIN || 10);
 
   const subject = "Verificá tu email - ZumaFit";
@@ -63,15 +30,15 @@ export async function sendVerifyCodeEmail({ to, code }) {
     </div>
   </div>`;
 
-  return sendMailSafe({ from, to, subject, text, html });
+  return resend.emails.send({ from, to, subject, text, html });
 }
 
 export async function sendPasswordResetCodeEmail({ to, code }) {
-  const from = process.env.MAIL_FROM || process.env.SMTP_USER;
+  const from = must("MAIL_FROM");
   const ttl = Number(process.env.OTP_TTL_MIN || 10);
 
   const subject = "Recuperación de contraseña - ZumaFit";
-  const text = `Tu código para restablecer la contraseña es: ${code}. Expira en ${ttl} minutos. Si no fuiste vos, ignorá este email.`;
+  const text = `Tu código para restablecer la contraseña es: ${code}. Expira en ${ttl} minutos.`;
 
   const html = `
   <div style="font-family:Arial,sans-serif;background:#0b0b0b;padding:24px;color:#eaeaea;">
@@ -84,11 +51,8 @@ export async function sendPasswordResetCodeEmail({ to, code }) {
       <p style="margin:12px 0 0;color:#a7a7a7;font-size:12px;">
         Este código expira en ${ttl} minutos.
       </p>
-      <p style="margin:10px 0 0;color:#a7a7a7;font-size:12px;">
-        Si no fuiste vos, podés ignorar este email.
-      </p>
     </div>
   </div>`;
 
-  return sendMailSafe({ from, to, subject, text, html });
+  return resend.emails.send({ from, to, subject, text, html });
 }
