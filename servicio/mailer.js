@@ -9,6 +9,46 @@ function must(name) {
 
 const resend = new Resend(must("RESEND_API_KEY"));
 
+function maskFrom(from) {
+  // evita loguear cosas raras, pero igual muestra útil
+  return String(from || "").replace(/<.*?>/, "<...>");
+}
+
+async function sendWithLogs({ from, to, subject, text, html, tag }) {
+  const startedAt = Date.now();
+
+  console.log(
+    `[RESEND] -> sending (${tag}) to=${to} from=${maskFrom(from)} subject="${subject}"`
+  );
+
+  try {
+    const resp = await resend.emails.send({ from, to, subject, text, html });
+
+    const ms = Date.now() - startedAt;
+    // Resend devuelve { data: { id }, error: null } o similar
+    console.log(
+      `[RESEND] OK (${tag}) id=${resp?.data?.id || "no-id"} ms=${ms}`
+    );
+
+    // Si querés ver TODO (a veces ayuda):
+    // console.log("[RESEND] RAW", resp);
+
+    return resp;
+  } catch (e) {
+    const ms = Date.now() - startedAt;
+
+    // Resend suele traer statusCode / message / name
+    console.error(
+      `[RESEND] FAIL (${tag}) ms=${ms} status=${e?.statusCode || "?"} message=${e?.message || e}`
+    );
+
+    // stack completo para Railway logs
+    console.error(e);
+
+    throw e;
+  }
+}
+
 export async function sendVerifyCodeEmail({ to, code }) {
   const from = must("MAIL_FROM");
   const ttl = Number(process.env.OTP_TTL_MIN || 10);
@@ -30,7 +70,7 @@ export async function sendVerifyCodeEmail({ to, code }) {
     </div>
   </div>`;
 
-  return resend.emails.send({ from, to, subject, text, html });
+  return sendWithLogs({ from, to, subject, text, html, tag: "verify" });
 }
 
 export async function sendPasswordResetCodeEmail({ to, code }) {
@@ -54,5 +94,5 @@ export async function sendPasswordResetCodeEmail({ to, code }) {
     </div>
   </div>`;
 
-  return resend.emails.send({ from, to, subject, text, html });
+  return sendWithLogs({ from, to, subject, text, html, tag: "reset" });
 }
