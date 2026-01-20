@@ -1,20 +1,12 @@
 // src/router/usuarios.js
 import express from "express";
 import multer from "multer";
-import { rateLimit } from "express-rate-limit"; // ✅ <-- ESTE ES EL FIX
+import { rateLimit } from "express-rate-limit";
 import passport from "../auth/google.js";
 
 import ControladorUsuarios from "../controlador/usuarios.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
-
-function assertFn(name, fn) {
-  if (typeof fn !== "function") {
-    console.error(`❌ [ROUTER ASSERT] ${name} NO es función. typeof=`, typeof fn, "valor=", fn);
-    throw new TypeError(`${name} must be a function`);
-  }
-  return fn;
-}
-
+import { requireRole } from "../middleware/requireRole.js"; // ✅ BACKEND middleware
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -39,7 +31,7 @@ const codeSendLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// ✅ encode/decode state para llevar returnTo a callback
+// ✅ encode state para llevar returnTo a callback
 function encodeState(obj) {
   try {
     return Buffer.from(JSON.stringify(obj), "utf8").toString("base64url");
@@ -57,12 +49,9 @@ class RouterUsuarios {
   start() {
     console.log("🔐 RouterUsuarios activo");
 
-    // ✅ DEBUG rápido para confirmar que todo es función
-    console.log("typeof loginLimiter =", typeof loginLimiter);
-    console.log("typeof codeSendLimiter =", typeof codeSendLimiter);
-    console.log("typeof controlador.registerCliente =", typeof this.controladorUsuarios.registerCliente);
-    console.log("typeof controlador.login =", typeof this.controladorUsuarios.login);
-
+    // =========================
+    // AUTH
+    // =========================
     const auth = express.Router();
 
     auth.post("/register", this.controladorUsuarios.registerCliente);
@@ -90,9 +79,6 @@ class RouterUsuarios {
 
       const state = encodeState({ returnTo });
 
-      console.log("✅ [GOOGLE] /google returnTo =", returnTo);
-      console.log("✅ [GOOGLE] /google state =", state);
-
       passport.authenticate("google", {
         scope: ["profile", "email"],
         session: false,
@@ -106,11 +92,6 @@ class RouterUsuarios {
         session: false,
         failureRedirect: `${process.env.FRONTEND_URL || "http://localhost:5173"}/auth?google=fail`,
       }),
-      (req, res, next) => {
-        console.log("✅ [ROUTER] google/callback req.user =", req.user);
-        console.log("✅ [ROUTER] google/callback query.state =", req.query?.state);
-        next();
-      },
       this.controladorUsuarios.googleCallback
     );
 
@@ -119,16 +100,71 @@ class RouterUsuarios {
 
     this.router.use("/auth", auth);
 
+    // =========================
+    // USERS (self)
+    // =========================
     const users = express.Router();
+
     users.get("/me", authMiddleware, this.controladorUsuarios.obtenerPerfil);
     users.patch("/me", authMiddleware, this.controladorUsuarios.actualizarPerfil);
-    users.post("/me/avatar", authMiddleware, upload.single("avatar"), this.controladorUsuarios.subirAvatar);
+    users.post(
+      "/me/avatar",
+      authMiddleware,
+      upload.single("avatar"),
+      this.controladorUsuarios.subirAvatar
+    );
 
     this.router.use("/users", users);
+
+    // =========================
+    // ✅ ADMIN: USERS CRUD
+    // =========================
+    const admin = express.Router();
+
+    // GET /api/usuarios/admin/users?search=&role=&tipo=&estado=
+    admin.get(
+      "/users",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminListUsers
+    );
+
+    // POST /api/usuarios/admin/users
+    admin.post(
+      "/users",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminCreateUser
+    );
+
+    // GET /api/usuarios/admin/users/:id
+    admin.get(
+      "/users/:id",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminGetUserById
+    );
+
+    // PATCH /api/usuarios/admin/users/:id
+    admin.patch(
+      "/users/:id",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminUpdateUser
+    );
+
+    // DELETE /api/usuarios/admin/users/:id
+    admin.delete(
+      "/users/:id",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminDeleteUser
+    );
+
+    this.router.use("/admin", admin);
 
     return this.router;
   }
 }
 
 export default RouterUsuarios;
-

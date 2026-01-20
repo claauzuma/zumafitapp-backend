@@ -267,6 +267,131 @@ resendVerifyCode = async (req, res) => {
     }
   };
 
+
+  // =========================
+// ✅ ADMIN: CRUD USERS
+// =========================
+
+// GET /api/usuarios/admin/users?search=&role=&estado=&tipo=
+adminListUsers = async (req, res) => {
+  try {
+    const { search = "", role = "", estado = "", tipo = "" } = req.query || {};
+
+    const users = await this.servicio.adminListUsers({
+      search: String(search || "").trim(),
+      role: String(role || "").trim(),
+      estado: String(estado || "").trim(),
+      tipo: String(tipo || "").trim(),
+      limit: Number(req.query?.limit || 50),
+      skip: Number(req.query?.skip || 0),
+    });
+
+    return res.json({ users });
+  } catch (error) {
+    console.error("Error adminListUsers:", error);
+    return res.status(500).json({ error: "Error en el servidor" });
+  }
+};
+
+// POST /api/usuarios/admin/users
+adminCreateUser = async (req, res) => {
+  try {
+    const {
+      email,
+      password,
+      role = "cliente",
+      estado = "activo",
+      tipo = "entrenado", // opcional (si lo querés)
+      profile = {},
+      fechaNacimiento,
+      nombre,
+      apellido,
+    } = req.body || {};
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email y contraseña son requeridos" });
+    }
+
+    const user = await this.servicio.adminCreateUser({
+      email,
+      password,
+      role,
+      estado,
+      tipo,
+      profile: {
+        ...profile,
+        nombre: profile?.nombre ?? nombre,
+        apellido: profile?.apellido ?? apellido,
+        fechaNacimiento: profile?.fechaNacimiento ?? fechaNacimiento,
+      },
+    });
+
+    return res.status(201).json({ user });
+  } catch (error) {
+    console.error("Error adminCreateUser:", error);
+
+    if (String(error?.message) === "EMAIL_DUPLICADO") {
+      return res.status(409).json({ error: "Ese email ya está registrado" });
+    }
+    if (String(error?.message) === "ROL_INVALIDO") {
+      return res.status(400).json({ error: "Rol inválido" });
+    }
+
+    return res.status(500).json({ error: "Error en el servidor" });
+  }
+};
+
+// GET /api/usuarios/admin/users/:id
+adminGetUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await this.servicio.adminGetUserById(id);
+    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+
+    return res.json({ user });
+  } catch (error) {
+    console.error("Error adminGetUserById:", error);
+    return res.status(500).json({ error: "Error en el servidor" });
+  }
+};
+
+// PATCH /api/usuarios/admin/users/:id
+adminUpdateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body || {};
+
+    const user = await this.servicio.adminUpdateUser(id, updates);
+    return res.json({ user });
+  } catch (error) {
+    console.error("Error adminUpdateUser:", error);
+
+    const msg = String(error?.message || "");
+    if (msg === "NOT_FOUND") return res.status(404).json({ error: "Usuario no encontrado" });
+    if (msg === "EMAIL_DUPLICADO") return res.status(409).json({ error: "Ese email ya está registrado" });
+    if (msg === "ROL_INVALIDO") return res.status(400).json({ error: "Rol inválido" });
+
+    return res.status(500).json({ error: "Error en el servidor" });
+  }
+};
+
+// DELETE /api/usuarios/admin/users/:id
+adminDeleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const r = await this.servicio.adminDeleteUser(id);
+    if (r?.deletedCount === 0) return res.status(404).json({ error: "Usuario no encontrado" });
+
+    return res.json({ message: "Usuario eliminado" });
+  } catch (error) {
+    console.error("Error adminDeleteUser:", error);
+    return res.status(500).json({ error: "Error en el servidor" });
+  }
+};
+
+
   // ✅ GOOGLE CALLBACK (con state -> returnTo)
   googleCallback = async (req, res) => {
     const frontendBase =

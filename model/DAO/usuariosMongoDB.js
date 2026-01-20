@@ -70,6 +70,38 @@ class ModelMongoDBUsuarios {
     return { deletedCount: r.deletedCount };
   };
 
+  // ✅ ADMIN: listado con filtros + búsqueda + paginación
+adminListUsers = async ({ search = "", role = "", estado = "", tipo = "", limit = 50, skip = 0 }) => {
+  const col = this._col();
+
+  const query = {};
+
+  if (role) query.role = role;
+  if (estado) query.estado = estado;
+  if (tipo) query.tipo = tipo;
+
+  if (search) {
+    const s = String(search).trim();
+    query.$or = [
+      { email: { $regex: s, $options: "i" } },
+      { "profile.nombre": { $regex: s, $options: "i" } },
+      { "profile.apellido": { $regex: s, $options: "i" } },
+    ];
+  }
+
+  const lim = Math.min(Number(limit) || 50, 200);
+  const sk = Math.max(Number(skip) || 0, 0);
+
+  // Proyección: no traer hashes
+  return await col
+    .find(query, { projection: { passwordHash: 0, password: 0 } })
+    .sort({ createdAt: -1 })
+    .skip(sk)
+    .limit(lim)
+    .toArray();
+};
+
+
   // ✅ Índices
   async ensureIndexes() {
     const col = this._col();
@@ -82,6 +114,11 @@ class ModelMongoDBUsuarios {
     //   { email: 1 },
     //   { unique: true, collation: { locale: "en", strength: 2 } }
     // );
+    await col.createIndex({ role: 1 });
+await col.createIndex({ estado: 1 });
+await col.createIndex({ tipo: 1 });
+await col.createIndex({ createdAt: -1 });
+
   }
 }
 
