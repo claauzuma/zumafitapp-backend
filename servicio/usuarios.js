@@ -18,13 +18,40 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
   return {
     role,
     plan, // "free" | "premium" | "premium2"
-    tipo, // "entrenado" | "entrenador" (o lo que uses)
+    tipo, // "entrenado" | "entrenador"
 
     estado: "activo",
     emailVerificado: false,
 
+    // ✅ Para controlar onboarding (primeros pasos)
+    onboarding: {
+      done: false,
+      step: 1,               // 1..N
+      startedAt: now,
+      completedAt: null,
+      lastSeenAt: null,
+    },
+
+    // ✅ Si el cliente queda asignado a un entrenador
+    coach: {
+      entrenadorId: null,
+      assignedAt: null,
+      assignedByAdminId: null,
+    },
+
+    // ✅ Para saber si pagó / si está activo por pago
+    billing: {
+      status: plan === "free" ? "free" : "inactive", // "free" | "inactive" | "active" | "past_due"
+      paidUntil: null,           // Date
+      lastPaymentAt: null,       // Date
+      provider: null,            // "mp" | "stripe" | etc
+      providerCustomerId: null,
+      providerSubscriptionId: null,
+    },
+
+    // (si querés mantener "subscription", la dejamos como alias de billing)
     subscription: {
-      status: plan === "free" ? "inactive" : "inactive", // lo activás cuando pague
+      status: plan === "free" ? "inactive" : "inactive",
       currentPeriodEnd: null,
       lastPaymentAt: null,
       provider: null,
@@ -40,25 +67,28 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
     },
 
     objetivoActual: {
-      objetivo: null, // "perdida_grasa" | "ganancia_muscular" | "mantenimiento"
-      actividad: null, // "sedentario" | "ligero" | "moderado" | "alto"
+      objetivo: null,   // "perdida_grasa" | "ganancia_muscular" | "mantenimiento"
+      actividad: null,  // "sedentario" | "ligero" | "moderado" | "alto"
       diasEntreno: null,
       updatedAt: null,
     },
 
+    // ✅ metas actuales (NO legacy)
     metasActuales: {
       kcal: null,
       macros: { p: null, c: null, g: null },
       updatedAt: null,
     },
 
+    // ✅ historial últimos 7 días
     ComidasUltimaSemana: {
-      from: null,     // "YYYY-MM-DD"
-      to: null,       // "YYYY-MM-DD"
-      dias: {},       // { "YYYY-MM-DD": { comidas: [...] } }
+      from: null,    // "YYYY-MM-DD"
+      to: null,      // "YYYY-MM-DD"
+      dias: {},      // { "YYYY-MM-DD": { comidas: [...] } }
       updatedAt: null,
     },
 
+    // ✅ favoritas
     ComidasFavoritas: {
       ids: [],
       updatedAt: null,
@@ -153,15 +183,10 @@ class ServicioUsuarios {
   }
 
   // -------------------------
-  // ✅ Email send wrappers (para usar async desde controlador)
+  // ✅ Email wrappers
   // -------------------------
-  sendVerifyEmail = async (to, code) => {
-    return sendVerifyCodeEmail({ to, code });
-  };
-
-  sendPasswordResetEmail = async (to, code) => {
-    return sendPasswordResetCodeEmail({ to, code });
-  };
+  sendVerifyEmail = async (to, code) => sendVerifyCodeEmail({ to, code });
+  sendPasswordResetEmail = async (to, code) => sendPasswordResetCodeEmail({ to, code });
 
   // -------------------------
   // AUTH
@@ -208,10 +233,25 @@ class ServicioUsuarios {
       role: user.role,
       plan: user.plan || "free",
       tipo: user.tipo || "entrenado",
+      estado: user.estado,
+
       profile: user.profile || {},
       settings: user.settings || {},
-      estado: user.estado,
-      metas: user.metas || {},
+
+      onboarding: user.onboarding || {},
+      coach: user.coach || {},
+
+      billing: user.billing || {},
+      subscription: user.subscription || {},
+
+      antropometriaActual: user.antropometriaActual || {},
+      objetivoActual: user.objetivoActual || {},
+      metasActuales: user.metasActuales || {},
+
+      ComidasUltimaSemana: user.ComidasUltimaSemana || { from: null, to: null, dias: {}, updatedAt: null },
+      ComidasFavoritas: user.ComidasFavoritas || { ids: [], updatedAt: null },
+
+      stats: user.stats || {},
     };
 
     return { user: safeUser, token };
@@ -240,6 +280,8 @@ class ServicioUsuarios {
       email,
       passwordHash,
       role: "cliente",
+      plan: "free",
+      tipo: "entrenado",
       profile,
       codeHash,
       expiresAt,
@@ -279,31 +321,21 @@ class ServicioUsuarios {
       throw new Error("CODIGO_INVALIDO");
     }
 
-    // ✅ acá se crea el usuario REAL con defaults nuevos
     const role = pending.role || "cliente";
-    const plan = "free";
-    const tipo = "entrenado";
+    const plan = pending.plan || "free";
+    const tipo = pending.tipo || "entrenado";
 
     const userToCreate = {
       email,
       passwordHash: pending.passwordHash,
       googleId: pending.googleId || null,
 
-      // defaults completos
       ...getUserDefaults({ role, plan, tipo }),
 
-      // overrides necesarios
       emailVerificado: true,
       profile: pending.profile || {},
       settings: {},
 
-      // lo que ya venías usando
-      metas: { calorias: 0, proteinas: 0, carbohidratos: 0, grasas: 0 },
-
-      // si querés mantener legacy (opcional)
-      favoritosComidas: [],
-
-      lastLoginAt: null,
       createdAt: new Date(),
       updatedAt: null,
     };
@@ -322,9 +354,7 @@ class ServicioUsuarios {
     if (!pending) throw new Error("SIN_PENDIENTE");
 
     const lastSentAt = pending.lastSentAt ? new Date(pending.lastSentAt).getTime() : 0;
-    if (lastSentAt && Date.now() - lastSentAt < 60 * 1000) {
-      throw new Error("ESPERA_1_MIN");
-    }
+    if (lastSentAt && Date.now() - lastSentAt < 60 * 1000) throw new Error("ESPERA_1_MIN");
 
     const code = this._generateOTP6();
     const codeHash = this._sha256(code);
@@ -375,7 +405,6 @@ class ServicioUsuarios {
     });
 
     await sendPasswordResetCodeEmail({ to: email, code });
-
     return { ok: true };
   };
 
@@ -402,7 +431,6 @@ class ServicioUsuarios {
 
     if (!ok) {
       await this.resetModel.upsertByEmail(email, { ...tokenDoc, attempts: attemptsNow });
-
       if (attemptsNow >= maxAttempts) {
         await this.resetModel.deleteByEmail(email);
         throw new Error("DEMASIADOS_INTENTOS");
@@ -457,10 +485,6 @@ class ServicioUsuarios {
         profile: { nombre, apellido, avatarUrl },
         settings: {},
 
-        metas: { calorias: 0, proteinas: 0, carbohidratos: 0, grasas: 0 },
-        favoritosComidas: [],
-
-        lastLoginAt: null,
         createdAt: new Date(),
         updatedAt: null,
       });
@@ -488,10 +512,25 @@ class ServicioUsuarios {
         role: user.role,
         plan: user.plan || "free",
         tipo: user.tipo || "entrenado",
+        estado: user.estado,
+
         profile: user.profile || {},
         settings: user.settings || {},
-        estado: user.estado,
-        metas: user.metas || {},
+
+        onboarding: user.onboarding || {},
+        coach: user.coach || {},
+
+        billing: user.billing || {},
+        subscription: user.subscription || {},
+
+        antropometriaActual: user.antropometriaActual || {},
+        objetivoActual: user.objetivoActual || {},
+        metasActuales: user.metasActuales || {},
+
+        ComidasUltimaSemana: user.ComidasUltimaSemana || { from: null, to: null, dias: {}, updatedAt: null },
+        ComidasFavoritas: user.ComidasFavoritas || { ids: [], updatedAt: null },
+
+        stats: user.stats || {},
       },
       token,
     };
@@ -501,8 +540,7 @@ class ServicioUsuarios {
   // USER DATA
   // -------------------------
   getById = async (id) => {
-    if (typeof this.model.obtenerPorId !== "function")
-      throw new Error("El modelo no implementa obtenerPorId");
+    if (typeof this.model.obtenerPorId !== "function") throw new Error("El modelo no implementa obtenerPorId");
     const user = await this.model.obtenerPorId(id);
     return this._normalizeUser(user);
   };
@@ -527,48 +565,31 @@ class ServicioUsuarios {
       plan: u.plan || "free",
       tipo: u.tipo || "entrenado",
       estado: u.estado || "activo",
+
+      onboarding: u.onboarding || {},
+      coach: u.coach || {},
+
+      billing: u.billing || {},
       subscription: u.subscription || {},
+
       profile: u.profile || {},
       settings: u.settings || {},
-      metas: u.metas || {},
+
       metasActuales: u.metasActuales || {},
       objetivoActual: u.objetivoActual || {},
       antropometriaActual: u.antropometriaActual || {},
+
       ComidasUltimaSemana: u.ComidasUltimaSemana || { from: null, to: null, dias: {}, updatedAt: null },
       ComidasFavoritas: u.ComidasFavoritas || { ids: [], updatedAt: null },
+
+      stats: u.stats || {},
+
       lastLoginAt: u.lastLoginAt || null,
       createdAt: u.createdAt || null,
       updatedAt: u.updatedAt || null,
     };
   }
 
-  adminListUsers = async ({ search = "", role = "", estado = "", tipo = "", limit = 50, skip = 0 }) => {
-    if (typeof this.model.adminListUsers === "function") {
-      const arr = await this.model.adminListUsers({ search, role, estado, tipo, limit, skip });
-      return arr.map((u) => this._sanitizeUser(this._normalizeUser(u)));
-    }
-
-    // fallback si no implementaste adminListUsers en DAO
-    const all = await this.model.obtenerUsuarios();
-    const s = (search || "").toLowerCase();
-
-    const filtered = all.filter((u) => {
-      const email = (u.email || "").toLowerCase();
-      const nombre = (u.profile?.nombre || "").toLowerCase();
-      const apellido = (u.profile?.apellido || "").toLowerCase();
-      const matchSearch = !s || email.includes(s) || nombre.includes(s) || apellido.includes(s);
-
-      const matchRole = !role || (u.role || u.rol) === role;
-      const matchEstado = !estado || (u.estado || "activo") === estado;
-      const matchTipo = !tipo || (u.tipo || "") === tipo;
-
-      return matchSearch && matchRole && matchEstado && matchTipo;
-    });
-
-    return filtered.slice(skip, skip + limit).map((u) => this._sanitizeUser(this._normalizeUser(u)));
-  };
-
-  // ✅ Admin crea usuario con defaults completos
   adminCreateUser = async ({
     email,
     password,
@@ -579,8 +600,6 @@ class ServicioUsuarios {
     profile = {},
   }) => {
     if (!email || !password) throw new Error("Email y password requeridos");
-
-    // roles válidos (dejé tu compatibilidad)
     if (!["admin", "cliente", "entrenador"].includes(role)) throw new Error("ROL_INVALIDO");
     if (!["free", "premium", "premium2"].includes(plan)) throw new Error("PLAN_INVALIDO");
 
@@ -603,10 +622,6 @@ class ServicioUsuarios {
       profile: profile || {},
       settings: {},
 
-      metas: { calorias: 0, proteinas: 0, carbohidratos: 0, grasas: 0 },
-      favoritosComidas: [],
-
-      lastLoginAt: null,
       createdAt: new Date(),
       updatedAt: null,
     };
@@ -626,7 +641,6 @@ class ServicioUsuarios {
 
     const patch = { ...updates };
 
-    // email
     if (patch.email !== undefined) {
       const email = String(patch.email).trim().toLowerCase();
       if (!email) delete patch.email;
@@ -638,17 +652,14 @@ class ServicioUsuarios {
       }
     }
 
-    // role
     if (patch.role !== undefined) {
       if (!["admin", "cliente", "entrenador"].includes(patch.role)) throw new Error("ROL_INVALIDO");
     }
 
-    // plan
     if (patch.plan !== undefined) {
       if (!["free", "premium", "premium2"].includes(patch.plan)) throw new Error("PLAN_INVALIDO");
     }
 
-    // password -> hash
     if (patch.password !== undefined) {
       const pass = String(patch.password || "");
       if (pass.length < 6) throw new Error("PASSWORD_CORTA");
@@ -663,9 +674,7 @@ class ServicioUsuarios {
   };
 
   adminDeleteUser = async (id) => {
-    if (typeof this.model.borrarUsuario !== "function") {
-      throw new Error("El modelo no implementa borrarUsuario");
-    }
+    if (typeof this.model.borrarUsuario !== "function") throw new Error("El modelo no implementa borrarUsuario");
     return await this.model.borrarUsuario(id);
   };
 }
