@@ -26,7 +26,7 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
     // ✅ Para controlar onboarding (primeros pasos)
     onboarding: {
       done: false,
-      step: 1,               // 1..N
+      step: 1, // 1..N
       startedAt: now,
       completedAt: null,
       lastSeenAt: null,
@@ -42,9 +42,9 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
     // ✅ Para saber si pagó / si está activo por pago
     billing: {
       status: plan === "free" ? "free" : "inactive", // "free" | "inactive" | "active" | "past_due"
-      paidUntil: null,           // Date
-      lastPaymentAt: null,       // Date
-      provider: null,            // "mp" | "stripe" | etc
+      paidUntil: null, // Date
+      lastPaymentAt: null, // Date
+      provider: null, // "mp" | "stripe" | etc
       providerCustomerId: null,
       providerSubscriptionId: null,
     },
@@ -67,9 +67,22 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
     },
 
     objetivoActual: {
-      objetivo: null,   // "perdida_grasa" | "ganancia_muscular" | "mantenimiento"
-      actividad: null,  // "sedentario" | "ligero" | "moderado" | "alto"
+      objetivo: null, // "perdida_grasa" | "ganancia_muscular" | "mantenimiento"
+      actividad: null, // "sedentario" | "ligero" | "moderado" | "alto"
       diasEntreno: null,
+      updatedAt: null,
+    },
+
+    // ✅ STEP 3 (opcional)
+    preferenciasPlan: {
+      comidasPorDia: null, // 2..6 (null si no eligió)
+      distribucion: "equilibrada", // "equilibrada" | "desayuno_fuerte" | "cena_fuerte" | "custom"
+      weekendBoost: false,
+      weekendBoostPct: 0, // 0..30
+      restricciones: [], // ["vegano","sin_tacc",...]
+      snackLibre: false,
+      snackLibreKcal: 0, // 0..600
+      skip: true, // por defecto: lo saltea hasta que lo complete
       updatedAt: null,
     },
 
@@ -82,9 +95,9 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
 
     // ✅ historial últimos 7 días
     ComidasUltimaSemana: {
-      from: null,    // "YYYY-MM-DD"
-      to: null,      // "YYYY-MM-DD"
-      dias: {},      // { "YYYY-MM-DD": { comidas: [...] } }
+      from: null, // "YYYY-MM-DD"
+      to: null, // "YYYY-MM-DD"
+      dias: {}, // { "YYYY-MM-DD": { comidas: [...] } }
       updatedAt: null,
     },
 
@@ -136,7 +149,10 @@ class ServicioUsuarios {
 
     if (typeof this.model.obtenerUsuarios === "function") {
       const usuarios = await this.model.obtenerUsuarios();
-      return usuarios.find((u) => (u.email || "").toLowerCase() === email.toLowerCase()) || null;
+      return (
+        usuarios.find((u) => (u.email || "").toLowerCase() === email.toLowerCase()) ||
+        null
+      );
     }
 
     throw new Error("El modelo no implementa obtenerPorEmail ni obtenerUsuarios");
@@ -239,8 +255,9 @@ class ServicioUsuarios {
       settings: user.settings || {},
 
       onboarding: user.onboarding || {},
-      coach: user.coach || {},
+      preferenciasPlan: user.preferenciasPlan || {},
 
+      coach: user.coach || {},
       billing: user.billing || {},
       subscription: user.subscription || {},
 
@@ -518,8 +535,9 @@ class ServicioUsuarios {
         settings: user.settings || {},
 
         onboarding: user.onboarding || {},
-        coach: user.coach || {},
+        preferenciasPlan: user.preferenciasPlan || {},
 
+        coach: user.coach || {},
         billing: user.billing || {},
         subscription: user.subscription || {},
 
@@ -567,6 +585,8 @@ class ServicioUsuarios {
       estado: u.estado || "activo",
 
       onboarding: u.onboarding || {},
+      preferenciasPlan: u.preferenciasPlan || {},
+
       coach: u.coach || {},
 
       billing: u.billing || {},
@@ -630,7 +650,218 @@ class ServicioUsuarios {
     return this._sanitizeUser(this._normalizeUser(created));
   };
 
-    // =========================
+  // =========================
+  // ✅ ONBOARDING (CLIENTE)
+  // =========================
+  actualizarOnboardingCliente = async (userId, step, data = {}) => {
+    const now = new Date();
+    const s = Number(step);
+
+    if (![1, 2, 3].includes(s)) throw new Error("STEP_INVALIDO");
+
+    // 1) Traigo user actual para no pisar cosas
+    const current = await this.getById(userId);
+    if (!current) throw new Error("NOT_FOUND");
+
+    const onboarding = {
+      ...(current.onboarding || {}),
+      lastSeenAt: now,
+    };
+
+    const profile = {
+      ...(current.profile || {}),
+    };
+
+    if (data?.genero) profile.genero = String(data.genero);
+
+    // 2) Patch base
+    const patch = { updatedAt: now };
+
+    // --------
+    // STEP 1
+    // --------
+    if (s === 1) {
+      const alturaCm = Number(data?.alturaCm);
+      const pesoKg = Number(data?.pesoKg);
+
+      if (!Number.isFinite(alturaCm) || alturaCm < 120 || alturaCm > 230) {
+        throw new Error("ALTURA_INVALIDA");
+      }
+      if (!Number.isFinite(pesoKg) || pesoKg < 30 || pesoKg > 250) {
+        throw new Error("PESO_INVALIDO");
+      }
+
+      let grasaPct = null;
+      if (data?.grasaPct !== null && data?.grasaPct !== undefined && String(data.grasaPct).trim() !== "") {
+        const g = Number(data.grasaPct);
+        if (!Number.isFinite(g) || g < 3 || g > 70) throw new Error("GRASA_INVALIDA");
+        grasaPct = g;
+      }
+
+      patch.antropometriaActual = {
+        ...(current.antropometriaActual || {}),
+        alturaCm,
+        pesoKg,
+        grasaPct,
+        updatedAt: now,
+      };
+
+      patch.onboarding = {
+        ...onboarding,
+        step: 2,
+        done: false,
+        startedAt: onboarding.startedAt || now,
+        completedAt: onboarding.completedAt || null,
+      };
+
+      patch.profile = profile;
+    }
+
+    // --------
+    // STEP 2
+    // --------
+    if (s === 2) {
+      const objetivo = String(data?.objetivo || "").trim();
+      const actividad = Number(data?.actividad);
+      const diasEntreno = Number(data?.diasEntreno);
+
+      if (!objetivo) throw new Error("OBJETIVO_INVALIDO");
+      if (!Number.isFinite(actividad) || actividad < 1.2 || actividad > 2.2) throw new Error("ACTIVIDAD_INVALIDA");
+      if (!Number.isFinite(diasEntreno) || diasEntreno < 0 || diasEntreno > 7) throw new Error("DIAS_INVALIDO");
+
+      patch.objetivoActual = {
+        ...(current.objetivoActual || {}),
+        objetivo,
+        actividad,
+        diasEntreno,
+        updatedAt: now,
+      };
+
+      patch.onboarding = {
+        ...onboarding,
+        step: 2,
+        done: true,
+        startedAt: onboarding.startedAt || now,
+        completedAt: now,
+      };
+
+      patch.profile = profile;
+    }
+
+    // --------
+    // STEP 3 (opcional)
+    // --------
+    if (s === 3) {
+      const currentPrefs = current.preferenciasPlan || {};
+      const skip = data?.skip === true;
+
+      const patchPrefs = {
+        ...currentPrefs,
+        skip,
+        updatedAt: now,
+      };
+
+      if (!skip) {
+        if (data?.comidasPorDia !== undefined) {
+          const n = Number(data.comidasPorDia);
+          if (!Number.isFinite(n) || n < 2 || n > 6) throw new Error("COMIDAS_INVALIDO");
+          patchPrefs.comidasPorDia = n;
+        }
+
+        if (data?.distribucion !== undefined) {
+          const d = String(data.distribucion || "").trim();
+          const allowed = ["equilibrada", "desayuno_fuerte", "cena_fuerte", "custom"];
+          if (!allowed.includes(d)) throw new Error("DISTRIBUCION_INVALIDA");
+          patchPrefs.distribucion = d;
+        }
+
+        if (data?.weekendBoost !== undefined) {
+          patchPrefs.weekendBoost = !!data.weekendBoost;
+        }
+
+        if (data?.weekendBoostPct !== undefined) {
+          const p = Number(data.weekendBoostPct);
+          if (!Number.isFinite(p) || p < 0 || p > 30) throw new Error("WEEKEND_PCT_INVALIDO");
+          patchPrefs.weekendBoostPct = p;
+          if (p > 0) patchPrefs.weekendBoost = true;
+        }
+
+        if (data?.restricciones !== undefined) {
+          const arr = Array.isArray(data.restricciones) ? data.restricciones : [];
+          const clean = arr
+            .map((x) => String(x || "").trim().toLowerCase())
+            .filter(Boolean);
+
+          const allowedR = ["vegano", "vegetariano", "sin_tacc", "sin_lactosa", "keto", "halal"];
+          patchPrefs.restricciones = clean.filter((x) => allowedR.includes(x));
+        }
+
+        if (data?.snackLibre !== undefined) {
+          patchPrefs.snackLibre = !!data.snackLibre;
+          if (!patchPrefs.snackLibre) patchPrefs.snackLibreKcal = 0;
+        }
+
+        if (data?.snackLibreKcal !== undefined) {
+          const k = Number(data.snackLibreKcal);
+          if (!Number.isFinite(k) || k < 0 || k > 600) throw new Error("SNACK_KCAL_INVALIDA");
+          patchPrefs.snackLibreKcal = k;
+          if (k > 0) patchPrefs.snackLibre = true;
+        }
+
+        patchPrefs.skip = false;
+      }
+
+      patch.preferenciasPlan = patchPrefs;
+
+      // ✅ no uses step 3 para bloquear. Solo para UI/ajustes.
+      patch.onboarding = {
+        ...onboarding,
+        step: 3,
+        done: true,
+        startedAt: onboarding.startedAt || now,
+        completedAt: onboarding.completedAt || now,
+      };
+
+      patch.profile = profile;
+    }
+
+    // 3) Persisto
+    const updated = await this.updateById(userId, patch);
+
+    // 4) Devuelvo “safe user”
+    return {
+      _id: updated._id,
+      id: updated._id,
+
+      email: updated.email,
+      role: updated.role,
+      plan: updated.plan || "free",
+      tipo: updated.tipo || "entrenado",
+      estado: updated.estado || "activo",
+
+      profile: updated.profile || {},
+      settings: updated.settings || {},
+
+      onboarding: updated.onboarding || {},
+      preferenciasPlan: updated.preferenciasPlan || {},
+
+      coach: updated.coach || {},
+
+      billing: updated.billing || {},
+      subscription: updated.subscription || {},
+
+      antropometriaActual: updated.antropometriaActual || {},
+      objetivoActual: updated.objetivoActual || {},
+      metasActuales: updated.metasActuales || {},
+
+      ComidasUltimaSemana: updated.ComidasUltimaSemana || { from: null, to: null, dias: {}, updatedAt: null },
+      ComidasFavoritas: updated.ComidasFavoritas || { ids: [], updatedAt: null },
+
+      stats: updated.stats || {},
+    };
+  };
+
+  // =========================
   // ✅ ADMIN: LIST USERS
   // =========================
   adminListUsers = async ({
@@ -644,15 +875,13 @@ class ServicioUsuarios {
     limit = Math.min(Number(limit) || 100, 500);
     skip = Math.max(Number(skip) || 0, 0);
 
-    // 1) Traigo todos (fallback simple)
     if (typeof this.model.obtenerUsuarios !== "function") {
       throw new Error("El modelo no implementa obtenerUsuarios");
     }
 
     const raw = await this.model.obtenerUsuarios();
-    let arr = Array.isArray(raw) ? raw : (raw?.users || raw?.usuarios || []);
+    let arr = Array.isArray(raw) ? raw : raw?.users || raw?.usuarios || [];
 
-    // 2) Filtro en memoria
     const s = String(search || "").trim().toLowerCase();
     if (s) {
       arr = arr.filter((u) => {
@@ -675,13 +904,11 @@ class ServicioUsuarios {
     const total = arr.length;
     arr = arr.slice(skip, skip + limit);
 
-    // 3) Sanitize (sin passwordHash)
     return {
       users: arr.map((u) => this._sanitizeUser(this._normalizeUser(u))),
       total,
     };
   };
-
 
   adminGetUserById = async (id) => {
     const u = await this.getById(id);

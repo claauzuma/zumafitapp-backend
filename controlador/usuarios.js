@@ -59,15 +59,22 @@ class ControladorUsuarios {
 
       res.cookie("access_token", token, { ...getCookieOptions(), maxAge: 7 * 24 * 60 * 60 * 1000 });
 
-      return res.json({
-        user: {
-          id: user._id,
-          email: user.email,
-          role: user.role,
-          profile: user.profile || {},
-          settings: user.settings || {},
-        },
-      });
+return res.json({
+  user: {
+    id: user._id,
+    _id: user._id,
+    email: user.email,
+    role: user.role,
+    plan: user.plan || "free",
+    tipo: user.tipo || "entrenado",
+    estado: user.estado || "activo",
+    profile: user.profile || {},
+    settings: user.settings || {},
+    onboarding: user.onboarding || {},
+    preferenciasPlan: user.preferenciasPlan || {}, // ✅ NUEVO
+  },
+});
+
     } catch (error) {
       const msg = String(error?.message || "");
 
@@ -99,32 +106,45 @@ class ControladorUsuarios {
     }
   };
 
-  me = async (req, res) => {
-    try {
-      // evitar cache
-      res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-      res.set("Pragma", "no-cache");
-      res.set("Expires", "0");
+me = async (req, res) => {
+  try {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
 
-      const { id } = req.user;
-      const user = await this.servicio.getById(id);
-      if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+    const { id } = req.user;
+    const user = await this.servicio.getById(id);
+    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
 
-      return res.json({
-        user: {
-          id: user._id,
-          email: user.email,
-          role: user.role,
-          profile: user.profile || {},
-          settings: user.settings || {},
-          metas: user.metas || {},
-        },
-      });
-    } catch (error) {
-      console.error("Error me:", error);
-      return res.status(500).json({ error: "Error en el servidor" });
-    }
-  };
+    return res.json({
+      user: {
+        id: user._id,
+        _id: user._id,
+        email: user.email,
+        role: user.role,
+        plan: user.plan || "free",
+        tipo: user.tipo || "entrenado",
+        estado: user.estado || "activo",
+
+        profile: user.profile || {},
+        settings: user.settings || {},
+
+        onboarding: user.onboarding || {},
+
+        // ✅ NUEVO
+        preferenciasPlan: user.preferenciasPlan || {},
+
+        antropometriaActual: user.antropometriaActual || {},
+        objetivoActual: user.objetivoActual || {},
+        metasActuales: user.metasActuales || {},
+      },
+    });
+  } catch (error) {
+    console.error("Error me:", error);
+    return res.status(500).json({ error: "Error en el servidor" });
+  }
+};
+
 
 registerCliente = async (req, res) => {
   try {
@@ -190,6 +210,31 @@ registerCliente = async (req, res) => {
       return res.status(500).json({ error: "Error en el servidor" });
     }
   };
+
+  // dentro de ControladorUsuarios
+actualizarOnboardingCliente = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?._id;
+    if (!userId) return res.status(401).json({ error: "No autenticado" });
+
+    const { step, data } = req.body || {};
+    const s = Number(step);
+
+  if (![1, 2, 3].includes(s)) {
+  return res.status(400).json({ error: "Step inválido (debe ser 1, 2 o 3)" });
+}
+
+
+    // ✅ acá delegamos al servicio
+    const user = await this.servicio.actualizarOnboardingCliente(userId, s, data);
+
+    return res.json({ ok: true, user });
+  } catch (e) {
+    console.error("actualizarOnboardingCliente error:", e);
+    return res.status(500).json({ error: e?.message || "Error interno" });
+  }
+};
+
 
 resendVerifyCode = async (req, res) => {
   try {
@@ -491,17 +536,23 @@ adminDeleteUser = async (req, res) => {
       if (Object.keys(updates).length === 0) return res.status(400).json({ error: "No hay campos para actualizar" });
 
       const user = await this.servicio.updateById(id, updates);
+return res.json({
+  user: {
+    id: user._id,
+    _id: user._id,
+    email: user.email,
+    role: user.role,
+    plan: user.plan || "free",
+    tipo: user.tipo || "entrenado",
+    estado: user.estado || "activo",
+    profile: user.profile || {},
+    settings: user.settings || {},
+    onboarding: user.onboarding || {},
+    preferenciasPlan: user.preferenciasPlan || {}, // ✅ NUEVO
+    metas: user.metas || {},
+  },
+});
 
-      return res.json({
-        user: {
-          id: user._id,
-          email: user.email,
-          role: user.role,
-          profile: user.profile || {},
-          settings: user.settings || {},
-          metas: user.metas || {},
-        },
-      });
     } catch (error) {
       console.error("Error actualizarPerfil:", error);
       return res.status(500).json({ error: "Error al actualizar perfil" });

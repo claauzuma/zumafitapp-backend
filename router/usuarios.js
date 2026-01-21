@@ -101,6 +101,17 @@ class RouterUsuarios {
     this.router.use("/auth", auth);
 
     // =========================
+    // ✅ ONBOARDING (self)
+    // =========================
+    // ✅ Ruta final: PATCH /api/usuarios/me/onboarding
+    // (Esto es lo que tu front está llamando)
+    this.router.patch(
+      "/me/onboarding",
+      authMiddleware,
+      this.controladorUsuarios.actualizarOnboardingCliente // 👈 agregá este método en el controlador
+    );
+
+    // =========================
     // USERS (self)
     // =========================
     const users = express.Router();
