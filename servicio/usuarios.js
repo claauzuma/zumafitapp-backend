@@ -630,6 +630,59 @@ class ServicioUsuarios {
     return this._sanitizeUser(this._normalizeUser(created));
   };
 
+    // =========================
+  // ✅ ADMIN: LIST USERS
+  // =========================
+  adminListUsers = async ({
+    search = "",
+    role = "todos",
+    tipo = "todos",
+    estado = "todos",
+    limit = 100,
+    skip = 0,
+  } = {}) => {
+    limit = Math.min(Number(limit) || 100, 500);
+    skip = Math.max(Number(skip) || 0, 0);
+
+    // 1) Traigo todos (fallback simple)
+    if (typeof this.model.obtenerUsuarios !== "function") {
+      throw new Error("El modelo no implementa obtenerUsuarios");
+    }
+
+    const raw = await this.model.obtenerUsuarios();
+    let arr = Array.isArray(raw) ? raw : (raw?.users || raw?.usuarios || []);
+
+    // 2) Filtro en memoria
+    const s = String(search || "").trim().toLowerCase();
+    if (s) {
+      arr = arr.filter((u) => {
+        const email = String(u?.email || "").toLowerCase();
+        const nombre = String(u?.profile?.nombre || "").toLowerCase();
+        const apellido = String(u?.profile?.apellido || "").toLowerCase();
+        return (
+          email.includes(s) ||
+          nombre.includes(s) ||
+          apellido.includes(s) ||
+          `${nombre} ${apellido}`.includes(s)
+        );
+      });
+    }
+
+    if (role && role !== "todos") arr = arr.filter((u) => (u?.role || u?.rol) === role);
+    if (tipo && tipo !== "todos") arr = arr.filter((u) => (u?.tipo || "") === tipo);
+    if (estado && estado !== "todos") arr = arr.filter((u) => (u?.estado || "activo") === estado);
+
+    const total = arr.length;
+    arr = arr.slice(skip, skip + limit);
+
+    // 3) Sanitize (sin passwordHash)
+    return {
+      users: arr.map((u) => this._sanitizeUser(this._normalizeUser(u))),
+      total,
+    };
+  };
+
+
   adminGetUserById = async (id) => {
     const u = await this.getById(id);
     return u ? this._sanitizeUser(u) : null;

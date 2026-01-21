@@ -275,9 +275,9 @@ resendVerifyCode = async (req, res) => {
 // GET /api/usuarios/admin/users?search=&role=&estado=&tipo=
 adminListUsers = async (req, res) => {
   try {
-    const { search = "", role = "", estado = "", tipo = "" } = req.query || {};
+    const { search = "", role = "todos", estado = "todos", tipo = "todos" } = req.query || {};
 
-    const users = await this.servicio.adminListUsers({
+    const data = await this.servicio.adminListUsers({
       search: String(search || "").trim(),
       role: String(role || "").trim(),
       estado: String(estado || "").trim(),
@@ -286,12 +286,13 @@ adminListUsers = async (req, res) => {
       skip: Number(req.query?.skip || 0),
     });
 
-    return res.json({ users });
+    return res.json(data); // ✅ { users: [...], total: N }
   } catch (error) {
     console.error("Error adminListUsers:", error);
     return res.status(500).json({ error: "Error en el servidor" });
   }
 };
+
 
 // POST /api/usuarios/admin/users
 adminCreateUser = async (req, res) => {
