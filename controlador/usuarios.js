@@ -57,9 +57,15 @@ class ControladorUsuarios {
 
       const { user, token } = result;
 
-      res.cookie("access_token", token, { ...getCookieOptions(), maxAge: 7 * 24 * 60 * 60 * 1000 });
+// ✅ cookie (para navegador)
+res.cookie("access_token", token, {
+  ...getCookieOptions(),
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+});
 
+// ✅ respuesta (para fallback por Authorization si hiciera falta)
 return res.json({
+  token,
   user: {
     id: user._id,
     _id: user._id,
@@ -71,9 +77,10 @@ return res.json({
     profile: user.profile || {},
     settings: user.settings || {},
     onboarding: user.onboarding || {},
-    preferenciasPlan: user.preferenciasPlan || {}, // ✅ NUEVO
+    preferenciasPlan: user.preferenciasPlan || {},
   },
 });
+
 
     } catch (error) {
       const msg = String(error?.message || "");
