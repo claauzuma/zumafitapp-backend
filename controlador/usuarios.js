@@ -38,6 +38,27 @@ function decodeState(state) {
   }
 }
 
+// ✅ helper: agrega query params sin romper los que ya existen
+function appendQuery(url, params = {}) {
+  try {
+    const u = new URL(url);
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && String(v) !== "") {
+        u.searchParams.set(k, String(v));
+      }
+    });
+    return u.toString();
+  } catch {
+    // fallback simple si url no es absoluta
+    const sep = url.includes("?") ? "&" : "?";
+    const qs = Object.entries(params)
+      .filter(([, v]) => v !== undefined && v !== null && String(v) !== "")
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+      .join("&");
+    return url + sep + qs;
+  }
+}
+
 class ControladorUsuarios {
   constructor(persistencia) {
     this.servicio = new Servicio(persistencia);
@@ -57,31 +78,29 @@ class ControladorUsuarios {
 
       const { user, token } = result;
 
-// ✅ cookie (para navegador)
-res.cookie("access_token", token, {
-  ...getCookieOptions(),
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-});
+      // ✅ cookie (para navegador)
+      res.cookie("access_token", token, {
+        ...getCookieOptions(),
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
 
-// ✅ respuesta (para fallback por Authorization si hiciera falta)
-return res.json({
-  token,
-  user: {
-    id: user._id,
-    _id: user._id,
-    email: user.email,
-    role: user.role,
-    plan: user.plan || "free",
-    tipo: user.tipo || "entrenado",
-    estado: user.estado || "activo",
-    profile: user.profile || {},
-    settings: user.settings || {},
-    onboarding: user.onboarding || {},
-    preferenciasPlan: user.preferenciasPlan || {},
-  },
-});
-
-
+      // ✅ respuesta (para fallback por Authorization si hiciera falta)
+      return res.json({
+        token,
+        user: {
+          id: user._id,
+          _id: user._id,
+          email: user.email,
+          role: user.role,
+          plan: user.plan || "free",
+          tipo: user.tipo || "entrenado",
+          estado: user.estado || "activo",
+          profile: user.profile || {},
+          settings: user.settings || {},
+          onboarding: user.onboarding || {},
+          preferenciasPlan: user.preferenciasPlan || {},
+        },
+      });
     } catch (error) {
       const msg = String(error?.message || "");
 
@@ -113,86 +132,85 @@ return res.json({
     }
   };
 
-me = async (req, res) => {
-  try {
-    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-    res.set("Pragma", "no-cache");
-    res.set("Expires", "0");
+  me = async (req, res) => {
+    try {
+      res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+      res.set("Pragma", "no-cache");
+      res.set("Expires", "0");
 
-    const { id } = req.user;
-    const user = await this.servicio.getById(id);
-    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+      const { id } = req.user;
+      const user = await this.servicio.getById(id);
+      if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
 
-    return res.json({
-      user: {
-        id: user._id,
-        _id: user._id,
-        email: user.email,
-        role: user.role,
-        plan: user.plan || "free",
-        tipo: user.tipo || "entrenado",
-        estado: user.estado || "activo",
+      return res.json({
+        user: {
+          id: user._id,
+          _id: user._id,
+          email: user.email,
+          role: user.role,
+          plan: user.plan || "free",
+          tipo: user.tipo || "entrenado",
+          estado: user.estado || "activo",
 
-        profile: user.profile || {},
-        settings: user.settings || {},
+          profile: user.profile || {},
+          settings: user.settings || {},
 
-        onboarding: user.onboarding || {},
+          onboarding: user.onboarding || {},
 
-        // ✅ NUEVO
-        preferenciasPlan: user.preferenciasPlan || {},
+          // ✅ NUEVO
+          preferenciasPlan: user.preferenciasPlan || {},
 
-        antropometriaActual: user.antropometriaActual || {},
-        objetivoActual: user.objetivoActual || {},
-        metasActuales: user.metasActuales || {},
-      },
-    });
-  } catch (error) {
-    console.error("Error me:", error);
-    return res.status(500).json({ error: "Error en el servidor" });
-  }
-};
-
-
-registerCliente = async (req, res) => {
-  try {
-    let { email, password, nombre, apellido, fechaNacimiento } = req.body || {};
-    email = normalizeEmail(email);
-
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email y contraseña son requeridos" });
+          antropometriaActual: user.antropometriaActual || {},
+          objetivoActual: user.objetivoActual || {},
+          metasActuales: user.metasActuales || {},
+        },
+      });
+    } catch (error) {
+      console.error("Error me:", error);
+      return res.status(500).json({ error: "Error en el servidor" });
     }
+  };
 
-    const result = await this.servicio.registerCliente({
-      email,
-      password,
-      profile: { nombre, apellido, fechaNacimiento },
-    });
+  registerCliente = async (req, res) => {
+    try {
+      let { email, password, nombre, apellido, fechaNacimiento } = req.body || {};
+      email = normalizeEmail(email);
 
-    // ✅ respondemos YA
-    res.status(200).json({
-      pending: true,
-      message: "Te enviamos un código al email. Ingresalo para activar tu cuenta.",
-    });
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email y contraseña son requeridos" });
+      }
 
-    // ✅ mail async (sin colgar el endpoint)
-    const code = result?.code;
-    if (code) {
-      this.servicio
-        .sendVerifyEmail(email, code)
-        .then(() => console.log("[MAIL] register ok ->", email))
-        .catch((e) => console.error("[MAIL] register fail ->", email, e));
+      const result = await this.servicio.registerCliente({
+        email,
+        password,
+        profile: { nombre, apellido, fechaNacimiento },
+      });
+
+      // ✅ respondemos YA
+      res.status(200).json({
+        pending: true,
+        message: "Te enviamos un código al email. Ingresalo para activar tu cuenta.",
+      });
+
+      // ✅ mail async (sin colgar el endpoint)
+      const code = result?.code;
+      if (code) {
+        this.servicio
+          .sendVerifyEmail(email, code)
+          .then(() => console.log("[MAIL] register ok ->", email))
+          .catch((e) => console.error("[MAIL] register fail ->", email, e));
+      }
+    } catch (error) {
+      const msg = String(error?.message || "");
+      console.error("Error register cliente:", error);
+
+      if (isDuplicateEmailError(error)) return res.status(409).json({ error: "Ese email ya está registrado" });
+      if (msg === "EMAIL_PENDIENTE")
+        return res.status(409).json({ error: "Ya hay una verificación pendiente. Reenviá el código." });
+
+      return res.status(500).json({ error: "Error en el servidor" });
     }
-  } catch (error) {
-    const msg = String(error?.message || "");
-    console.error("Error register cliente:", error);
-
-    if (isDuplicateEmailError(error)) return res.status(409).json({ error: "Ese email ya está registrado" });
-    if (msg === "EMAIL_PENDIENTE") return res.status(409).json({ error: "Ya hay una verificación pendiente. Reenviá el código." });
-
-    return res.status(500).json({ error: "Error en el servidor" });
-  }
-};
-
+  };
 
   verifyEmail = async (req, res) => {
     try {
@@ -219,58 +237,56 @@ registerCliente = async (req, res) => {
   };
 
   // dentro de ControladorUsuarios
-actualizarOnboardingCliente = async (req, res) => {
-  try {
-    const userId = req.user?.id || req.user?._id;
-    if (!userId) return res.status(401).json({ error: "No autenticado" });
+  actualizarOnboardingCliente = async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?._id;
+      if (!userId) return res.status(401).json({ error: "No autenticado" });
 
-    const { step, data } = req.body || {};
-    const s = Number(step);
+      const { step, data } = req.body || {};
+      const s = Number(step);
 
-  if (![1, 2, 3].includes(s)) {
-  return res.status(400).json({ error: "Step inválido (debe ser 1, 2 o 3)" });
-}
+      if (![1, 2, 3].includes(s)) {
+        return res.status(400).json({ error: "Step inválido (debe ser 1, 2 o 3)" });
+      }
 
+      // ✅ acá delegamos al servicio
+      const user = await this.servicio.actualizarOnboardingCliente(userId, s, data);
 
-    // ✅ acá delegamos al servicio
-    const user = await this.servicio.actualizarOnboardingCliente(userId, s, data);
+      return res.json({ ok: true, user });
+    } catch (e) {
+      console.error("actualizarOnboardingCliente error:", e);
+      return res.status(500).json({ error: e?.message || "Error interno" });
+    }
+  };
 
-    return res.json({ ok: true, user });
-  } catch (e) {
-    console.error("actualizarOnboardingCliente error:", e);
-    return res.status(500).json({ error: e?.message || "Error interno" });
-  }
-};
+  resendVerifyCode = async (req, res) => {
+    try {
+      let { email } = req.body || {};
+      email = normalizeEmail(email);
 
+      if (!email) return res.status(400).json({ error: "Email requerido" });
 
-resendVerifyCode = async (req, res) => {
-  try {
-    let { email } = req.body || {};
-    email = normalizeEmail(email);
+      // ✅ 1) el servicio debería generar/guardar un nuevo código y DEVOLVERLO
+      const code = await this.servicio.resendVerifyCode(email);
 
-    if (!email) return res.status(400).json({ error: "Email requerido" });
+      // ✅ 2) respondemos YA (evita “Reenviando…” infinito)
+      res.json({ ok: true, message: "Código reenviado ✅" });
 
-    // ✅ 1) el servicio debería generar/guardar un nuevo código y DEVOLVERLO
-    const code = await this.servicio.resendVerifyCode(email);
+      // ✅ 3) enviamos el mail sin bloquear (si falla, log)
+      this.servicio
+        .sendVerifyEmail(email, code)
+        .then(() => console.log("[MAIL] resend ok ->", email))
+        .catch((e) => console.error("[MAIL] resend fail ->", email, e));
+    } catch (error) {
+      const msg = String(error?.message || "");
 
-    // ✅ 2) respondemos YA (evita “Reenviando…” infinito)
-    res.json({ ok: true, message: "Código reenviado ✅" });
+      if (msg === "ESPERA_1_MIN") return res.status(429).json({ error: "Esperá 1 minuto antes de reenviar" });
+      if (msg === "SIN_PENDIENTE") return res.status(404).json({ error: "No hay verificación pendiente para ese email" });
 
-    // ✅ 3) enviamos el mail sin bloquear (si falla, log)
-    this.servicio
-      .sendVerifyEmail(email, code)
-      .then(() => console.log("[MAIL] resend ok ->", email))
-      .catch((e) => console.error("[MAIL] resend fail ->", email, e));
-  } catch (error) {
-    const msg = String(error?.message || "");
-
-    if (msg === "ESPERA_1_MIN") return res.status(429).json({ error: "Esperá 1 minuto antes de reenviar" });
-    if (msg === "SIN_PENDIENTE") return res.status(404).json({ error: "No hay verificación pendiente para ese email" });
-
-    console.error("Error resendVerifyCode:", error);
-    return res.status(500).json({ error: "Error en el servidor" });
-  }
-};
+      console.error("Error resendVerifyCode:", error);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+  };
 
   forgotPassword = async (req, res) => {
     try {
@@ -319,133 +335,130 @@ resendVerifyCode = async (req, res) => {
     }
   };
 
-
   // =========================
-// ✅ ADMIN: CRUD USERS
-// =========================
+  // ✅ ADMIN: CRUD USERS
+  // =========================
 
-// GET /api/usuarios/admin/users?search=&role=&estado=&tipo=
-adminListUsers = async (req, res) => {
-  try {
-    const { search = "", role = "todos", estado = "todos", tipo = "todos" } = req.query || {};
+  // GET /api/usuarios/admin/users?search=&role=&estado=&tipo=
+  adminListUsers = async (req, res) => {
+    try {
+      const { search = "", role = "todos", estado = "todos", tipo = "todos" } = req.query || {};
 
-    const data = await this.servicio.adminListUsers({
-      search: String(search || "").trim(),
-      role: String(role || "").trim(),
-      estado: String(estado || "").trim(),
-      tipo: String(tipo || "").trim(),
-      limit: Number(req.query?.limit || 50),
-      skip: Number(req.query?.skip || 0),
-    });
+      const data = await this.servicio.adminListUsers({
+        search: String(search || "").trim(),
+        role: String(role || "").trim(),
+        estado: String(estado || "").trim(),
+        tipo: String(tipo || "").trim(),
+        limit: Number(req.query?.limit || 50),
+        skip: Number(req.query?.skip || 0),
+      });
 
-    return res.json(data); // ✅ { users: [...], total: N }
-  } catch (error) {
-    console.error("Error adminListUsers:", error);
-    return res.status(500).json({ error: "Error en el servidor" });
-  }
-};
-
-
-// POST /api/usuarios/admin/users
-adminCreateUser = async (req, res) => {
-  try {
-    const {
-      email,
-      password,
-      role = "cliente",
-      estado = "activo",
-      tipo = "entrenado", // opcional (si lo querés)
-      profile = {},
-      fechaNacimiento,
-      nombre,
-      apellido,
-    } = req.body || {};
-
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email y contraseña son requeridos" });
+      return res.json(data); // ✅ { users: [...], total: N }
+    } catch (error) {
+      console.error("Error adminListUsers:", error);
+      return res.status(500).json({ error: "Error en el servidor" });
     }
+  };
 
-    const user = await this.servicio.adminCreateUser({
-      email,
-      password,
-      role,
-      estado,
-      tipo,
-      profile: {
-        ...profile,
-        nombre: profile?.nombre ?? nombre,
-        apellido: profile?.apellido ?? apellido,
-        fechaNacimiento: profile?.fechaNacimiento ?? fechaNacimiento,
-      },
-    });
+  // POST /api/usuarios/admin/users
+  adminCreateUser = async (req, res) => {
+    try {
+      const {
+        email,
+        password,
+        role = "cliente",
+        estado = "activo",
+        tipo = "entrenado", // opcional (si lo querés)
+        profile = {},
+        fechaNacimiento,
+        nombre,
+        apellido,
+      } = req.body || {};
 
-    return res.status(201).json({ user });
-  } catch (error) {
-    console.error("Error adminCreateUser:", error);
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email y contraseña son requeridos" });
+      }
 
-    if (String(error?.message) === "EMAIL_DUPLICADO") {
-      return res.status(409).json({ error: "Ese email ya está registrado" });
+      const user = await this.servicio.adminCreateUser({
+        email,
+        password,
+        role,
+        estado,
+        tipo,
+        profile: {
+          ...profile,
+          nombre: profile?.nombre ?? nombre,
+          apellido: profile?.apellido ?? apellido,
+          fechaNacimiento: profile?.fechaNacimiento ?? fechaNacimiento,
+        },
+      });
+
+      return res.status(201).json({ user });
+    } catch (error) {
+      console.error("Error adminCreateUser:", error);
+
+      if (String(error?.message) === "EMAIL_DUPLICADO") {
+        return res.status(409).json({ error: "Ese email ya está registrado" });
+      }
+      if (String(error?.message) === "ROL_INVALIDO") {
+        return res.status(400).json({ error: "Rol inválido" });
+      }
+
+      return res.status(500).json({ error: "Error en el servidor" });
     }
-    if (String(error?.message) === "ROL_INVALIDO") {
-      return res.status(400).json({ error: "Rol inválido" });
+  };
+
+  // GET /api/usuarios/admin/users/:id
+  adminGetUserById = async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const user = await this.servicio.adminGetUserById(id);
+      if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+
+      return res.json({ user });
+    } catch (error) {
+      console.error("Error adminGetUserById:", error);
+      return res.status(500).json({ error: "Error en el servidor" });
     }
+  };
 
-    return res.status(500).json({ error: "Error en el servidor" });
-  }
-};
+  // PATCH /api/usuarios/admin/users/:id
+  adminUpdateUser = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body || {};
 
-// GET /api/usuarios/admin/users/:id
-adminGetUserById = async (req, res) => {
-  try {
-    const { id } = req.params;
+      const user = await this.servicio.adminUpdateUser(id, updates);
+      return res.json({ user });
+    } catch (error) {
+      console.error("Error adminUpdateUser:", error);
 
-    const user = await this.servicio.adminGetUserById(id);
-    if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+      const msg = String(error?.message || "");
+      if (msg === "NOT_FOUND") return res.status(404).json({ error: "Usuario no encontrado" });
+      if (msg === "EMAIL_DUPLICADO") return res.status(409).json({ error: "Ese email ya está registrado" });
+      if (msg === "ROL_INVALIDO") return res.status(400).json({ error: "Rol inválido" });
 
-    return res.json({ user });
-  } catch (error) {
-    console.error("Error adminGetUserById:", error);
-    return res.status(500).json({ error: "Error en el servidor" });
-  }
-};
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+  };
 
-// PATCH /api/usuarios/admin/users/:id
-adminUpdateUser = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updates = req.body || {};
+  // DELETE /api/usuarios/admin/users/:id
+  adminDeleteUser = async (req, res) => {
+    try {
+      const { id } = req.params;
 
-    const user = await this.servicio.adminUpdateUser(id, updates);
-    return res.json({ user });
-  } catch (error) {
-    console.error("Error adminUpdateUser:", error);
+      const r = await this.servicio.adminDeleteUser(id);
+      if (r?.deletedCount === 0) return res.status(404).json({ error: "Usuario no encontrado" });
 
-    const msg = String(error?.message || "");
-    if (msg === "NOT_FOUND") return res.status(404).json({ error: "Usuario no encontrado" });
-    if (msg === "EMAIL_DUPLICADO") return res.status(409).json({ error: "Ese email ya está registrado" });
-    if (msg === "ROL_INVALIDO") return res.status(400).json({ error: "Rol inválido" });
+      return res.json({ message: "Usuario eliminado" });
+    } catch (error) {
+      console.error("Error adminDeleteUser:", error);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+  };
 
-    return res.status(500).json({ error: "Error en el servidor" });
-  }
-};
-
-// DELETE /api/usuarios/admin/users/:id
-adminDeleteUser = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const r = await this.servicio.adminDeleteUser(id);
-    if (r?.deletedCount === 0) return res.status(404).json({ error: "Usuario no encontrado" });
-
-    return res.json({ message: "Usuario eliminado" });
-  } catch (error) {
-    console.error("Error adminDeleteUser:", error);
-    return res.status(500).json({ error: "Error en el servidor" });
-  }
-};
-
-
-  // ✅ GOOGLE CALLBACK (con state -> returnTo)
+  // ✅ GOOGLE CALLBACK (con state -> returnTo) + fallback token por query para Safari/ITP
   googleCallback = async (req, res) => {
     const frontendBase =
       process.env.FRONTEND_URL ||
@@ -453,7 +466,8 @@ adminDeleteUser = async (req, res) => {
       "http://localhost:5173";
 
     const parsed = decodeState(req.query?.state);
-    const returnTo = parsed?.returnTo || `${frontendBase}/app/inicio`;
+    // ✅ preferimos volver a /auth para que corra el effect de /me y redirija por rol
+    const returnTo = parsed?.returnTo || `${frontendBase}/auth`;
 
     try {
       console.log("✅ [GOOGLE] callback entrando");
@@ -463,7 +477,6 @@ adminDeleteUser = async (req, res) => {
       console.log("✅ [GOOGLE] req.user =", req.user);
 
       const payload = req.user; // viene de passport
-
       if (!payload?.email || !payload?.googleId) {
         console.log("❌ [GOOGLE] payload inválido, faltan email/googleId");
         return res.redirect(`${frontendBase}/auth?google=fail`);
@@ -489,15 +502,18 @@ adminDeleteUser = async (req, res) => {
         return res.redirect(`${frontendBase}/auth?google=error`);
       }
 
-      // cookie
+      // ✅ 1) intentamos cookie igual (Chrome/Edge lo guardan)
       const cookieOptions = { ...getCookieOptions(), maxAge: 7 * 24 * 60 * 60 * 1000 };
       res.cookie("access_token", token, cookieOptions);
 
       console.log("✅ [GOOGLE] cookie seteada -> options:", cookieOptions);
       console.log("✅ [GOOGLE] set-cookie header =", res.getHeader("set-cookie"));
 
-      console.log("✅ [GOOGLE] redirect final a:", returnTo);
-      return res.redirect(returnTo);
+      // ✅ 2) PERO además mandamos token por query para Safari/ITP
+      const redirectUrl = appendQuery(returnTo, { token, oauth: 1 });
+
+      console.log("✅ [GOOGLE] redirect final a:", redirectUrl);
+      return res.redirect(redirectUrl);
     } catch (error) {
       const msg = String(error?.message || "");
       console.error("❌ Error googleCallback:", error);
@@ -543,23 +559,23 @@ adminDeleteUser = async (req, res) => {
       if (Object.keys(updates).length === 0) return res.status(400).json({ error: "No hay campos para actualizar" });
 
       const user = await this.servicio.updateById(id, updates);
-return res.json({
-  user: {
-    id: user._id,
-    _id: user._id,
-    email: user.email,
-    role: user.role,
-    plan: user.plan || "free",
-    tipo: user.tipo || "entrenado",
-    estado: user.estado || "activo",
-    profile: user.profile || {},
-    settings: user.settings || {},
-    onboarding: user.onboarding || {},
-    preferenciasPlan: user.preferenciasPlan || {}, // ✅ NUEVO
-    metas: user.metas || {},
-  },
-});
 
+      return res.json({
+        user: {
+          id: user._id,
+          _id: user._id,
+          email: user.email,
+          role: user.role,
+          plan: user.plan || "free",
+          tipo: user.tipo || "entrenado",
+          estado: user.estado || "activo",
+          profile: user.profile || {},
+          settings: user.settings || {},
+          onboarding: user.onboarding || {},
+          preferenciasPlan: user.preferenciasPlan || {}, // ✅ NUEVO
+          metas: user.metas || {},
+        },
+      });
     } catch (error) {
       console.error("Error actualizarPerfil:", error);
       return res.status(500).json({ error: "Error al actualizar perfil" });

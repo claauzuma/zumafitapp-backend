@@ -1,20 +1,35 @@
+// src/middleware/authMiddleware.js
 import jwt from "jsonwebtoken";
 
 /**
  * Lee JWT desde:
- *  - Cookie: access_token (recomendado)
- *  - Header: Authorization: Bearer <token> (fallback para Postman)
+ *  - Cookie: access_token (principal)
+ *  - Header: Authorization: Bearer <token> (fallback)
  *
  * Setea:
  *   req.user = { id, email, role }
  */
 export function authMiddleware(req, res, next) {
   try {
-    let token = req.cookies?.access_token;
+    let token = null;
 
+    // 1) Cookie (principal)
+    const cookieToken = req.cookies?.access_token;
+    if (cookieToken && typeof cookieToken === "string" && cookieToken.trim()) {
+      token = cookieToken.trim();
+    }
+
+    // 2) Header Authorization (fallback, importante para Safari/ITP cuando usás token por query + localStorage)
     if (!token) {
-      const header = req.headers.authorization || "";
-      if (header.startsWith("Bearer ")) token = header.slice(7);
+      const headerRaw =
+        req.headers?.authorization ||
+        req.headers?.Authorization ||
+        "";
+
+      const header = String(headerRaw).trim();
+      if (/^Bearer\s+/i.test(header)) {
+        token = header.replace(/^Bearer\s+/i, "").trim();
+      }
     }
 
     if (!token) {
@@ -28,15 +43,17 @@ export function authMiddleware(req, res, next) {
 
     const payload = jwt.verify(token, secret);
 
-    // payload esperado: { uid, email, role, iat, exp }
-    if (!payload?.uid) {
+    // Soportamos varias keys comunes (para no romper nada si cambiaste el signer alguna vez)
+    const uid = payload?.uid || payload?.id || payload?._id || payload?.userId;
+
+    if (!uid) {
       return res.status(401).json({ error: "Token inválido: falta uid" });
     }
 
     req.user = {
-      id: payload.uid,
-      email: payload.email,
-      role: payload.role,
+      id: uid,
+      email: payload?.email,
+      role: payload?.role || payload?.rol,
     };
 
     return next();
