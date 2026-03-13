@@ -653,13 +653,12 @@ class ServicioUsuarios {
   // =========================
   // ✅ ONBOARDING (CLIENTE)
   // =========================
-  actualizarOnboardingCliente = async (userId, step, data = {}) => {
+actualizarOnboardingCliente = async (userId, step, data = {}) => {
   const now = new Date();
   const s = Number(step);
 
   if (![1, 2, 3].includes(s)) throw new Error("STEP_INVALIDO");
 
-  // 1) Traigo user actual para no pisar cosas
   const current = await this.getById(userId);
   if (!current) throw new Error("NOT_FOUND");
 
@@ -672,78 +671,82 @@ class ServicioUsuarios {
     ...(current.profile || {}),
   };
 
-  // ✅ nuevo contenedor "basics" para onboarding_v2 (no rompe nada)
+  // ✅ contenedor para onboarding_v2
   const basics = {
     ...(profile.basics || {}),
   };
 
-  // 2) Patch base
   const patch = { updatedAt: now };
 
+  // helper
+  const has = (k) => Object.prototype.hasOwnProperty.call(data, k);
+
   // ----------------
-  // STEP 1 (AHORA: parcial, compatible con onboarding_v2)
+  // STEP 1 (BASICS v2 - PARCIAL)
   // ----------------
   if (s === 1) {
-    // ✅ Map: en onboarding viejo usabas "genero", en v2 estás mandando "sexo"
-    // Guardamos ambos en basics.genero (o lo que quieras)
-    if (Object.prototype.hasOwnProperty.call(data, "genero") && data.genero != null) {
-      basics.genero = String(data.genero);
-    }
-    if (Object.prototype.hasOwnProperty.call(data, "sexo") && data.sexo != null) {
-      basics.genero = String(data.sexo); // lo dejamos unificado
-    }
+    // ✅ sexo/genero (unificamos)
+    if (has("genero") && data.genero != null) basics.genero = String(data.genero);
+    if (has("sexo") && data.sexo != null) basics.genero = String(data.sexo);
 
-    if (Object.prototype.hasOwnProperty.call(data, "fechaNacimiento") && data.fechaNacimiento != null) {
+    if (has("fechaNacimiento") && data.fechaNacimiento != null) {
       basics.fechaNacimiento = String(data.fechaNacimiento);
     }
 
-    if (Object.prototype.hasOwnProperty.call(data, "tendenciaPeso") && data.tendenciaPeso != null) {
+    if (has("tendenciaPeso") && data.tendenciaPeso != null) {
       basics.tendenciaPeso = String(data.tendenciaPeso);
     }
 
-    if (Object.prototype.hasOwnProperty.call(data, "frecuenciaEjercicio") && data.frecuenciaEjercicio != null) {
+    if (has("frecuenciaEjercicio") && data.frecuenciaEjercicio != null) {
       basics.frecuenciaEjercicio = String(data.frecuenciaEjercicio);
     }
 
-    if (Object.prototype.hasOwnProperty.call(data, "actividadDiaria") && data.actividadDiaria != null) {
+    if (has("actividadDiaria") && data.actividadDiaria != null) {
       basics.actividadDiaria = String(data.actividadDiaria);
     }
 
-    if (Object.prototype.hasOwnProperty.call(data, "experienciaPesas") && data.experienciaPesas != null) {
+    if (has("experienciaPesas") && data.experienciaPesas != null) {
       basics.experienciaPesas = String(data.experienciaPesas);
     }
 
-    // ✅ TDEE (puede venir como tdeeEstimado o tdeeCustom en tu front)
-    if (Object.prototype.hasOwnProperty.call(data, "tdeeEstimado") && data.tdeeEstimado != null) {
+    // ✅ NUEVO: % graso visual (por imágenes)
+    // Ej: "3-4", "5-7", "8-12" o el label que uses
+    if (has("grasaNivel") && data.grasaNivel != null) {
+      basics.grasaNivel = String(data.grasaNivel);
+    }
+
+    // ✅ TDEE (si llega, damos por terminado BASICS)
+    const sentTdee = has("tdeeEstimado") || has("tdeeCustom");
+
+    if (has("tdeeEstimado") && data.tdeeEstimado != null) {
       const t = Number(data.tdeeEstimado);
       if (!Number.isFinite(t) || t < 800 || t > 6000) throw new Error("TDEE_INVALIDO");
       basics.tdeeEstimado = t;
     }
-    if (Object.prototype.hasOwnProperty.call(data, "tdeeCustom") && data.tdeeCustom != null) {
+    if (has("tdeeCustom") && data.tdeeCustom != null) {
       const t = Number(data.tdeeCustom);
       if (!Number.isFinite(t) || t < 800 || t > 6000) throw new Error("TDEE_INVALIDO");
       basics.tdeeCustom = t;
     }
 
-    // ✅ Altura/peso/grasa: VALIDAR SOLO SI VIENEN
-    // (esto arregla ALTURA_INVALIDA en pantalla de sexo)
+    // ✅ Antropometría: validar SOLO si viene (esto evita ALTURA_INVALIDA en pantalla sexo)
     let alturaCm = current?.antropometriaActual?.alturaCm ?? null;
     let pesoKg = current?.antropometriaActual?.pesoKg ?? null;
     let grasaPct = current?.antropometriaActual?.grasaPct ?? null;
 
-    if (Object.prototype.hasOwnProperty.call(data, "alturaCm")) {
+    if (has("alturaCm")) {
       const a = Number(data.alturaCm);
       if (!Number.isFinite(a) || a < 120 || a > 230) throw new Error("ALTURA_INVALIDA");
       alturaCm = a;
     }
 
-    if (Object.prototype.hasOwnProperty.call(data, "pesoKg")) {
+    if (has("pesoKg")) {
       const p = Number(data.pesoKg);
       if (!Number.isFinite(p) || p < 30 || p > 250) throw new Error("PESO_INVALIDO");
       pesoKg = p;
     }
 
-    if (Object.prototype.hasOwnProperty.call(data, "grasaPct")) {
+    if (has("grasaPct")) {
       if (data.grasaPct === null || data.grasaPct === "" || String(data.grasaPct).trim() === "") {
         grasaPct = null;
       } else {
@@ -753,11 +756,7 @@ class ServicioUsuarios {
       }
     }
 
-    // ✅ Guardamos antropometría SOLO si se tocó alguno de esos 3
-    const touchedAnthro =
-      Object.prototype.hasOwnProperty.call(data, "alturaCm") ||
-      Object.prototype.hasOwnProperty.call(data, "pesoKg") ||
-      Object.prototype.hasOwnProperty.call(data, "grasaPct");
+    const touchedAnthro = has("alturaCm") || has("pesoKg") || has("grasaPct");
 
     if (touchedAnthro) {
       patch.antropometriaActual = {
@@ -769,20 +768,17 @@ class ServicioUsuarios {
       };
     }
 
-    // ✅ Onboarding: NO avances a step 2 a menos que tengas altura+peso (compat con flow viejo)
-    const hasAlt = Object.prototype.hasOwnProperty.call(data, "alturaCm");
-    const hasPeso = Object.prototype.hasOwnProperty.call(data, "pesoKg");
-    const canAdvanceOldFlow = hasAlt && hasPeso;
-
+    // ✅ PROGRESO WIZARD:
+    // - Si llegó TDEE => Basics completo => step=2
+    // - done sigue false hasta terminar Program (step 3)
     patch.onboarding = {
       ...onboarding,
-      step: canAdvanceOldFlow ? 2 : (onboarding.step || 1),
+      step: sentTdee ? 2 : (onboarding.step || 1),
       done: false,
       startedAt: onboarding.startedAt || now,
       completedAt: onboarding.completedAt || null,
     };
 
-    // ✅ Persistimos basics dentro de profile
     patch.profile = {
       ...profile,
       basics,
@@ -790,43 +786,80 @@ class ServicioUsuarios {
   }
 
   // ----------------
-  // STEP 2 (tu flow viejo: objetivo/actividad/días)
+  // STEP 2 (GOAL)
   // ----------------
   if (s === 2) {
-    const objetivo = String(data?.objetivo || "").trim();
-    const actividad = Number(data?.actividad);
-    const diasEntreno = Number(data?.diasEntreno);
+    const isWizardV2 = String(data?.__wizard || "") === "v2";
 
-    if (!objetivo) throw new Error("OBJETIVO_INVALIDO");
-    if (!Number.isFinite(actividad) || actividad < 1.2 || actividad > 2.2) throw new Error("ACTIVIDAD_INVALIDA");
-    if (!Number.isFinite(diasEntreno) || diasEntreno < 0 || diasEntreno > 7) throw new Error("DIAS_INVALIDO");
+    if (isWizardV2) {
+      // ✅ Guardás cosas del Goal v2 acá (por ahora genérico)
+      const goal = { ...(current.goal || {}) };
+      const incoming = { ...(data || {}) };
+      delete incoming.__wizard;
 
-    patch.objetivoActual = {
-      ...(current.objetivoActual || {}),
-      objetivo,
-      actividad,
-      diasEntreno,
-      updatedAt: now,
-    };
+      patch.goal = {
+        ...goal,
+        ...incoming,
+        updatedAt: now,
+      };
 
-    patch.onboarding = {
-      ...onboarding,
-      step: 2,
-      done: true,
-      startedAt: onboarding.startedAt || now,
-      completedAt: now,
-    };
+      // ✅ Goal completado => step=3, done=false
+      patch.onboarding = {
+        ...onboarding,
+        step: 3,
+        done: false,
+        startedAt: onboarding.startedAt || now,
+        completedAt: onboarding.completedAt || null,
+      };
 
-    patch.profile = {
-      ...profile,
-      basics,
-    };
+      patch.profile = {
+        ...profile,
+        basics,
+      };
+    } else {
+      // ✅ flujo viejo (lo mantenemos)
+      const objetivo = String(data?.objetivo || "").trim();
+      const actividad = Number(data?.actividad);
+      const diasEntreno = Number(data?.diasEntreno);
+
+      if (!objetivo) throw new Error("OBJETIVO_INVALIDO");
+      if (!Number.isFinite(actividad) || actividad < 1.2 || actividad > 2.2) throw new Error("ACTIVIDAD_INVALIDA");
+      if (!Number.isFinite(diasEntreno) || diasEntreno < 0 || diasEntreno > 7) throw new Error("DIAS_INVALIDO");
+
+      patch.objetivoActual = {
+        ...(current.objetivoActual || {}),
+        objetivo,
+        actividad,
+        diasEntreno,
+        updatedAt: now,
+      };
+
+      // ⚠️ viejo: marcaba done=true; lo dejamos igual para no romper tu lógica anterior
+      patch.onboarding = {
+        ...onboarding,
+        step: 2,
+        done: true,
+        startedAt: onboarding.startedAt || now,
+        completedAt: now,
+      };
+
+      patch.profile = {
+        ...profile,
+        basics,
+      };
+    }
   }
 
   // ----------------
-  // STEP 3 (opcional)
+  // STEP 3 (PROGRAM) -> FINALIZA TODO
   // ----------------
   if (s === 3) {
+    const isWizardV2 = String(data?.__wizard || "") === "v2";
+
+    // ✅ Si es wizard v2, podrías guardar "program" acá (por ahora dejamos preferenciaPlan como ya tenías)
+    // (Te sirve para cuando Program deje de ser placeholder)
+    // const program = { ...(current.program || {}), ...data }; delete program.__wizard; patch.program = { ...program, updatedAt: now };
+
     const currentPrefs = current.preferenciasPlan || {};
     const skip = data?.skip === true;
 
@@ -864,7 +897,6 @@ class ServicioUsuarios {
       if (data?.restricciones !== undefined) {
         const arr = Array.isArray(data.restricciones) ? data.restricciones : [];
         const clean = arr.map((x) => String(x || "").trim().toLowerCase()).filter(Boolean);
-
         const allowedR = ["vegano", "vegetariano", "sin_tacc", "sin_lactosa", "keto", "halal"];
         patchPrefs.restricciones = clean.filter((x) => allowedR.includes(x));
       }
@@ -886,12 +918,13 @@ class ServicioUsuarios {
 
     patch.preferenciasPlan = patchPrefs;
 
+    // ✅ FINAL DEL WIZARD: Program completado => done=true
     patch.onboarding = {
       ...onboarding,
       step: 3,
       done: true,
       startedAt: onboarding.startedAt || now,
-      completedAt: onboarding.completedAt || now,
+      completedAt: now,
     };
 
     patch.profile = {
@@ -900,10 +933,8 @@ class ServicioUsuarios {
     };
   }
 
-  // 3) Persisto
   const updated = await this.updateById(userId, patch);
 
-  // 4) Devuelvo “safe user”
   return {
     _id: updated._id,
     id: updated._id,
@@ -920,6 +951,8 @@ class ServicioUsuarios {
     onboarding: updated.onboarding || {},
     preferenciasPlan: updated.preferenciasPlan || {},
 
+    goal: updated.goal || {},
+
     coach: updated.coach || {},
 
     billing: updated.billing || {},
@@ -935,7 +968,6 @@ class ServicioUsuarios {
     stats: updated.stats || {},
   };
 };
-
   // =========================
   // ✅ ADMIN: LIST USERS
   // =========================
