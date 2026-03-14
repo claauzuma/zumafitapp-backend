@@ -791,32 +791,32 @@ actualizarOnboardingCliente = async (userId, step, data = {}) => {
   if (s === 2) {
     const isWizardV2 = String(data?.__wizard || "") === "v2";
 
-    if (isWizardV2) {
-      // ✅ Guardás cosas del Goal v2 acá (por ahora genérico)
-      const goal = { ...(current.goal || {}) };
-      const incoming = { ...(data || {}) };
-      delete incoming.__wizard;
+  if (isWizardV2) {
+  // ✅ Guardamos Goal v2 en un campo separado (no pisa nada del flow viejo)
+  const goalV2 = { ...(current.goalV2 || {}) };
+  const incoming = { ...(data || {}) };
+  delete incoming.__wizard;
 
-      patch.goal = {
-        ...goal,
-        ...incoming,
-        updatedAt: now,
-      };
+  patch.goalV2 = {
+    ...goalV2,
+    ...incoming,
+    updatedAt: now,
+  };
 
-      // ✅ Goal completado => step=3, done=false
-      patch.onboarding = {
-        ...onboarding,
-        step: 3,
-        done: false,
-        startedAt: onboarding.startedAt || now,
-        completedAt: onboarding.completedAt || null,
-      };
+  // ✅ Goal completado => avanzar a Program
+  patch.onboarding = {
+    ...onboarding,
+    step: 3,
+    done: false,
+    startedAt: onboarding.startedAt || now,
+    completedAt: onboarding.completedAt || null,
+  };
 
-      patch.profile = {
-        ...profile,
-        basics,
-      };
-    } else {
+  patch.profile = {
+    ...profile,
+    basics,
+  };
+} else {
       // ✅ flujo viejo (lo mantenemos)
       const objetivo = String(data?.objetivo || "").trim();
       const actividad = Number(data?.actividad);
