@@ -853,85 +853,118 @@ actualizarOnboardingCliente = async (userId, step, data = {}) => {
   // ----------------
   // STEP 3 (PROGRAM) -> FINALIZA TODO
   // ----------------
-  if (s === 3) {
-    const isWizardV2 = String(data?.__wizard || "") === "v2";
+// ----------------
+// STEP 3 (PROGRAM) -> FINALIZA TODO
+// ----------------
+if (s === 3) {
+  const isWizardV2 = String(data?.__wizard || "") === "v2";
 
-    // ✅ Si es wizard v2, podrías guardar "program" acá (por ahora dejamos preferenciaPlan como ya tenías)
-    // (Te sirve para cuando Program deje de ser placeholder)
-    // const program = { ...(current.program || {}), ...data }; delete program.__wizard; patch.program = { ...program, updatedAt: now };
+  // =========================================================
+  // ✅ PROGRAM V2 (nuevo) — guardado incremental + final
+  // =========================================================
+  // Front manda:
+  // step: 3
+  // data: { __wizard:"v2", __final:true/false, programV2:{ diet, training, calorieDist, shiftDays, protein } }
+  if (isWizardV2 && data?.programV2 && typeof data.programV2 === "object") {
+    const currentProgramV2 = current.programV2 || {};
+    const incomingProgramV2 = { ...(data.programV2 || {}) };
 
-    const currentPrefs = current.preferenciasPlan || {};
-    const skip = data?.skip === true;
-
-    const patchPrefs = {
-      ...currentPrefs,
-      skip,
+    patch.programV2 = {
+      ...currentProgramV2,
+      ...incomingProgramV2,
+      final: data?.__final === true,
       updatedAt: now,
     };
+  }
 
-    if (!skip) {
-      if (data?.comidasPorDia !== undefined) {
-        const n = Number(data.comidasPorDia);
-        if (!Number.isFinite(n) || n < 2 || n > 6) throw new Error("COMIDAS_INVALIDO");
-        patchPrefs.comidasPorDia = n;
-      }
+  // =========================================================
+  // ✅ FLOW VIEJO (lo mantenemos tal cual) -> preferenciasPlan
+  // =========================================================
+  const currentPrefs = current.preferenciasPlan || {};
+  const skip = data?.skip === true;
 
-      if (data?.distribucion !== undefined) {
-        const d = String(data.distribucion || "").trim();
-        const allowed = ["equilibrada", "desayuno_fuerte", "cena_fuerte", "custom"];
-        if (!allowed.includes(d)) throw new Error("DISTRIBUCION_INVALIDA");
-        patchPrefs.distribucion = d;
-      }
+  const patchPrefs = {
+    ...currentPrefs,
+    skip,
+    updatedAt: now,
+  };
 
-      if (data?.weekendBoost !== undefined) {
-        patchPrefs.weekendBoost = !!data.weekendBoost;
-      }
-
-      if (data?.weekendBoostPct !== undefined) {
-        const p = Number(data.weekendBoostPct);
-        if (!Number.isFinite(p) || p < 0 || p > 30) throw new Error("WEEKEND_PCT_INVALIDO");
-        patchPrefs.weekendBoostPct = p;
-        if (p > 0) patchPrefs.weekendBoost = true;
-      }
-
-      if (data?.restricciones !== undefined) {
-        const arr = Array.isArray(data.restricciones) ? data.restricciones : [];
-        const clean = arr.map((x) => String(x || "").trim().toLowerCase()).filter(Boolean);
-        const allowedR = ["vegano", "vegetariano", "sin_tacc", "sin_lactosa", "keto", "halal"];
-        patchPrefs.restricciones = clean.filter((x) => allowedR.includes(x));
-      }
-
-      if (data?.snackLibre !== undefined) {
-        patchPrefs.snackLibre = !!data.snackLibre;
-        if (!patchPrefs.snackLibre) patchPrefs.snackLibreKcal = 0;
-      }
-
-      if (data?.snackLibreKcal !== undefined) {
-        const k = Number(data.snackLibreKcal);
-        if (!Number.isFinite(k) || k < 0 || k > 600) throw new Error("SNACK_KCAL_INVALIDA");
-        patchPrefs.snackLibreKcal = k;
-        if (k > 0) patchPrefs.snackLibre = true;
-      }
-
-      patchPrefs.skip = false;
+  if (!skip) {
+    if (data?.comidasPorDia !== undefined) {
+      const n = Number(data.comidasPorDia);
+      if (!Number.isFinite(n) || n < 2 || n > 6) throw new Error("COMIDAS_INVALIDO");
+      patchPrefs.comidasPorDia = n;
     }
 
-    patch.preferenciasPlan = patchPrefs;
+    if (data?.distribucion !== undefined) {
+      const d = String(data.distribucion || "").trim();
+      const allowed = ["equilibrada", "desayuno_fuerte", "cena_fuerte", "custom"];
+      if (!allowed.includes(d)) throw new Error("DISTRIBUCION_INVALIDA");
+      patchPrefs.distribucion = d;
+    }
 
-    // ✅ FINAL DEL WIZARD: Program completado => done=true
-    patch.onboarding = {
-      ...onboarding,
-      step: 3,
-      done: true,
-      startedAt: onboarding.startedAt || now,
-      completedAt: now,
-    };
+    if (data?.weekendBoost !== undefined) {
+      patchPrefs.weekendBoost = !!data.weekendBoost;
+    }
 
-    patch.profile = {
-      ...profile,
-      basics,
-    };
+    if (data?.weekendBoostPct !== undefined) {
+      const p = Number(data.weekendBoostPct);
+      if (!Number.isFinite(p) || p < 0 || p > 30) throw new Error("WEEKEND_PCT_INVALIDO");
+      patchPrefs.weekendBoostPct = p;
+      if (p > 0) patchPrefs.weekendBoost = true;
+    }
+
+    if (data?.restricciones !== undefined) {
+      const arr = Array.isArray(data.restricciones) ? data.restricciones : [];
+      const clean = arr
+        .map((x) => String(x || "").trim().toLowerCase())
+        .filter(Boolean);
+      const allowedR = ["vegano", "vegetariano", "sin_tacc", "sin_lactosa", "keto", "halal"];
+      patchPrefs.restricciones = clean.filter((x) => allowedR.includes(x));
+    }
+
+    if (data?.snackLibre !== undefined) {
+      patchPrefs.snackLibre = !!data.snackLibre;
+      if (!patchPrefs.snackLibre) patchPrefs.snackLibreKcal = 0;
+    }
+
+    if (data?.snackLibreKcal !== undefined) {
+      const k = Number(data.snackLibreKcal);
+      if (!Number.isFinite(k) || k < 0 || k > 600) throw new Error("SNACK_KCAL_INVALIDA");
+      patchPrefs.snackLibreKcal = k;
+      if (k > 0) patchPrefs.snackLibre = true;
+    }
+
+    patchPrefs.skip = false;
   }
+
+  patch.preferenciasPlan = patchPrefs;
+
+// =========================================================
+// ✅ FINAL DEL WIZARD
+// - v2 parcial (__final:false) => step 3, done false
+// - v2 final   (__final:true)  => step 3, done true
+// - flow viejo => mantiene comportamiento anterior
+// =========================================================
+const isFinalV2 = isWizardV2 && data?.__final === true;
+
+patch.onboarding = {
+  ...onboarding,
+  step: 3,
+  done: isWizardV2 ? isFinalV2 : true,
+  startedAt: onboarding.startedAt || now,
+  completedAt: isWizardV2
+    ? (isFinalV2 ? now : null)
+    : now,
+};
+
+
+  patch.profile = {
+    ...profile,
+    basics,
+  };
+}
+
 
   const updated = await this.updateById(userId, patch);
 

@@ -526,25 +526,45 @@ class ControladorUsuarios {
     }
   };
 
-  obtenerPerfil = async (req, res) => {
-    try {
-      const { id } = req.user;
+obtenerPerfil = async (req, res) => {
+  try {
+    const { id } = req.user;
 
-      const user = await this.servicio.getById(id);
-      if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
-
-      return res.json({
-        email: user.email,
-        role: user.role,
-        profile: user.profile || {},
-        settings: user.settings || {},
-        metas: user.metas || {},
-      });
-    } catch (error) {
-      console.error("Error obtenerPerfil:", error);
-      return res.status(500).json({ error: "Error al obtener perfil" });
+    const user = await this.servicio.getById(id);
+    if (!user) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
     }
-  };
+
+    return res.json({
+      _id: user._id,
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      plan: user.plan || "free",
+      tipo: user.tipo || "entrenado",
+      estado: user.estado || "activo",
+
+      profile: user.profile || {},
+      settings: user.settings || {},
+      metas: user.metas || {},
+
+      onboarding: user.onboarding || {},
+      antropometriaActual: user.antropometriaActual || {},
+      goalV2: user.goalV2 || {},
+      programV2: user.programV2 || {},
+
+      preferenciasPlan: user.preferenciasPlan || {},
+      objetivoActual: user.objetivoActual || {},
+      metasActuales: user.metasActuales || {},
+      coach: user.coach || {},
+      billing: user.billing || {},
+      subscription: user.subscription || {},
+    });
+  } catch (error) {
+    console.error("Error obtenerPerfil:", error);
+    return res.status(500).json({ error: "Error al obtener perfil" });
+  }
+};
 
   actualizarPerfil = async (req, res) => {
     try {
