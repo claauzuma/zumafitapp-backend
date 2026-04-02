@@ -80,7 +80,7 @@ class Server {
         if (origin === "http://localhost:5173") return cb(null, true);
         if (/^http:\/\/192\.168\.\d+\.\d+:5173$/.test(origin)) return cb(null, true);
 
-        if (origin === "https://zumafitapp.netlify.app") return cb(null, true);
+        if (origin === "https://zumafitweb.netlify.app") return cb(null, true);
         if (/^https:\/\/.*--zumafitapp\.netlify\.app$/.test(origin)) return cb(null, true);
 
         return cb(new Error("CORS origin no permitido -> " + origin), false);
