@@ -17,13 +17,19 @@ class ModelMongoDBUsuarios {
   };
 
   obtenerPorId = async (id) => {
-    if (!id) return null;
-    return await this._col().findOne({ _id: new ObjectId(id) });
+    try {
+      if (!id) return null;
+      return await this._col().findOne({ _id: new ObjectId(id) });
+    } catch {
+      return null;
+    }
   };
 
   obtenerPorEmail = async (email) => {
     if (!email) return null;
-    return await this._col().findOne({ email: String(email).toLowerCase().trim() });
+    return await this._col().findOne({
+      email: String(email).toLowerCase().trim(),
+    });
   };
 
   obtenerPorRol = async (role) => {
@@ -38,6 +44,8 @@ class ModelMongoDBUsuarios {
     const doc = {
       ...usuario,
       email: usuario.email?.toLowerCase().trim(),
+      createdAt: usuario.createdAt || new Date(),
+      updatedAt: usuario.updatedAt || null,
     };
 
     const r = await col.insertOne(doc);
@@ -50,11 +58,21 @@ class ModelMongoDBUsuarios {
 
   updateById = async (id, updates) => {
     const col = this._col();
-    const _id = new ObjectId(id);
+
+    let _id;
+    try {
+      _id = new ObjectId(id);
+    } catch {
+      throw new Error("ID_INVALIDO");
+    }
 
     if (updates?._id) delete updates._id;
 
-    await col.updateOne({ _id }, { $set: { ...updates, updatedAt: new Date() } });
+    await col.updateOne(
+      { _id },
+      { $set: { ...updates, updatedAt: new Date() } }
+    );
+
     return await col.findOne({ _id });
   };
 
@@ -64,61 +82,70 @@ class ModelMongoDBUsuarios {
 
   borrarUsuario = async (id) => {
     const col = this._col();
-    const _id = new ObjectId(id);
+
+    let _id;
+    try {
+      _id = new ObjectId(id);
+    } catch {
+      throw new Error("ID_INVALIDO");
+    }
 
     const r = await col.deleteOne({ _id });
     return { deletedCount: r.deletedCount };
   };
 
   // ✅ ADMIN: listado con filtros + búsqueda + paginación
-adminListUsers = async ({ search = "", role = "", estado = "", tipo = "", limit = 50, skip = 0 }) => {
-  const col = this._col();
+  adminListUsers = async ({
+    search = "",
+    role = "",
+    estado = "",
+    tipo = "",
+    limit = 50,
+    skip = 0,
+  }) => {
+    const col = this._col();
+    const query = {};
 
-  const query = {};
+    if (role) query.role = role;
+    if (estado) query.estado = estado;
+    if (tipo) query.tipo = tipo;
 
-  if (role) query.role = role;
-  if (estado) query.estado = estado;
-  if (tipo) query.tipo = tipo;
+    if (search) {
+      const s = String(search).trim();
+      query.$or = [
+        { email: { $regex: s, $options: "i" } },
+        { "profile.nombre": { $regex: s, $options: "i" } },
+        { "profile.apellido": { $regex: s, $options: "i" } },
+      ];
+    }
 
-  if (search) {
-    const s = String(search).trim();
-    query.$or = [
-      { email: { $regex: s, $options: "i" } },
-      { "profile.nombre": { $regex: s, $options: "i" } },
-      { "profile.apellido": { $regex: s, $options: "i" } },
-    ];
-  }
+    const lim = Math.min(Number(limit) || 50, 200);
+    const sk = Math.max(Number(skip) || 0, 0);
 
-  const lim = Math.min(Number(limit) || 50, 200);
-  const sk = Math.max(Number(skip) || 0, 0);
-
-  // Proyección: no traer hashes
-  return await col
-    .find(query, { projection: { passwordHash: 0, password: 0 } })
-    .sort({ createdAt: -1 })
-    .skip(sk)
-    .limit(lim)
-    .toArray();
-};
-
+    return await col
+      .find(query, { projection: { passwordHash: 0, password: 0 } })
+      .sort({ createdAt: -1 })
+      .skip(sk)
+      .limit(lim)
+      .toArray();
+  };
 
   // ✅ Índices
   async ensureIndexes() {
     const col = this._col();
 
-    // Versión simple (recomendada si querés cero quilombos)
     await col.createIndex({ email: 1 }, { unique: true });
+    await col.createIndex({ googleId: 1 }, { sparse: true });
 
-    // Versión PRO (case-insensitive). Si te tira error en Atlas, dejá la simple.
-    // await col.createIndex(
-    //   { email: 1 },
-    //   { unique: true, collation: { locale: "en", strength: 2 } }
-    // );
     await col.createIndex({ role: 1 });
-await col.createIndex({ estado: 1 });
-await col.createIndex({ tipo: 1 });
-await col.createIndex({ createdAt: -1 });
+    await col.createIndex({ estado: 1 });
+    await col.createIndex({ tipo: 1 });
+    await col.createIndex({ plan: 1 });
 
+    await col.createIndex({ "coach.entrenadorId": 1 });
+    await col.createIndex({ "onboarding.step": 1 });
+
+    await col.createIndex({ createdAt: -1 });
   }
 }
 

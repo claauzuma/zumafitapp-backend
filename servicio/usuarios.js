@@ -1,4 +1,3 @@
-// src/servicio/usuarios.js
 import ModelFactory from "../model/DAO/usuariosFactory.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -23,36 +22,23 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
     estado: "activo",
     emailVerificado: false,
 
-    // ✅ Para controlar onboarding (primeros pasos)
     onboarding: {
       done: false,
-      step: 1, // 1..N
+      step: 1,
       startedAt: now,
       completedAt: null,
       lastSeenAt: null,
     },
 
-    // ✅ Si el cliente queda asignado a un entrenador
     coach: {
       entrenadorId: null,
       assignedAt: null,
       assignedByAdminId: null,
     },
 
-    // ✅ Para saber si pagó / si está activo por pago
     billing: {
-      status: plan === "free" ? "free" : "inactive", // "free" | "inactive" | "active" | "past_due"
-      paidUntil: null, // Date
-      lastPaymentAt: null, // Date
-      provider: null, // "mp" | "stripe" | etc
-      providerCustomerId: null,
-      providerSubscriptionId: null,
-    },
-
-    // (si querés mantener "subscription", la dejamos como alias de billing)
-    subscription: {
-      status: plan === "free" ? "inactive" : "inactive",
-      currentPeriodEnd: null,
+      status: plan === "free" ? "free" : "inactive",
+      paidUntil: null,
       lastPaymentAt: null,
       provider: null,
       providerCustomerId: null,
@@ -66,44 +52,106 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
       updatedAt: null,
     },
 
-    objetivoActual: {
-      objetivo: null, // "perdida_grasa" | "ganancia_muscular" | "mantenimiento"
-      actividad: null, // "sedentario" | "ligero" | "moderado" | "alto"
-      diasEntreno: null,
+    goal: {
+      type: null,
+      maintenanceKcal: null,
+      startWeightKg: null,
+      targetWeightKg: null,
+      targetRangeKg: {
+        min: null,
+        max: null,
+      },
+      ratePctBWPerWeek: null,
+      initialBudgetKcal: null,
+      endDateLabel: null,
+      approach: null,
       updatedAt: null,
     },
 
-    // ✅ STEP 3 (opcional)
-    preferenciasPlan: {
-      comidasPorDia: null, // 2..6 (null si no eligió)
-      distribucion: "equilibrada", // "equilibrada" | "desayuno_fuerte" | "cena_fuerte" | "custom"
-      weekendBoost: false,
-      weekendBoostPct: 0, // 0..30
-      restricciones: [], // ["vegano","sin_tacc",...]
-      snackLibre: false,
-      snackLibreKcal: 0, // 0..600
-      skip: true, // por defecto: lo saltea hasta que lo complete
+    program: {
+      diet: null,
+      training: null,
+      calorieDist: null,
+      shiftDays: [],
+      protein: null,
+      final: false,
       updatedAt: null,
     },
 
-    // ✅ metas actuales (NO legacy)
     metasActuales: {
       kcal: null,
       macros: { p: null, c: null, g: null },
       updatedAt: null,
     },
 
-    // ✅ historial últimos 7 días
-    ComidasUltimaSemana: {
-      from: null, // "YYYY-MM-DD"
-      to: null, // "YYYY-MM-DD"
-      dias: {}, // { "YYYY-MM-DD": { comidas: [...] } }
+    menu: {
+      mode: {
+        type: "automatic", // automatic | manual | hybrid
+        lockedByCoach: false,
+      },
+      mealConfig: {
+        mealsPerDay: null,
+        distribution: "equilibrada",
+        weekendBoost: false,
+        weekendBoostPct: 0,
+        snackLibre: false,
+        snackLibreKcal: 0,
+      },
+      restrictions: {
+        allergies: [],
+        intolerances: [],
+        excludedFoods: [],
+        preferredFoods: [],
+        favoriteFoods: [],
+        favoriteMeals: [],
+      },
+      weeklyPlan: {
+        caloriesByDay: {},
+        macrosByDay: {},
+        mealsByDay: {},
+      },
+      history: {
+        lastWeek: {
+          from: null,
+          to: null,
+          dias: {},
+          updatedAt: null,
+        },
+      },
+      favorites: {
+        ids: [],
+        updatedAt: null,
+      },
       updatedAt: null,
     },
 
-    // ✅ favoritas
-    ComidasFavoritas: {
-      ids: [],
+    routine: {
+      mode: {
+        type: "manual", // automatic | manual | hybrid
+        editableByClient: true,
+        editableByCoach: true,
+        source: "system",
+      },
+      structure: {
+        split: null,
+        trainingDaysPerWeek: null,
+        preferredDays: [],
+        sessionDurationMin: null,
+        focus: [],
+      },
+      currentPlan: {
+        name: null,
+        description: null,
+        startDate: null,
+        endDate: null,
+        isActive: false,
+        days: [],
+      },
+      progression: {
+        mode: "manual",
+        deloadEnabled: false,
+        progressionRule: null,
+      },
       updatedAt: null,
     },
 
@@ -121,6 +169,7 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
     updatedAt: null,
   };
 }
+
 
 class ServicioUsuarios {
   constructor(persistencia) {
@@ -198,6 +247,50 @@ class ServicioUsuarios {
     return new Date(Date.now() + ttlMin * 60 * 1000);
   }
 
+  // ✅ shape compatible para devolver usuario desde servicio
+  _buildCompatUser(user) {
+  const u = this._normalizeUser(user);
+  if (!u) return null;
+
+  return {
+    _id: u._id,
+    id: u._id,
+
+    email: u.email,
+    googleId: u.googleId || null,
+    emailVerificado: !!u.emailVerificado,
+
+    role: u.role,
+    plan: u.plan || "free",
+    tipo: u.tipo || "entrenado",
+    estado: u.estado || "activo",
+
+    profile: u.profile || {},
+    settings: u.settings || {},
+    metas: u.metas || {},
+
+    onboarding: u.onboarding || {},
+
+    coach: u.coach || {},
+    billing: u.billing || {},
+
+    antropometriaActual: u.antropometriaActual || {},
+    metasActuales: u.metasActuales || {},
+
+    goal: u.goal || {},
+    program: u.program || {},
+    menu: u.menu || {},
+    routine: u.routine || {},
+
+    stats: u.stats || {},
+
+    lastLoginAt: u.lastLoginAt || null,
+    createdAt: u.createdAt || null,
+    updatedAt: u.updatedAt || null,
+  };
+}
+
+
   // -------------------------
   // ✅ Email wrappers
   // -------------------------
@@ -243,35 +336,8 @@ class ServicioUsuarios {
       await this._updateById(user._id, { lastLoginAt: new Date() });
     } catch {}
 
-    const safeUser = {
-      _id: user._id,
-      email: user.email,
-      role: user.role,
-      plan: user.plan || "free",
-      tipo: user.tipo || "entrenado",
-      estado: user.estado,
-
-      profile: user.profile || {},
-      settings: user.settings || {},
-
-      onboarding: user.onboarding || {},
-      preferenciasPlan: user.preferenciasPlan || {},
-
-      coach: user.coach || {},
-      billing: user.billing || {},
-      subscription: user.subscription || {},
-
-      antropometriaActual: user.antropometriaActual || {},
-      objetivoActual: user.objetivoActual || {},
-      metasActuales: user.metasActuales || {},
-
-      ComidasUltimaSemana: user.ComidasUltimaSemana || { from: null, to: null, dias: {}, updatedAt: null },
-      ComidasFavoritas: user.ComidasFavoritas || { ids: [], updatedAt: null },
-
-      stats: user.stats || {},
-    };
-
-    return { user: safeUser, token };
+    const refreshed = await this.getById(user._id);
+    return { user: this._buildCompatUser(refreshed || user), token };
   };
 
   // -------------------------
@@ -522,34 +588,9 @@ class ServicioUsuarios {
       { expiresIn: "7d" }
     );
 
+    const refreshed = await this.getById(user._id);
     return {
-      user: {
-        _id: user._id,
-        email: user.email,
-        role: user.role,
-        plan: user.plan || "free",
-        tipo: user.tipo || "entrenado",
-        estado: user.estado,
-
-        profile: user.profile || {},
-        settings: user.settings || {},
-
-        onboarding: user.onboarding || {},
-        preferenciasPlan: user.preferenciasPlan || {},
-
-        coach: user.coach || {},
-        billing: user.billing || {},
-        subscription: user.subscription || {},
-
-        antropometriaActual: user.antropometriaActual || {},
-        objetivoActual: user.objetivoActual || {},
-        metasActuales: user.metasActuales || {},
-
-        ComidasUltimaSemana: user.ComidasUltimaSemana || { from: null, to: null, dias: {}, updatedAt: null },
-        ComidasFavoritas: user.ComidasFavoritas || { ids: [], updatedAt: null },
-
-        stats: user.stats || {},
-      },
+      user: this._buildCompatUser(refreshed || user),
       token,
     };
   };
@@ -558,7 +599,9 @@ class ServicioUsuarios {
   // USER DATA
   // -------------------------
   getById = async (id) => {
-    if (typeof this.model.obtenerPorId !== "function") throw new Error("El modelo no implementa obtenerPorId");
+    if (typeof this.model.obtenerPorId !== "function") {
+      throw new Error("El modelo no implementa obtenerPorId");
+    }
     const user = await this.model.obtenerPorId(id);
     return this._normalizeUser(user);
   };
@@ -572,42 +615,8 @@ class ServicioUsuarios {
   // ✅ ADMIN: CRUD USERS
   // =========================
   _sanitizeUser(u) {
-    if (!u) return null;
-    const id = u._id?.toString?.() || u.id?.toString?.() || u._id || u.id;
-
-    return {
-      id,
-      _id: id,
-      email: u.email,
-      role: u.role || u.rol,
-      plan: u.plan || "free",
-      tipo: u.tipo || "entrenado",
-      estado: u.estado || "activo",
-
-      onboarding: u.onboarding || {},
-      preferenciasPlan: u.preferenciasPlan || {},
-
-      coach: u.coach || {},
-
-      billing: u.billing || {},
-      subscription: u.subscription || {},
-
-      profile: u.profile || {},
-      settings: u.settings || {},
-
-      metasActuales: u.metasActuales || {},
-      objetivoActual: u.objetivoActual || {},
-      antropometriaActual: u.antropometriaActual || {},
-
-      ComidasUltimaSemana: u.ComidasUltimaSemana || { from: null, to: null, dias: {}, updatedAt: null },
-      ComidasFavoritas: u.ComidasFavoritas || { ids: [], updatedAt: null },
-
-      stats: u.stats || {},
-
-      lastLoginAt: u.lastLoginAt || null,
-      createdAt: u.createdAt || null,
-      updatedAt: u.updatedAt || null,
-    };
+    const user = this._buildCompatUser(u);
+    return user;
   }
 
   adminCreateUser = async ({
@@ -647,13 +656,13 @@ class ServicioUsuarios {
     };
 
     const created = await this._createUser(userToCreate);
-    return this._sanitizeUser(this._normalizeUser(created));
+    return this._sanitizeUser(created);
   };
 
   // =========================
   // ✅ ONBOARDING (CLIENTE)
   // =========================
-actualizarOnboardingCliente = async (userId, step, data = {}) => {
+  actualizarOnboardingCliente = async (userId, step, data = {}) => {
   const now = new Date();
   const s = Number(step);
 
@@ -671,21 +680,17 @@ actualizarOnboardingCliente = async (userId, step, data = {}) => {
     ...(current.profile || {}),
   };
 
-  // ✅ contenedor para onboarding_v2
   const basics = {
     ...(profile.basics || {}),
   };
 
   const patch = { updatedAt: now };
-
-  // helper
   const has = (k) => Object.prototype.hasOwnProperty.call(data, k);
 
   // ----------------
-  // STEP 1 (BASICS v2 - PARCIAL)
+  // STEP 1 (BASICS)
   // ----------------
   if (s === 1) {
-    // ✅ sexo/genero (unificamos)
     if (has("genero") && data.genero != null) basics.genero = String(data.genero);
     if (has("sexo") && data.sexo != null) basics.genero = String(data.sexo);
 
@@ -709,49 +714,60 @@ actualizarOnboardingCliente = async (userId, step, data = {}) => {
       basics.experienciaPesas = String(data.experienciaPesas);
     }
 
-    // ✅ NUEVO: % graso visual (por imágenes)
-    // Ej: "3-4", "5-7", "8-12" o el label que uses
     if (has("grasaNivel") && data.grasaNivel != null) {
       basics.grasaNivel = String(data.grasaNivel);
     }
 
-    // ✅ TDEE (si llega, damos por terminado BASICS)
     const sentTdee = has("tdeeEstimado") || has("tdeeCustom");
 
     if (has("tdeeEstimado") && data.tdeeEstimado != null) {
       const t = Number(data.tdeeEstimado);
-      if (!Number.isFinite(t) || t < 800 || t > 6000) throw new Error("TDEE_INVALIDO");
+      if (!Number.isFinite(t) || t < 800 || t > 6000) {
+        throw new Error("TDEE_INVALIDO");
+      }
       basics.tdeeEstimado = t;
     }
+
     if (has("tdeeCustom") && data.tdeeCustom != null) {
       const t = Number(data.tdeeCustom);
-      if (!Number.isFinite(t) || t < 800 || t > 6000) throw new Error("TDEE_INVALIDO");
+      if (!Number.isFinite(t) || t < 800 || t > 6000) {
+        throw new Error("TDEE_INVALIDO");
+      }
       basics.tdeeCustom = t;
     }
 
-    // ✅ Antropometría: validar SOLO si viene (esto evita ALTURA_INVALIDA en pantalla sexo)
     let alturaCm = current?.antropometriaActual?.alturaCm ?? null;
     let pesoKg = current?.antropometriaActual?.pesoKg ?? null;
     let grasaPct = current?.antropometriaActual?.grasaPct ?? null;
 
     if (has("alturaCm")) {
       const a = Number(data.alturaCm);
-      if (!Number.isFinite(a) || a < 120 || a > 230) throw new Error("ALTURA_INVALIDA");
+      if (!Number.isFinite(a) || a < 120 || a > 230) {
+        throw new Error("ALTURA_INVALIDA");
+      }
       alturaCm = a;
     }
 
     if (has("pesoKg")) {
       const p = Number(data.pesoKg);
-      if (!Number.isFinite(p) || p < 30 || p > 250) throw new Error("PESO_INVALIDO");
+      if (!Number.isFinite(p) || p < 30 || p > 250) {
+        throw new Error("PESO_INVALIDO");
+      }
       pesoKg = p;
     }
 
     if (has("grasaPct")) {
-      if (data.grasaPct === null || data.grasaPct === "" || String(data.grasaPct).trim() === "") {
+      if (
+        data.grasaPct === null ||
+        data.grasaPct === "" ||
+        String(data.grasaPct).trim() === ""
+      ) {
         grasaPct = null;
       } else {
         const g = Number(data.grasaPct);
-        if (!Number.isFinite(g) || g < 3 || g > 70) throw new Error("GRASA_INVALIDA");
+        if (!Number.isFinite(g) || g < 3 || g > 70) {
+          throw new Error("GRASA_INVALIDA");
+        }
         grasaPct = g;
       }
     }
@@ -768,9 +784,6 @@ actualizarOnboardingCliente = async (userId, step, data = {}) => {
       };
     }
 
-    // ✅ PROGRESO WIZARD:
-    // - Si llegó TDEE => Basics completo => step=2
-    // - done sigue false hasta terminar Program (step 3)
     patch.onboarding = {
       ...onboarding,
       step: sentTdee ? 2 : (onboarding.step || 1),
@@ -791,50 +804,47 @@ actualizarOnboardingCliente = async (userId, step, data = {}) => {
   if (s === 2) {
     const isWizardV2 = String(data?.__wizard || "") === "v2";
 
-  if (isWizardV2) {
-  // ✅ Guardamos Goal v2 en un campo separado (no pisa nada del flow viejo)
-  const goalV2 = { ...(current.goalV2 || {}) };
-  const incoming = { ...(data || {}) };
-  delete incoming.__wizard;
+    if (isWizardV2) {
+      const incomingGoal = { ...(data?.goal || {}) };
 
-  patch.goalV2 = {
-    ...goalV2,
-    ...incoming,
-    updatedAt: now,
-  };
+      patch.goal = {
+        ...(current.goal || {}),
+        ...incomingGoal,
+        updatedAt: now,
+      };
 
-  // ✅ Goal completado => avanzar a Program
-  patch.onboarding = {
-    ...onboarding,
-    step: 3,
-    done: false,
-    startedAt: onboarding.startedAt || now,
-    completedAt: onboarding.completedAt || null,
-  };
+      patch.onboarding = {
+        ...onboarding,
+        step: 3,
+        done: false,
+        startedAt: onboarding.startedAt || now,
+        completedAt: onboarding.completedAt || null,
+      };
 
-  patch.profile = {
-    ...profile,
-    basics,
-  };
-} else {
-      // ✅ flujo viejo (lo mantenemos)
+      patch.profile = {
+        ...profile,
+        basics,
+      };
+    } else {
       const objetivo = String(data?.objetivo || "").trim();
       const actividad = Number(data?.actividad);
       const diasEntreno = Number(data?.diasEntreno);
 
       if (!objetivo) throw new Error("OBJETIVO_INVALIDO");
-      if (!Number.isFinite(actividad) || actividad < 1.2 || actividad > 2.2) throw new Error("ACTIVIDAD_INVALIDA");
-      if (!Number.isFinite(diasEntreno) || diasEntreno < 0 || diasEntreno > 7) throw new Error("DIAS_INVALIDO");
+      if (!Number.isFinite(actividad) || actividad < 1.2 || actividad > 2.2) {
+        throw new Error("ACTIVIDAD_INVALIDA");
+      }
+      if (!Number.isFinite(diasEntreno) || diasEntreno < 0 || diasEntreno > 7) {
+        throw new Error("DIAS_INVALIDO");
+      }
 
-      patch.objetivoActual = {
-        ...(current.objetivoActual || {}),
-        objetivo,
-        actividad,
-        diasEntreno,
+      // opcional: si querés mantener compatibilidad con el flow viejo
+      patch.goal = {
+        ...(current.goal || {}),
+        type: objetivo,
         updatedAt: now,
       };
 
-      // ⚠️ viejo: marcaba done=true; lo dejamos igual para no romper tu lógica anterior
       patch.onboarding = {
         ...onboarding,
         step: 2,
@@ -851,156 +861,82 @@ actualizarOnboardingCliente = async (userId, step, data = {}) => {
   }
 
   // ----------------
-  // STEP 3 (PROGRAM) -> FINALIZA TODO
+  // STEP 3 (PROGRAM)
   // ----------------
-// ----------------
-// STEP 3 (PROGRAM) -> FINALIZA TODO
-// ----------------
-if (s === 3) {
-  const isWizardV2 = String(data?.__wizard || "") === "v2";
+  if (s === 3) {
+    const isWizardV2 = String(data?.__wizard || "") === "v2";
 
-  // =========================================================
-  // ✅ PROGRAM V2 (nuevo) — guardado incremental + final
-  // =========================================================
-  // Front manda:
-  // step: 3
-  // data: { __wizard:"v2", __final:true/false, programV2:{ diet, training, calorieDist, shiftDays, protein } }
-  if (isWizardV2 && data?.programV2 && typeof data.programV2 === "object") {
-    const currentProgramV2 = current.programV2 || {};
-    const incomingProgramV2 = { ...(data.programV2 || {}) };
+    if (isWizardV2 && data?.program && typeof data.program === "object") {
+      const incomingProgram = { ...(data.program || {}) };
 
-    patch.programV2 = {
-      ...currentProgramV2,
-      ...incomingProgramV2,
-      final: data?.__final === true,
-      updatedAt: now,
+      patch.program = {
+        ...(current.program || {}),
+        ...incomingProgram,
+        final: data?.__final === true,
+        updatedAt: now,
+      };
+
+      patch.menu = {
+        ...(current.menu || {}),
+        mode: {
+          ...(current?.menu?.mode || {}),
+          type: "automatic",
+          lockedByCoach: false,
+        },
+        mealConfig: {
+          ...(current?.menu?.mealConfig || {}),
+        },
+        restrictions: {
+          ...(current?.menu?.restrictions || {}),
+          allergies: current?.menu?.restrictions?.allergies || [],
+          intolerances: current?.menu?.restrictions?.intolerances || [],
+          excludedFoods: current?.menu?.restrictions?.excludedFoods || [],
+          preferredFoods: current?.menu?.restrictions?.preferredFoods || [],
+          favoriteFoods: current?.menu?.restrictions?.favoriteFoods || [],
+          favoriteMeals: current?.menu?.restrictions?.favoriteMeals || [],
+        },
+        weeklyPlan: current?.menu?.weeklyPlan || {
+          caloriesByDay: {},
+          macrosByDay: {},
+          mealsByDay: {},
+        },
+        history: current?.menu?.history || {
+          lastWeek: {
+            from: null,
+            to: null,
+            dias: {},
+            updatedAt: null,
+          },
+        },
+        favorites: current?.menu?.favorites || {
+          ids: [],
+          updatedAt: null,
+        },
+        updatedAt: now,
+      };
+    }
+
+    const isFinalV2 = isWizardV2 && data?.__final === true;
+
+    patch.onboarding = {
+      ...onboarding,
+      step: 3,
+      done: isWizardV2 ? isFinalV2 : true,
+      startedAt: onboarding.startedAt || now,
+      completedAt: isWizardV2 ? (isFinalV2 ? now : null) : now,
+    };
+
+    patch.profile = {
+      ...profile,
+      basics,
     };
   }
 
-  // =========================================================
-  // ✅ FLOW VIEJO (lo mantenemos tal cual) -> preferenciasPlan
-  // =========================================================
-  const currentPrefs = current.preferenciasPlan || {};
-  const skip = data?.skip === true;
-
-  const patchPrefs = {
-    ...currentPrefs,
-    skip,
-    updatedAt: now,
-  };
-
-  if (!skip) {
-    if (data?.comidasPorDia !== undefined) {
-      const n = Number(data.comidasPorDia);
-      if (!Number.isFinite(n) || n < 2 || n > 6) throw new Error("COMIDAS_INVALIDO");
-      patchPrefs.comidasPorDia = n;
-    }
-
-    if (data?.distribucion !== undefined) {
-      const d = String(data.distribucion || "").trim();
-      const allowed = ["equilibrada", "desayuno_fuerte", "cena_fuerte", "custom"];
-      if (!allowed.includes(d)) throw new Error("DISTRIBUCION_INVALIDA");
-      patchPrefs.distribucion = d;
-    }
-
-    if (data?.weekendBoost !== undefined) {
-      patchPrefs.weekendBoost = !!data.weekendBoost;
-    }
-
-    if (data?.weekendBoostPct !== undefined) {
-      const p = Number(data.weekendBoostPct);
-      if (!Number.isFinite(p) || p < 0 || p > 30) throw new Error("WEEKEND_PCT_INVALIDO");
-      patchPrefs.weekendBoostPct = p;
-      if (p > 0) patchPrefs.weekendBoost = true;
-    }
-
-    if (data?.restricciones !== undefined) {
-      const arr = Array.isArray(data.restricciones) ? data.restricciones : [];
-      const clean = arr
-        .map((x) => String(x || "").trim().toLowerCase())
-        .filter(Boolean);
-      const allowedR = ["vegano", "vegetariano", "sin_tacc", "sin_lactosa", "keto", "halal"];
-      patchPrefs.restricciones = clean.filter((x) => allowedR.includes(x));
-    }
-
-    if (data?.snackLibre !== undefined) {
-      patchPrefs.snackLibre = !!data.snackLibre;
-      if (!patchPrefs.snackLibre) patchPrefs.snackLibreKcal = 0;
-    }
-
-    if (data?.snackLibreKcal !== undefined) {
-      const k = Number(data.snackLibreKcal);
-      if (!Number.isFinite(k) || k < 0 || k > 600) throw new Error("SNACK_KCAL_INVALIDA");
-      patchPrefs.snackLibreKcal = k;
-      if (k > 0) patchPrefs.snackLibre = true;
-    }
-
-    patchPrefs.skip = false;
-  }
-
-  patch.preferenciasPlan = patchPrefs;
-
-// =========================================================
-// ✅ FINAL DEL WIZARD
-// - v2 parcial (__final:false) => step 3, done false
-// - v2 final   (__final:true)  => step 3, done true
-// - flow viejo => mantiene comportamiento anterior
-// =========================================================
-const isFinalV2 = isWizardV2 && data?.__final === true;
-
-patch.onboarding = {
-  ...onboarding,
-  step: 3,
-  done: isWizardV2 ? isFinalV2 : true,
-  startedAt: onboarding.startedAt || now,
-  completedAt: isWizardV2
-    ? (isFinalV2 ? now : null)
-    : now,
-};
-
-
-  patch.profile = {
-    ...profile,
-    basics,
-  };
-}
-
-
   const updated = await this.updateById(userId, patch);
-
-  return {
-    _id: updated._id,
-    id: updated._id,
-
-    email: updated.email,
-    role: updated.role,
-    plan: updated.plan || "free",
-    tipo: updated.tipo || "entrenado",
-    estado: updated.estado || "activo",
-
-    profile: updated.profile || {},
-    settings: updated.settings || {},
-
-    onboarding: updated.onboarding || {},
-    preferenciasPlan: updated.preferenciasPlan || {},
-
-    goal: updated.goal || {},
-
-    coach: updated.coach || {},
-
-    billing: updated.billing || {},
-    subscription: updated.subscription || {},
-
-    antropometriaActual: updated.antropometriaActual || {},
-    objetivoActual: updated.objetivoActual || {},
-    metasActuales: updated.metasActuales || {},
-
-    ComidasUltimaSemana: updated.ComidasUltimaSemana || { from: null, to: null, dias: {}, updatedAt: null },
-    ComidasFavoritas: updated.ComidasFavoritas || { ids: [], updatedAt: null },
-
-    stats: updated.stats || {},
-  };
+  return this._normalizeUser(updated);
 };
+
+
   // =========================
   // ✅ ADMIN: LIST USERS
   // =========================
@@ -1045,7 +981,7 @@ patch.onboarding = {
     arr = arr.slice(skip, skip + limit);
 
     return {
-      users: arr.map((u) => this._sanitizeUser(this._normalizeUser(u))),
+      users: arr.map((u) => this._sanitizeUser(u)),
       total,
     };
   };
@@ -1063,8 +999,9 @@ patch.onboarding = {
 
     if (patch.email !== undefined) {
       const email = String(patch.email).trim().toLowerCase();
-      if (!email) delete patch.email;
-      else {
+      if (!email) {
+        delete patch.email;
+      } else {
         const other = await this._findUserByEmail(email);
         const otherId = other ? (other._id?.toString?.() || other.id) : null;
         if (other && String(otherId) !== String(id)) throw new Error("EMAIL_DUPLICADO");
@@ -1090,11 +1027,13 @@ patch.onboarding = {
     if (patch._id) delete patch._id;
 
     const updated = await this._updateById(id, patch);
-    return this._sanitizeUser(this._normalizeUser(updated));
+    return this._sanitizeUser(updated);
   };
 
   adminDeleteUser = async (id) => {
-    if (typeof this.model.borrarUsuario !== "function") throw new Error("El modelo no implementa borrarUsuario");
+    if (typeof this.model.borrarUsuario !== "function") {
+      throw new Error("El modelo no implementa borrarUsuario");
+    }
     return await this.model.borrarUsuario(id);
   };
 }

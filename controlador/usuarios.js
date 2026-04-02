@@ -1,4 +1,3 @@
-// src/controlador/usuarios.js
 import Servicio from "../servicio/usuarios.js";
 import cloudinary from "cloudinary";
 
@@ -49,7 +48,6 @@ function appendQuery(url, params = {}) {
     });
     return u.toString();
   } catch {
-    // fallback simple si url no es absoluta
     const sep = url.includes("?") ? "&" : "?";
     const qs = Object.entries(params)
       .filter(([, v]) => v !== undefined && v !== null && String(v) !== "")
@@ -58,6 +56,160 @@ function appendQuery(url, params = {}) {
     return url + sep + qs;
   }
 }
+
+function mapUserPublic(user) {
+  return {
+    _id: user._id,
+    id: user._id,
+
+    email: user.email,
+    googleId: user.googleId || null,
+    emailVerificado: !!user.emailVerificado,
+
+    role: user.role || "cliente",
+    plan: user.plan || "free",
+    tipo: user.tipo || "entrenado",
+    estado: user.estado || "activo",
+
+    profile: user.profile || {},
+    settings: user.settings || {},
+    metas: user.metas || {},
+
+    onboarding: user.onboarding || {},
+    coach: user.coach || {},
+    billing: user.billing || {},
+
+    antropometriaActual: user.antropometriaActual || {},
+    metasActuales: user.metasActuales || {},
+    stats: user.stats || {},
+
+    account: {
+      role: user.role || "cliente",
+      type: user.tipo || "entrenado",
+      status: user.estado || "activo",
+      plan: user.plan || "free",
+      emailVerified: !!user.emailVerificado,
+    },
+
+    body: {
+      heightCm: user?.antropometriaActual?.alturaCm ?? null,
+      weightKg: user?.antropometriaActual?.pesoKg ?? null,
+      bodyFatPct: user?.antropometriaActual?.grasaPct ?? null,
+      updatedAt: user?.antropometriaActual?.updatedAt ?? null,
+
+      gender: user?.profile?.basics?.genero ?? null,
+      birthDate: user?.profile?.basics?.fechaNacimiento ?? null,
+      weightTrend: user?.profile?.basics?.tendenciaPeso ?? null,
+      exerciseFrequency: user?.profile?.basics?.frecuenciaEjercicio ?? null,
+      dailyActivity: user?.profile?.basics?.actividadDiaria ?? null,
+      trainingExperience: user?.profile?.basics?.experienciaPesas ?? null,
+      tdeeEstimated: user?.profile?.basics?.tdeeEstimado ?? null,
+      tdeeCustom: user?.profile?.basics?.tdeeCustom ?? null,
+      bodyFatLevel: user?.profile?.basics?.grasaNivel ?? null,
+    },
+
+    goal: {
+      type: user?.goal?.type ?? null,
+      maintenanceKcal: user?.goal?.maintenanceKcal ?? null,
+      startWeightKg: user?.goal?.startWeightKg ?? null,
+      targetWeightKg: user?.goal?.targetWeightKg ?? null,
+      targetRangeKg: user?.goal?.targetRangeKg || { min: null, max: null },
+      ratePctBWPerWeek: user?.goal?.ratePctBWPerWeek ?? null,
+      initialBudgetKcal: user?.goal?.initialBudgetKcal ?? null,
+      endDateLabel: user?.goal?.endDateLabel ?? null,
+      approach: user?.goal?.approach ?? null,
+      updatedAt: user?.goal?.updatedAt ?? null,
+    },
+
+    program: {
+      diet: user?.program?.diet ?? null,
+      training: user?.program?.training ?? null,
+      calorieDist: user?.program?.calorieDist ?? null,
+      shiftDays: user?.program?.shiftDays ?? [],
+      protein: user?.program?.protein ?? null,
+      final: !!user?.program?.final,
+      updatedAt: user?.program?.updatedAt ?? null,
+    },
+
+    menu: {
+      mode: user?.menu?.mode || {
+        type: "automatic",
+        lockedByCoach: false,
+      },
+
+      mealConfig: user?.menu?.mealConfig || {
+        mealsPerDay: null,
+        distribution: "equilibrada",
+        weekendBoost: false,
+        weekendBoostPct: 0,
+        snackLibre: false,
+        snackLibreKcal: 0,
+      },
+
+      restrictions: user?.menu?.restrictions || {
+        allergies: [],
+        intolerances: [],
+        excludedFoods: [],
+        preferredFoods: [],
+        favoriteFoods: [],
+        favoriteMeals: [],
+      },
+
+      weeklyPlan: user?.menu?.weeklyPlan || {
+        caloriesByDay: {},
+        macrosByDay: {},
+        mealsByDay: {},
+      },
+
+      history: user?.menu?.history || {
+        lastWeek: {
+          from: null,
+          to: null,
+          dias: {},
+          updatedAt: null,
+        },
+      },
+
+      favorites: user?.menu?.favorites || {
+        ids: [],
+        updatedAt: null,
+      },
+
+      updatedAt: user?.menu?.updatedAt ?? null,
+    },
+
+    routine: user?.routine || {
+      mode: {
+        type: "manual",
+        editableByClient: true,
+        editableByCoach: true,
+        source: "system",
+      },
+      structure: {
+        split: null,
+        trainingDaysPerWeek: null,
+        preferredDays: [],
+        sessionDurationMin: null,
+        focus: [],
+      },
+      currentPlan: {
+        name: null,
+        description: null,
+        startDate: null,
+        endDate: null,
+        isActive: false,
+        days: [],
+      },
+      progression: {
+        mode: "manual",
+        deloadEnabled: false,
+        progressionRule: null,
+      },
+      updatedAt: null,
+    },
+  };
+}
+
 
 class ControladorUsuarios {
   constructor(persistencia) {
@@ -78,28 +230,14 @@ class ControladorUsuarios {
 
       const { user, token } = result;
 
-      // ✅ cookie (para navegador)
       res.cookie("access_token", token, {
         ...getCookieOptions(),
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
-      // ✅ respuesta (para fallback por Authorization si hiciera falta)
       return res.json({
         token,
-        user: {
-          id: user._id,
-          _id: user._id,
-          email: user.email,
-          role: user.role,
-          plan: user.plan || "free",
-          tipo: user.tipo || "entrenado",
-          estado: user.estado || "activo",
-          profile: user.profile || {},
-          settings: user.settings || {},
-          onboarding: user.onboarding || {},
-          preferenciasPlan: user.preferenciasPlan || {},
-        },
+        user: mapUserPublic(user),
       });
     } catch (error) {
       const msg = String(error?.message || "");
@@ -122,7 +260,6 @@ class ControladorUsuarios {
 
   logout = async (req, res) => {
     try {
-      // Nota: clearCookie necesita las mismas options que al setear cookie
       res.clearCookie("access_token", getCookieOptions());
       res.cookie("access_token", "", { ...getCookieOptions(), maxAge: 0 });
       return res.status(200).json({ message: "Logout exitoso" });
@@ -143,27 +280,7 @@ class ControladorUsuarios {
       if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
 
       return res.json({
-        user: {
-          id: user._id,
-          _id: user._id,
-          email: user.email,
-          role: user.role,
-          plan: user.plan || "free",
-          tipo: user.tipo || "entrenado",
-          estado: user.estado || "activo",
-
-          profile: user.profile || {},
-          settings: user.settings || {},
-
-          onboarding: user.onboarding || {},
-
-          // ✅ NUEVO
-          preferenciasPlan: user.preferenciasPlan || {},
-
-          antropometriaActual: user.antropometriaActual || {},
-          objetivoActual: user.objetivoActual || {},
-          metasActuales: user.metasActuales || {},
-        },
+        user: mapUserPublic(user),
       });
     } catch (error) {
       console.error("Error me:", error);
@@ -186,13 +303,11 @@ class ControladorUsuarios {
         profile: { nombre, apellido, fechaNacimiento },
       });
 
-      // ✅ respondemos YA
       res.status(200).json({
         pending: true,
         message: "Te enviamos un código al email. Ingresalo para activar tu cuenta.",
       });
 
-      // ✅ mail async (sin colgar el endpoint)
       const code = result?.code;
       if (code) {
         this.servicio
@@ -204,9 +319,13 @@ class ControladorUsuarios {
       const msg = String(error?.message || "");
       console.error("Error register cliente:", error);
 
-      if (isDuplicateEmailError(error)) return res.status(409).json({ error: "Ese email ya está registrado" });
-      if (msg === "EMAIL_PENDIENTE")
+      if (isDuplicateEmailError(error)) {
+        return res.status(409).json({ error: "Ese email ya está registrado" });
+      }
+
+      if (msg === "EMAIL_PENDIENTE") {
         return res.status(409).json({ error: "Ya hay una verificación pendiente. Reenviá el código." });
+      }
 
       return res.status(500).json({ error: "Error en el servidor" });
     }
@@ -218,25 +337,36 @@ class ControladorUsuarios {
       email = normalizeEmail(email);
       code = String(code || "").trim();
 
-      if (!email || !code) return res.status(400).json({ error: "Email y código son requeridos" });
+      if (!email || !code) {
+        return res.status(400).json({ error: "Email y código son requeridos" });
+      }
 
       await this.servicio.verifyEmail(email, code);
       return res.json({ ok: true, message: "Email verificado ✅ Ya podés iniciar sesión" });
     } catch (error) {
       const msg = String(error?.message || "");
 
-      if (msg === "SIN_PENDIENTE") return res.status(404).json({ error: "No hay verificación pendiente para ese email" });
-      if (msg === "CODIGO_EXPIRADO") return res.status(400).json({ error: "El código expiró. Pedí uno nuevo." });
-      if (msg === "CODIGO_INVALIDO") return res.status(400).json({ error: "Dígitos incorrectos, volvé a intentar" });
-      if (msg === "DEMASIADOS_INTENTOS") return res.status(429).json({ error: "Máximo de intentos alcanzado. Reenviá el código." });
-      if (msg === "EMAIL_DUPLICADO") return res.status(409).json({ error: "Ese email ya está registrado" });
+      if (msg === "SIN_PENDIENTE") {
+        return res.status(404).json({ error: "No hay verificación pendiente para ese email" });
+      }
+      if (msg === "CODIGO_EXPIRADO") {
+        return res.status(400).json({ error: "El código expiró. Pedí uno nuevo." });
+      }
+      if (msg === "CODIGO_INVALIDO") {
+        return res.status(400).json({ error: "Dígitos incorrectos, volvé a intentar" });
+      }
+      if (msg === "DEMASIADOS_INTENTOS") {
+        return res.status(429).json({ error: "Máximo de intentos alcanzado. Reenviá el código." });
+      }
+      if (msg === "EMAIL_DUPLICADO") {
+        return res.status(409).json({ error: "Ese email ya está registrado" });
+      }
 
       console.error("Error verifyEmail:", error);
       return res.status(500).json({ error: "Error en el servidor" });
     }
   };
 
-  // dentro de ControladorUsuarios
   actualizarOnboardingCliente = async (req, res) => {
     try {
       const userId = req.user?.id || req.user?._id;
@@ -249,10 +379,9 @@ class ControladorUsuarios {
         return res.status(400).json({ error: "Step inválido (debe ser 1, 2 o 3)" });
       }
 
-      // ✅ acá delegamos al servicio
       const user = await this.servicio.actualizarOnboardingCliente(userId, s, data);
 
-      return res.json({ ok: true, user });
+      return res.json({ ok: true, user: mapUserPublic(user) });
     } catch (e) {
       console.error("actualizarOnboardingCliente error:", e);
       return res.status(500).json({ error: e?.message || "Error interno" });
@@ -266,13 +395,10 @@ class ControladorUsuarios {
 
       if (!email) return res.status(400).json({ error: "Email requerido" });
 
-      // ✅ 1) el servicio debería generar/guardar un nuevo código y DEVOLVERLO
       const code = await this.servicio.resendVerifyCode(email);
 
-      // ✅ 2) respondemos YA (evita “Reenviando…” infinito)
       res.json({ ok: true, message: "Código reenviado ✅" });
 
-      // ✅ 3) enviamos el mail sin bloquear (si falla, log)
       this.servicio
         .sendVerifyEmail(email, code)
         .then(() => console.log("[MAIL] resend ok ->", email))
@@ -280,8 +406,12 @@ class ControladorUsuarios {
     } catch (error) {
       const msg = String(error?.message || "");
 
-      if (msg === "ESPERA_1_MIN") return res.status(429).json({ error: "Esperá 1 minuto antes de reenviar" });
-      if (msg === "SIN_PENDIENTE") return res.status(404).json({ error: "No hay verificación pendiente para ese email" });
+      if (msg === "ESPERA_1_MIN") {
+        return res.status(429).json({ error: "Esperá 1 minuto antes de reenviar" });
+      }
+      if (msg === "SIN_PENDIENTE") {
+        return res.status(404).json({ error: "No hay verificación pendiente para ese email" });
+      }
 
       console.error("Error resendVerifyCode:", error);
       return res.status(500).json({ error: "Error en el servidor" });
@@ -299,10 +429,11 @@ class ControladorUsuarios {
       return res.json({ ok: true, message: "Si el email existe, te enviamos un código ✅" });
     } catch (error) {
       const msg = String(error?.message || "");
-      if (msg === "ESPERA_1_MIN") return res.status(429).json({ error: "Esperá 1 minuto antes de pedir otro código" });
+      if (msg === "ESPERA_1_MIN") {
+        return res.status(429).json({ error: "Esperá 1 minuto antes de pedir otro código" });
+      }
 
       console.error("Error forgotPassword:", error);
-      // por seguridad no revelar si existe o no
       return res.json({ ok: true, message: "Si el email existe, te enviamos un código ✅" });
     }
   };
@@ -317,6 +448,7 @@ class ControladorUsuarios {
       if (!email || !code || !newPassword) {
         return res.status(400).json({ error: "Email, código y nueva contraseña son requeridos" });
       }
+
       if (newPassword.length < 6) {
         return res.status(400).json({ error: "La contraseña debe tener 6+ caracteres" });
       }
@@ -326,9 +458,15 @@ class ControladorUsuarios {
     } catch (error) {
       const msg = String(error?.message || "");
 
-      if (msg === "CODIGO_EXPIRADO") return res.status(400).json({ error: "El código expiró. Pedí uno nuevo." });
-      if (msg === "CODIGO_INVALIDO") return res.status(400).json({ error: "Código inválido. Verificá e intentá de nuevo." });
-      if (msg === "DEMASIADOS_INTENTOS") return res.status(429).json({ error: "Máximo de intentos alcanzado. Pedí un nuevo código." });
+      if (msg === "CODIGO_EXPIRADO") {
+        return res.status(400).json({ error: "El código expiró. Pedí uno nuevo." });
+      }
+      if (msg === "CODIGO_INVALIDO") {
+        return res.status(400).json({ error: "Código inválido. Verificá e intentá de nuevo." });
+      }
+      if (msg === "DEMASIADOS_INTENTOS") {
+        return res.status(429).json({ error: "Máximo de intentos alcanzado. Pedí un nuevo código." });
+      }
 
       console.error("Error resetPassword:", error);
       return res.status(500).json({ error: "Error en el servidor" });
@@ -339,7 +477,6 @@ class ControladorUsuarios {
   // ✅ ADMIN: CRUD USERS
   // =========================
 
-  // GET /api/usuarios/admin/users?search=&role=&estado=&tipo=
   adminListUsers = async (req, res) => {
     try {
       const { search = "", role = "todos", estado = "todos", tipo = "todos" } = req.query || {};
@@ -353,14 +490,13 @@ class ControladorUsuarios {
         skip: Number(req.query?.skip || 0),
       });
 
-      return res.json(data); // ✅ { users: [...], total: N }
+      return res.json(data);
     } catch (error) {
       console.error("Error adminListUsers:", error);
       return res.status(500).json({ error: "Error en el servidor" });
     }
   };
 
-  // POST /api/usuarios/admin/users
   adminCreateUser = async (req, res) => {
     try {
       const {
@@ -368,7 +504,7 @@ class ControladorUsuarios {
         password,
         role = "cliente",
         estado = "activo",
-        tipo = "entrenado", // opcional (si lo querés)
+        tipo = "entrenado",
         profile = {},
         fechaNacimiento,
         nombre,
@@ -393,7 +529,7 @@ class ControladorUsuarios {
         },
       });
 
-      return res.status(201).json({ user });
+      return res.status(201).json({ user: mapUserPublic(user) });
     } catch (error) {
       console.error("Error adminCreateUser:", error);
 
@@ -408,7 +544,6 @@ class ControladorUsuarios {
     }
   };
 
-  // GET /api/usuarios/admin/users/:id
   adminGetUserById = async (req, res) => {
     try {
       const { id } = req.params;
@@ -416,21 +551,20 @@ class ControladorUsuarios {
       const user = await this.servicio.adminGetUserById(id);
       if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
 
-      return res.json({ user });
+      return res.json({ user: mapUserPublic(user) });
     } catch (error) {
       console.error("Error adminGetUserById:", error);
       return res.status(500).json({ error: "Error en el servidor" });
     }
   };
 
-  // PATCH /api/usuarios/admin/users/:id
   adminUpdateUser = async (req, res) => {
     try {
       const { id } = req.params;
       const updates = req.body || {};
 
       const user = await this.servicio.adminUpdateUser(id, updates);
-      return res.json({ user });
+      return res.json({ user: mapUserPublic(user) });
     } catch (error) {
       console.error("Error adminUpdateUser:", error);
 
@@ -443,7 +577,6 @@ class ControladorUsuarios {
     }
   };
 
-  // DELETE /api/usuarios/admin/users/:id
   adminDeleteUser = async (req, res) => {
     try {
       const { id } = req.params;
@@ -458,7 +591,6 @@ class ControladorUsuarios {
     }
   };
 
-  // ✅ GOOGLE CALLBACK (con state -> returnTo) + fallback token por query para Safari/ITP
   googleCallback = async (req, res) => {
     const frontendBase =
       process.env.FRONTEND_URL ||
@@ -466,7 +598,6 @@ class ControladorUsuarios {
       "http://localhost:5173";
 
     const parsed = decodeState(req.query?.state);
-    // ✅ preferimos volver a /auth para que corra el effect de /me y redirija por rol
     const returnTo = parsed?.returnTo || `${frontendBase}/auth`;
 
     try {
@@ -476,7 +607,7 @@ class ControladorUsuarios {
       console.log("✅ [GOOGLE] returnTo efectivo =", returnTo);
       console.log("✅ [GOOGLE] req.user =", req.user);
 
-      const payload = req.user; // viene de passport
+      const payload = req.user;
       if (!payload?.email || !payload?.googleId) {
         console.log("❌ [GOOGLE] payload inválido, faltan email/googleId");
         return res.redirect(`${frontendBase}/auth?google=fail`);
@@ -502,14 +633,12 @@ class ControladorUsuarios {
         return res.redirect(`${frontendBase}/auth?google=error`);
       }
 
-      // ✅ 1) intentamos cookie igual (Chrome/Edge lo guardan)
       const cookieOptions = { ...getCookieOptions(), maxAge: 7 * 24 * 60 * 60 * 1000 };
       res.cookie("access_token", token, cookieOptions);
 
       console.log("✅ [GOOGLE] cookie seteada -> options:", cookieOptions);
       console.log("✅ [GOOGLE] set-cookie header =", res.getHeader("set-cookie"));
 
-      // ✅ 2) PERO además mandamos token por query para Safari/ITP
       const redirectUrl = appendQuery(returnTo, { token, oauth: 1 });
 
       console.log("✅ [GOOGLE] redirect final a:", redirectUrl);
@@ -526,75 +655,28 @@ class ControladorUsuarios {
     }
   };
 
-obtenerPerfil = async (req, res) => {
-  try {
-    const { id } = req.user;
+  obtenerPerfil = async (req, res) => {
+    try {
+      const { id } = req.user;
 
-    const user = await this.servicio.getById(id);
-    if (!user) {
-      return res.status(404).json({ error: "Usuario no encontrado" });
+      const user = await this.servicio.getById(id);
+      if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+
+      return res.json(mapUserPublic(user));
+    } catch (error) {
+      console.error("Error obtenerPerfil:", error);
+      return res.status(500).json({ error: "Error al obtener perfil" });
     }
-
-    return res.json({
-      _id: user._id,
-      id: user._id,
-      email: user.email,
-      role: user.role,
-      plan: user.plan || "free",
-      tipo: user.tipo || "entrenado",
-      estado: user.estado || "activo",
-
-      profile: user.profile || {},
-      settings: user.settings || {},
-      metas: user.metas || {},
-
-      onboarding: user.onboarding || {},
-      antropometriaActual: user.antropometriaActual || {},
-      goalV2: user.goalV2 || {},
-      programV2: user.programV2 || {},
-
-      preferenciasPlan: user.preferenciasPlan || {},
-      objetivoActual: user.objetivoActual || {},
-      metasActuales: user.metasActuales || {},
-      coach: user.coach || {},
-      billing: user.billing || {},
-      subscription: user.subscription || {},
-    });
-  } catch (error) {
-    console.error("Error obtenerPerfil:", error);
-    return res.status(500).json({ error: "Error al obtener perfil" });
-  }
-};
+  };
 
   actualizarPerfil = async (req, res) => {
     try {
       const { id } = req.user;
-      const { profile, settings, metas } = req.body || {};
-
-      const updates = {};
-      if (profile) updates.profile = profile;
-      if (settings) updates.settings = settings;
-      if (metas) updates.metas = metas;
-
-      if (Object.keys(updates).length === 0) return res.status(400).json({ error: "No hay campos para actualizar" });
-
-      const user = await this.servicio.updateById(id, updates);
+      const updated = await this.servicio.actualizarPerfil(id, req.body);
 
       return res.json({
-        user: {
-          id: user._id,
-          _id: user._id,
-          email: user.email,
-          role: user.role,
-          plan: user.plan || "free",
-          tipo: user.tipo || "entrenado",
-          estado: user.estado || "activo",
-          profile: user.profile || {},
-          settings: user.settings || {},
-          onboarding: user.onboarding || {},
-          preferenciasPlan: user.preferenciasPlan || {}, // ✅ NUEVO
-          metas: user.metas || {},
-        },
+        ok: true,
+        user: mapUserPublic(updated),
       });
     } catch (error) {
       console.error("Error actualizarPerfil:", error);
@@ -606,7 +688,9 @@ obtenerPerfil = async (req, res) => {
     try {
       const { id } = req.user;
 
-      if (!req.file) return res.status(400).json({ error: "No se recibió imagen (campo 'avatar')" });
+      if (!req.file) {
+        return res.status(400).json({ error: "No se recibió imagen (campo 'avatar')" });
+      }
 
       if (!cloudinary?.v2?.uploader) {
         return res.status(500).json({ error: "Cloudinary no está configurado" });
@@ -631,7 +715,7 @@ obtenerPerfil = async (req, res) => {
       return res.json({
         message: "Avatar actualizado",
         avatarUrl,
-        user: { id: user._id, email: user.email, role: user.role },
+        user: mapUserPublic(user),
       });
     } catch (error) {
       console.error("Error subirAvatar:", error);
