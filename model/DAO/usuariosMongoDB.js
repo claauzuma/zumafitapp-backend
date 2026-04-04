@@ -93,8 +93,8 @@ class ModelMongoDBUsuarios {
     const r = await col.deleteOne({ _id });
     return { deletedCount: r.deletedCount };
   };
-
-  getUpdatedAtById = async (id) => {
+  
+async getUpdatedAtById(id) {
   try {
     if (!id) return null;
 
@@ -113,7 +113,8 @@ class ModelMongoDBUsuarios {
   } catch {
     return null;
   }
-};
+}
+
 
 
   // ✅ ADMIN: listado con filtros + búsqueda + paginación
@@ -151,6 +152,27 @@ class ModelMongoDBUsuarios {
       .limit(lim)
       .toArray();
   };
+
+
+async touchLastActivityById(id, date = new Date()) {
+  const col = this._col();
+
+  let _id;
+  try {
+    _id = new ObjectId(id);
+  } catch {
+    throw new Error("ID_INVALIDO");
+  }
+
+  await col.updateOne(
+    { _id },
+    { $set: { lastActivityAt: date } }
+  );
+
+  return await col.findOne({ _id });
+}
+
+
 
   // ✅ Índices
   async ensureIndexes() {
