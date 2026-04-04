@@ -250,7 +250,7 @@ class ServicioUsuarios {
   }
 
   // ✅ shape compatible para devolver usuario desde servicio
-_buildCompatUser(user) {
+  _buildCompatUser(user) {
   const u = this._normalizeUser(user);
   if (!u) return null;
 
@@ -287,12 +287,10 @@ _buildCompatUser(user) {
     stats: u.stats || {},
 
     lastLoginAt: u.lastLoginAt || null,
-    lastActivityAt: u.lastActivityAt || null,
     createdAt: u.createdAt || null,
     updatedAt: u.updatedAt || null,
   };
 }
-
 
 
   // -------------------------
