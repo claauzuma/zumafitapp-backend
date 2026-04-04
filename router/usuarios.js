@@ -115,6 +115,11 @@ class RouterUsuarios {
     // USERS (self)
     // =========================
     const users = express.Router();
+        users.get(
+  "/me/updatedAt",
+  authMiddleware,
+  this.controladorUsuarios.getUpdatedAt
+);
 
     users.get("/me", authMiddleware, this.controladorUsuarios.obtenerPerfil);
     users.patch("/me", authMiddleware, this.controladorUsuarios.actualizarPerfil);
@@ -124,6 +129,9 @@ class RouterUsuarios {
       upload.single("avatar"),
       this.controladorUsuarios.subirAvatar
     );
+
+
+
 
     this.router.use("/users", users);
 

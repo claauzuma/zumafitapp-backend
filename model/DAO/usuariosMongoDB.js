@@ -94,6 +94,28 @@ class ModelMongoDBUsuarios {
     return { deletedCount: r.deletedCount };
   };
 
+  getUpdatedAtById = async (id) => {
+  try {
+    if (!id) return null;
+
+    const _id = new ObjectId(id);
+
+    const user = await this._col().findOne(
+      { _id },
+      { projection: { updatedAt: 1 } }
+    );
+
+    if (!user) return null;
+
+    return {
+      updatedAt: user.updatedAt || null,
+    };
+  } catch {
+    return null;
+  }
+};
+
+
   // ✅ ADMIN: listado con filtros + búsqueda + paginación
   adminListUsers = async ({
     search = "",

@@ -210,7 +210,6 @@ function mapUserPublic(user) {
   };
 }
 
-
 class ControladorUsuarios {
   constructor(persistencia) {
     this.servicio = new Servicio(persistencia);
@@ -276,6 +275,10 @@ class ControladorUsuarios {
       res.set("Expires", "0");
 
       const { id } = req.user;
+
+      // ✅ actividad real del usuario
+      await this.servicio.touchLastActivity(id);
+
       const user = await this.servicio.getById(id);
       if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
 
@@ -473,6 +476,23 @@ class ControladorUsuarios {
     }
   };
 
+  getUpdatedAt = async (req, res) => {
+    try {
+      const userId = req.user.id;
+
+      const result = await this.servicio.getUpdatedAt(userId);
+
+      if (!result) {
+        return res.status(404).json({ error: "NOT_FOUND" });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("getUpdatedAt error:", error);
+      res.status(500).json({ error: "ERROR" });
+    }
+  };
+
   // =========================
   // ✅ ADMIN: CRUD USERS
   // =========================
@@ -658,6 +678,9 @@ class ControladorUsuarios {
   obtenerPerfil = async (req, res) => {
     try {
       const { id } = req.user;
+
+      // ✅ actividad real del usuario
+      await this.servicio.touchLastActivity(id);
 
       const user = await this.servicio.getById(id);
       if (!user) return res.status(404).json({ error: "Usuario no encontrado" });

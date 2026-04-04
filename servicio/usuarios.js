@@ -155,18 +155,20 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
       updatedAt: null,
     },
 
-    stats: {
-      lastCheckinAt: null,
-      pesoInicialKg: null,
-      pesoActualKg: null,
-      changeKg30d: null,
-      adherencia7dPct: null,
-      comidasRegistradas7d: 0,
-    },
+stats: {
+  lastCheckinAt: null,
+  pesoInicialKg: null,
+  pesoActualKg: null,
+  changeKg30d: null,
+  adherencia7dPct: null,
+  comidasRegistradas7d: 0,
+},
 
-    lastLoginAt: null,
-    createdAt: now,
-    updatedAt: null,
+lastLoginAt: null,
+lastActivityAt: null,
+createdAt: now,
+updatedAt: null,
+
   };
 }
 
@@ -248,7 +250,7 @@ class ServicioUsuarios {
   }
 
   // ✅ shape compatible para devolver usuario desde servicio
-  _buildCompatUser(user) {
+_buildCompatUser(user) {
   const u = this._normalizeUser(user);
   if (!u) return null;
 
@@ -285,10 +287,12 @@ class ServicioUsuarios {
     stats: u.stats || {},
 
     lastLoginAt: u.lastLoginAt || null,
+    lastActivityAt: u.lastActivityAt || null,
     createdAt: u.createdAt || null,
     updatedAt: u.updatedAt || null,
   };
 }
+
 
 
   // -------------------------
@@ -536,6 +540,30 @@ class ServicioUsuarios {
     return { ok: true };
   };
 
+
+  touchLastActivity = async (userId) => {
+  if (!userId) return null;
+
+  const user = await this.model.obtenerPorId(userId);
+  if (!user) return null;
+
+  const now = new Date();
+
+  const last = user.lastActivityAt
+    ? new Date(user.lastActivityAt).getTime()
+    : 0;
+
+  const diffMs = now.getTime() - last;
+
+  // no escribir si pasaron menos de 5 minutos
+  if (diffMs < 5 * 60 * 1000) {
+    return user;
+  }
+
+  return await this.model.touchLastActivityById(userId, now);
+};
+
+  
   // -------------------------
   // ✅ GOOGLE LOGIN / REGISTER
   // -------------------------
@@ -935,6 +963,11 @@ class ServicioUsuarios {
   const updated = await this.updateById(userId, patch);
   return this._normalizeUser(updated);
 };
+
+getUpdatedAt = async (userId) => {
+  return await this.model.getUpdatedAtById(userId);
+};
+
 
 
   // =========================
