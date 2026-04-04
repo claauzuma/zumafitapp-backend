@@ -611,6 +611,59 @@ class ControladorUsuarios {
     }
   };
 
+  adminCreateInvitation = async (req, res) => {
+  try {
+    const data = req.body || {};
+
+    const invitation = await this.servicio.adminCreateInvitation({
+      ...data,
+      invitedBy: req.user?._id || null,
+    });
+
+    return res.status(201).json({
+      invitation: mapInvitationPublic(invitation),
+    });
+  } catch (error) {
+    console.error("Error adminCreateInvitation:", error);
+
+    const msg = String(error?.message || "");
+
+    if (msg === "NOMBRE_REQUERIDO") {
+      return res.status(400).json({ error: "Ingresá el nombre" });
+    }
+
+    if (msg === "APELLIDO_REQUERIDO") {
+      return res.status(400).json({ error: "Ingresá el apellido" });
+    }
+
+    if (msg === "EMAIL_REQUERIDO") {
+      return res.status(400).json({ error: "Ingresá el email" });
+    }
+
+    if (msg === "EMAIL_INVALIDO") {
+      return res.status(400).json({ error: "Ingresá un email válido" });
+    }
+
+    if (msg === "ROL_INVALIDO") {
+      return res.status(400).json({ error: "Rol inválido" });
+    }
+
+    if (msg === "PLAN_INVALIDO") {
+      return res.status(400).json({ error: "Plan inválido" });
+    }
+
+    if (msg === "USUARIO_YA_EXISTE") {
+      return res.status(409).json({ error: "Ya existe un usuario con ese email" });
+    }
+
+    if (msg === "INVITACION_PENDIENTE_EXISTENTE") {
+      return res.status(409).json({ error: "Ya existe una invitación pendiente para ese email" });
+    }
+
+    return res.status(500).json({ error: "Error en el servidor" });
+  }
+};
+
   googleCallback = async (req, res) => {
     const frontendBase =
       process.env.FRONTEND_URL ||

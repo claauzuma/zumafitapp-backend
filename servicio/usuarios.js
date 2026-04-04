@@ -7,6 +7,7 @@ import { sendVerifyCodeEmail, sendPasswordResetCodeEmail } from "./mailer.js";
 
 import ModelMongoDBPendingUsers from "../model/DAO/pendingUsersMongoDB.js";
 import ModelMongoDBPasswordResets from "../model/DAO/passwordResetMongoDB.js";
+import ModelMongoDBInvitedUsers from "../model/DAO/invitedUsersMongoDB.js";
 
 // =========================
 // ✅ Defaults del usuario (shape inicial)
@@ -171,24 +172,81 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
   };
 }
 
+// =========================
+// ✅ Helpers de roles / planes
+// Mantienen compatibilidad con lo viejo
+// =========================
+const STAFF_INVITE_ROLES = [
+  "admin",
+  "entrenador",
+  "nutricionista",
+  "entrenador_nutricionista",
+];
+
+function normalizeRole(role) {
+  const r = String(role || "").trim().toLowerCase();
+
+  if (r === "trainer" || r === "coach") return "entrenador";
+  if (r === "nutritionist") return "nutricionista";
+  if (
+    r === "trainer_nutritionist" ||
+    r === "trainernutri" ||
+    r === "coach_nutrition" ||
+    r === "entrenador+nutricion"
+  ) {
+    return "entrenador_nutricionista";
+  }
+
+  if (r === "client" || r === "customer") return "cliente";
+
+  return r;
+}
+
+function toDbPlan(plan) {
+  const p = String(plan || "").trim().toLowerCase();
+
+  if (p === "free") return "free";
+  if (p === "pro") return "premium";
+  if (p === "vip") return "premium2";
+
+  // compatibilidad si ya viene en formato viejo
+  if (p === "premium" || p === "premium2") return p;
+
+  return null;
+}
+
+function inferTipoFromRole(role) {
+  const r = normalizeRole(role);
+  return r === "cliente" ? "entrenado" : "entrenador";
+}
+
 class ServicioUsuarios {
   constructor(persistencia) {
     this.model = ModelFactory.get(persistencia);
 
-console.log("MODEL REAL =", this.model?.constructor?.name);
-console.log("METODOS DEL MODEL =", Object.getOwnPropertyNames(Object.getPrototypeOf(this.model)));
-console.log("touchLastActivityById =", this.model?.touchLastActivityById);
-console.log("typeof touchLastActivityById =", typeof this.model?.touchLastActivityById);
+    console.log("MODEL REAL =", this.model?.constructor?.name);
+    console.log("METODOS DEL MODEL =", Object.getOwnPropertyNames(Object.getPrototypeOf(this.model)));
+    console.log("touchLastActivityById =", this.model?.touchLastActivityById);
+    console.log("typeof touchLastActivityById =", typeof this.model?.touchLastActivityById);
 
     if (typeof this.model.ensureIndexes === "function") {
       this.model.ensureIndexes().catch(() => {});
     }
 
     this.pendingModel = new ModelMongoDBPendingUsers();
-    this.pendingModel.ensureIndexes().catch(() => {});
+    if (typeof this.pendingModel.ensureIndexes === "function") {
+      this.pendingModel.ensureIndexes().catch(() => {});
+    }
 
     this.resetModel = new ModelMongoDBPasswordResets();
-    this.resetModel.ensureIndexes().catch(() => {});
+    if (typeof this.resetModel.ensureIndexes === "function") {
+      this.resetModel.ensureIndexes().catch(() => {});
+    }
+
+    this.invitedModel = new ModelMongoDBInvitedUsers();
+    if (typeof this.invitedModel.ensureIndexes === "function") {
+      this.invitedModel.ensureIndexes().catch(() => {});
+    }
   }
 
   // -------------------------
@@ -211,6 +269,16 @@ console.log("typeof touchLastActivityById =", typeof this.model?.touchLastActivi
 
     throw new Error("El modelo no implementa obtenerPorEmail ni obtenerUsuarios");
   }
+
+  async _findInviteByEmail(email) {
+    if (!email) return null;
+    return await this.invitedModel.findPendingByEmail(String(email).toLowerCase().trim());
+  }
+
+ async _deleteInviteById(id) {
+  if (!id) return null;
+  return await this.invitedModel.deleteById(id);
+}
 
   _normalizeUser(u) {
     if (!u) return null;
@@ -575,6 +643,9 @@ console.log("typeof touchLastActivityById =", typeof this.model?.touchLastActivi
 
   // -------------------------
   // ✅ GOOGLE LOGIN / REGISTER
+  // Mantiene compatibilidad:
+  // - si hay invited_user pendiente, usa esa invitación
+  // - si no hay invitación, sigue creando cliente como antes
   // -------------------------
   loginOrRegisterWithGoogle = async ({ email, googleId, nombre, apellido, avatarUrl }) => {
     if (!process.env.JWT_SECRET) throw new Error("Falta JWT_SECRET en .env");
@@ -587,33 +658,70 @@ console.log("typeof touchLastActivityById =", typeof this.model?.touchLastActivi
     let userRaw = await this._findUserByEmail(email);
 
     if (!userRaw) {
-      const randomPass = crypto.randomBytes(32).toString("hex");
-      const passwordHash = await bcrypt.hash(randomPass, 10);
+      const invite = await this._findInviteByEmail(email);
 
-      const role = "cliente";
-      const plan = "free";
-      const tipo = "entrenado";
+      if (invite) {
+        const randomPass = crypto.randomBytes(32).toString("hex");
+        const passwordHash = await bcrypt.hash(randomPass, 10);
 
-      userRaw = await this._createUser({
-        email,
-        passwordHash,
-        googleId,
+        const role = normalizeRole(invite.role);
+        const plan = invite.plan || "free";
+        const tipo = inferTipoFromRole(role);
 
-        ...getUserDefaults({ role, plan, tipo }),
+        userRaw = await this._createUser({
+          email,
+          passwordHash,
+          googleId,
 
-        emailVerificado: true,
-        profile: { nombre, apellido, avatarUrl },
-        settings: {},
+          ...getUserDefaults({ role, plan, tipo }),
 
-        createdAt: new Date(),
-        updatedAt: null,
-      });
+          emailVerificado: true,
+          profile: {
+            nombre: invite?.profile?.nombre || nombre || "",
+            apellido: invite?.profile?.apellido || apellido || "",
+            avatarUrl: avatarUrl || "",
+          },
+          settings: {},
+
+          createdAt: new Date(),
+          updatedAt: null,
+        });
+
+try {
+  await this._deleteInviteById(invite._id);
+} catch (e) {
+  console.error("No se pudo eliminar la invitación:", e);
+}
+      } else {
+        // comportamiento original: si no hay invitación, crea cliente normal
+        const randomPass = crypto.randomBytes(32).toString("hex");
+        const passwordHash = await bcrypt.hash(randomPass, 10);
+
+        const role = "cliente";
+        const plan = "free";
+        const tipo = "entrenado";
+
+        userRaw = await this._createUser({
+          email,
+          passwordHash,
+          googleId,
+
+          ...getUserDefaults({ role, plan, tipo }),
+
+          emailVerificado: true,
+          profile: { nombre, apellido, avatarUrl },
+          settings: {},
+
+          createdAt: new Date(),
+          updatedAt: null,
+        });
+      }
     }
 
     const user = this._normalizeUser(userRaw);
 
     try {
-      const patch = {};
+      const patch = { lastLoginAt: new Date() };
       if (!user.googleId && googleId) patch.googleId = googleId;
       if (avatarUrl) patch["profile.avatarUrl"] = avatarUrl;
       if (Object.keys(patch).length) await this._updateById(user._id, patch);
@@ -656,6 +764,64 @@ console.log("typeof touchLastActivityById =", typeof this.model?.touchLastActivi
     return user;
   }
 
+  // =========================
+  // ✅ ADMIN: CREATE INVITATION
+  // Este es el método que llama el controlador
+  // =========================
+  adminCreateInvitation = async ({
+    email,
+    role,
+    plan,
+    profile = {},
+    invitedBy = null,
+  }) => {
+    email = String(email || "").trim().toLowerCase();
+    role = normalizeRole(role);
+
+    const nombre = String(profile?.nombre || "").trim();
+    const apellido = String(profile?.apellido || "").trim();
+
+    if (!nombre) throw new Error("NOMBRE_REQUERIDO");
+    if (!apellido) throw new Error("APELLIDO_REQUERIDO");
+    if (!email) throw new Error("EMAIL_REQUERIDO");
+
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!emailOk) throw new Error("EMAIL_INVALIDO");
+
+    if (!STAFF_INVITE_ROLES.includes(role)) throw new Error("ROL_INVALIDO");
+
+    const dbPlan = role === "admin" ? null : toDbPlan(plan);
+    if (role !== "admin" && !dbPlan) throw new Error("PLAN_INVALIDO");
+
+    const existingUser = await this._findUserByEmail(email);
+    if (existingUser) throw new Error("USUARIO_YA_EXISTE");
+
+    const existingPending = await this.pendingModel.findByEmail(email);
+    if (existingPending) throw new Error("EMAIL_PENDIENTE");
+
+    const existingInvite = await this._findInviteByEmail(email);
+    if (existingInvite) throw new Error("INVITACION_PENDIENTE_EXISTENTE");
+
+    const created = await this.invitedModel.create({
+      email,
+      role,
+      plan: dbPlan,
+      status: "pending",
+      profile: {
+        nombre,
+        apellido,
+      },
+      invitedBy,
+      invitedAt: new Date(),
+      acceptedAt: null,
+      expiresAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    return created;
+  };
+
   adminCreateUser = async ({
     email,
     password,
@@ -666,8 +832,20 @@ console.log("typeof touchLastActivityById =", typeof this.model?.touchLastActivi
     profile = {},
   }) => {
     if (!email || !password) throw new Error("Email y password requeridos");
-    if (!["admin", "cliente", "entrenador"].includes(role)) throw new Error("ROL_INVALIDO");
-    if (!["free", "premium", "premium2"].includes(plan)) throw new Error("PLAN_INVALIDO");
+
+    role = normalizeRole(role);
+
+    const validRoles = [
+      "admin",
+      "cliente",
+      "entrenador",
+      "nutricionista",
+      "entrenador_nutricionista",
+    ];
+    if (!validRoles.includes(role)) throw new Error("ROL_INVALIDO");
+
+    const dbPlan = toDbPlan(plan);
+    if (!dbPlan) throw new Error("PLAN_INVALIDO");
 
     email = String(email).trim().toLowerCase();
 
@@ -680,7 +858,7 @@ console.log("typeof touchLastActivityById =", typeof this.model?.touchLastActivi
       email,
       passwordHash,
 
-      ...getUserDefaults({ role, plan, tipo }),
+      ...getUserDefaults({ role, plan: dbPlan, tipo }),
 
       estado,
       emailVerificado: false,
@@ -1049,11 +1227,27 @@ console.log("typeof touchLastActivityById =", typeof this.model?.touchLastActivi
     }
 
     if (patch.role !== undefined) {
-      if (!["admin", "cliente", "entrenador"].includes(patch.role)) throw new Error("ROL_INVALIDO");
+      patch.role = normalizeRole(patch.role);
+
+      const validRoles = [
+        "admin",
+        "cliente",
+        "entrenador",
+        "nutricionista",
+        "entrenador_nutricionista",
+      ];
+
+      if (!validRoles.includes(patch.role)) throw new Error("ROL_INVALIDO");
     }
 
     if (patch.plan !== undefined) {
-      if (!["free", "premium", "premium2"].includes(patch.plan)) throw new Error("PLAN_INVALIDO");
+      if (patch.plan === null || String(patch.plan).trim() === "") {
+        patch.plan = null;
+      } else {
+        const dbPlan = toDbPlan(patch.plan);
+        if (!dbPlan) throw new Error("PLAN_INVALIDO");
+        patch.plan = dbPlan;
+      }
     }
 
     if (patch.password !== undefined) {

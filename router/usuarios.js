@@ -140,6 +140,14 @@ class RouterUsuarios {
     // =========================
     const admin = express.Router();
 
+    // POST /api/usuarios/admin/invitations
+admin.post(
+  "/invitations",
+  authMiddleware,
+  requireRole("admin"),
+  this.controladorUsuarios.adminCreateInvitation
+);
+
     // GET /api/usuarios/admin/users?search=&role=&tipo=&estado=
     admin.get(
       "/users",
