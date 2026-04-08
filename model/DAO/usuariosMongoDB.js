@@ -1,4 +1,3 @@
-// model/DAO/usuariosMongoDB.js
 import { ObjectId } from "mongodb";
 import CnxMongoDB from "../DBMongo.js";
 
@@ -11,7 +10,6 @@ class ModelMongoDBUsuarios {
   }
 
   // ----- Lecturas -----
-
   obtenerUsuarios = async () => {
     return await this._col().find({}).toArray();
   };
@@ -36,18 +34,54 @@ class ModelMongoDBUsuarios {
     return await this._col().find({ role }).toArray();
   };
 
-  // ----- Escrituras -----
+  // ✅ nuevo
+  listByRole = async (role) => {
+    return await this._col()
+      .find({ role: String(role || "").toLowerCase().trim() })
+      .toArray();
+  };
 
+  // ✅ nuevo
+  listClientsByCoachId = async (coachId) => {
+    return await this._col()
+      .find({
+        role: "cliente",
+        "coach.entrenadorId": String(coachId),
+      })
+      .toArray();
+  };
+
+  // ✅ nuevo
+  countClientsByCoachId = async (coachId) => {
+    return await this._col().countDocuments({
+      role: "cliente",
+      "coach.entrenadorId": String(coachId),
+    });
+  };
+
+  // ✅ nuevo
+  listUnassignedClients = async () => {
+    return await this._col()
+      .find({
+        role: "cliente",
+        $or: [
+          { "coach.entrenadorId": null },
+          { "coach.entrenadorId": "" },
+          { coach: { $exists: false } },
+        ],
+      })
+      .toArray();
+  };
+
+  // ----- Escrituras -----
   registrarUsuario = async (usuario) => {
     const col = this._col();
-
     const doc = {
       ...usuario,
       email: usuario.email?.toLowerCase().trim(),
       createdAt: usuario.createdAt || new Date(),
       updatedAt: usuario.updatedAt || null,
     };
-
     const r = await col.insertOne(doc);
     return { ...doc, _id: r.insertedId };
   };
@@ -58,7 +92,6 @@ class ModelMongoDBUsuarios {
 
   updateById = async (id, updates) => {
     const col = this._col();
-
     let _id;
     try {
       _id = new ObjectId(id);
@@ -82,7 +115,6 @@ class ModelMongoDBUsuarios {
 
   borrarUsuario = async (id) => {
     const col = this._col();
-
     let _id;
     try {
       _id = new ObjectId(id);
@@ -93,31 +125,28 @@ class ModelMongoDBUsuarios {
     const r = await col.deleteOne({ _id });
     return { deletedCount: r.deletedCount };
   };
-  
-async getUpdatedAtById(id) {
-  try {
-    if (!id) return null;
 
-    const _id = new ObjectId(id);
+  async getUpdatedAtById(id) {
+    try {
+      if (!id) return null;
+      const _id = new ObjectId(id);
 
-    const user = await this._col().findOne(
-      { _id },
-      { projection: { updatedAt: 1 } }
-    );
+      const user = await this._col().findOne(
+        { _id },
+        { projection: { updatedAt: 1 } }
+      );
 
-    if (!user) return null;
+      if (!user) return null;
 
-    return {
-      updatedAt: user.updatedAt || null,
-    };
-  } catch {
-    return null;
+      return {
+        updatedAt: user.updatedAt || null,
+      };
+    } catch {
+      return null;
+    }
   }
-}
 
-
-
-  // ✅ ADMIN: listado con filtros + búsqueda + paginación
+  // ✅ opcional viejo helper admin
   adminListUsers = async ({
     search = "",
     role = "",
@@ -153,42 +182,34 @@ async getUpdatedAtById(id) {
       .toArray();
   };
 
+  async touchLastActivityById(id, date = new Date()) {
+    const col = this._col();
+    let _id;
+    try {
+      _id = new ObjectId(id);
+    } catch {
+      throw new Error("ID_INVALIDO");
+    }
 
-async touchLastActivityById(id, date = new Date()) {
-  const col = this._col();
+    await col.updateOne(
+      { _id },
+      { $set: { lastActivityAt: date } }
+    );
 
-  let _id;
-  try {
-    _id = new ObjectId(id);
-  } catch {
-    throw new Error("ID_INVALIDO");
+    return await col.findOne({ _id });
   }
 
-  await col.updateOne(
-    { _id },
-    { $set: { lastActivityAt: date } }
-  );
-
-  return await col.findOne({ _id });
-}
-
-
-
-  // ✅ Índices
+  // ----- Índices -----
   async ensureIndexes() {
     const col = this._col();
-
     await col.createIndex({ email: 1 }, { unique: true });
     await col.createIndex({ googleId: 1 }, { sparse: true });
-
     await col.createIndex({ role: 1 });
     await col.createIndex({ estado: 1 });
     await col.createIndex({ tipo: 1 });
     await col.createIndex({ plan: 1 });
-
     await col.createIndex({ "coach.entrenadorId": 1 });
     await col.createIndex({ "onboarding.step": 1 });
-
     await col.createIndex({ createdAt: -1 });
   }
 }

@@ -5,7 +5,7 @@ function getCookieOptions() {
   const isProd = process.env.NODE_ENV === "production";
   return {
     httpOnly: true,
-    secure: isProd, // prod:true, dev:false
+    secure: isProd,
     sameSite: isProd ? "none" : "lax",
     path: "/",
   };
@@ -20,14 +20,12 @@ function isDuplicateEmailError(error) {
   return msg === "EMAIL_DUPLICADO" || msg.includes("E11000");
 }
 
-// ✅ helper para no loguear tokens completos
 function maskToken(token) {
   if (!token || typeof token !== "string") return token;
   if (token.length <= 16) return "***";
   return token.slice(0, 10) + "..." + token.slice(-6);
 }
 
-// ✅ decode state para leer returnTo desde /auth/google -> /auth/google/callback
 function decodeState(state) {
   try {
     const json = Buffer.from(String(state || ""), "base64url").toString("utf8");
@@ -37,7 +35,6 @@ function decodeState(state) {
   }
 }
 
-// ✅ helper: agrega query params sin romper los que ya existen
 function appendQuery(url, params = {}) {
   try {
     const u = new URL(url);
@@ -57,6 +54,40 @@ function appendQuery(url, params = {}) {
   }
 }
 
+function adminError(res, error) {
+  const msg = String(error?.message || "");
+
+  if (msg === "NOT_FOUND") return res.status(404).json({ error: "Usuario no encontrado" });
+  if (msg === "COACH_NOT_FOUND") return res.status(404).json({ error: "Coach no encontrado" });
+  if (msg === "INVITATION_NOT_FOUND") return res.status(404).json({ error: "Invitación no encontrada" });
+
+  if (msg === "USER_NOT_CLIENT") return res.status(400).json({ error: "El usuario no es cliente" });
+  if (msg === "USER_NOT_COACH") return res.status(400).json({ error: "El usuario no es coach" });
+  if (msg === "COACH_ID_REQUIRED") return res.status(400).json({ error: "Falta coachId" });
+  if (msg === "CANNOT_ASSIGN_SELF") {
+    return res.status(400).json({ error: "No podés asignar el mismo usuario como coach y cliente" });
+  }
+
+  if (msg === "PLAN_INVALIDO") return res.status(400).json({ error: "Plan inválido" });
+  if (msg === "ESTADO_INVALIDO") return res.status(400).json({ error: "Estado inválido" });
+  if (msg === "MAX_CLIENTS_INVALIDO") return res.status(400).json({ error: "maxClients inválido" });
+  if (msg === "SPECIALTIES_INVALIDAS") return res.status(400).json({ error: "Especialidades inválidas" });
+  if (msg === "PASSWORD_CORTA") {
+    return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
+  }
+
+  if (msg === "COACH_CLIENT_LIMIT_REACHED") {
+    return res.status(409).json({ error: "El coach alcanzó el límite de clientes" });
+  }
+
+  if (msg === "INVITATION_ALREADY_FINALIZED") {
+    return res.status(409).json({ error: "La invitación ya no está pendiente" });
+  }
+
+  console.error("Admin error:", error);
+  return res.status(500).json({ error: "Error en el servidor" });
+}
+
 function mapUserPublic(user) {
   return {
     _id: user._id,
@@ -72,9 +103,13 @@ function mapUserPublic(user) {
     estado: user.estado || "activo",
 
     profile: user.profile || {},
+    coachProfile: user.coachProfile || null,
+    coachCapabilities: user.coachCapabilities || null,
+    coachWelcome: user.coachWelcome || null,
     settings: user.settings || {},
-    metas: user.metas || {},
+    adminMeta: user.adminMeta || {},
 
+    metas: user.metas || {},
     onboarding: user.onboarding || {},
     coach: user.coach || {},
     billing: user.billing || {},
@@ -82,6 +117,11 @@ function mapUserPublic(user) {
     antropometriaActual: user.antropometriaActual || {},
     metasActuales: user.metasActuales || {},
     stats: user.stats || {},
+
+    lastLoginAt: user.lastLoginAt || null,
+    lastActivityAt: user.lastActivityAt || null,
+    createdAt: user.createdAt || null,
+    updatedAt: user.updatedAt || null,
 
     account: {
       role: user.role || "cliente",
@@ -276,7 +316,6 @@ class ControladorUsuarios {
 
       const { id } = req.user;
 
-      // ✅ actividad real del usuario
       await this.servicio.touchLastActivity(id);
 
       const user = await this.servicio.getById(id);
@@ -370,27 +409,6 @@ class ControladorUsuarios {
     }
   };
 
-  actualizarOnboardingCliente = async (req, res) => {
-    try {
-      const userId = req.user?.id || req.user?._id;
-      if (!userId) return res.status(401).json({ error: "No autenticado" });
-
-      const { step, data } = req.body || {};
-      const s = Number(step);
-
-      if (![1, 2, 3].includes(s)) {
-        return res.status(400).json({ error: "Step inválido (debe ser 1, 2 o 3)" });
-      }
-
-      const user = await this.servicio.actualizarOnboardingCliente(userId, s, data);
-
-      return res.json({ ok: true, user: mapUserPublic(user) });
-    } catch (e) {
-      console.error("actualizarOnboardingCliente error:", e);
-      return res.status(500).json({ error: e?.message || "Error interno" });
-    }
-  };
-
   resendVerifyCode = async (req, res) => {
     try {
       let { email } = req.body || {};
@@ -476,10 +494,40 @@ class ControladorUsuarios {
     }
   };
 
+  markCoachWelcomeSeen = async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?._id;
+      const user = await this.servicio.markCoachWelcomeSeen(userId);
+      return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (error) {
+      console.error("Error markCoachWelcomeSeen:", error);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+  };
+
+  actualizarOnboardingCliente = async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?._id;
+      if (!userId) return res.status(401).json({ error: "No autenticado" });
+
+      const { step, data } = req.body || {};
+      const s = Number(step);
+
+      if (![1, 2, 3].includes(s)) {
+        return res.status(400).json({ error: "Step inválido (debe ser 1, 2 o 3)" });
+      }
+
+      const user = await this.servicio.actualizarOnboardingCliente(userId, s, data);
+      return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (e) {
+      console.error("actualizarOnboardingCliente error:", e);
+      return res.status(500).json({ error: e?.message || "Error interno" });
+    }
+  };
+
   getUpdatedAt = async (req, res) => {
     try {
       const userId = req.user.id;
-
       const result = await this.servicio.getUpdatedAt(userId);
 
       if (!result) {
@@ -493,246 +541,10 @@ class ControladorUsuarios {
     }
   };
 
-  // =========================
-  // ✅ ADMIN: CRUD USERS
-  // =========================
-
-  adminListUsers = async (req, res) => {
-    try {
-      const { search = "", role = "todos", estado = "todos", tipo = "todos" } = req.query || {};
-
-      const data = await this.servicio.adminListUsers({
-        search: String(search || "").trim(),
-        role: String(role || "").trim(),
-        estado: String(estado || "").trim(),
-        tipo: String(tipo || "").trim(),
-        limit: Number(req.query?.limit || 50),
-        skip: Number(req.query?.skip || 0),
-      });
-
-      return res.json(data);
-    } catch (error) {
-      console.error("Error adminListUsers:", error);
-      return res.status(500).json({ error: "Error en el servidor" });
-    }
-  };
-
-  adminCreateUser = async (req, res) => {
-    try {
-      const {
-        email,
-        password,
-        role = "cliente",
-        estado = "activo",
-        tipo = "entrenado",
-        profile = {},
-        fechaNacimiento,
-        nombre,
-        apellido,
-      } = req.body || {};
-
-      if (!email || !password) {
-        return res.status(400).json({ error: "Email y contraseña son requeridos" });
-      }
-
-      const user = await this.servicio.adminCreateUser({
-        email,
-        password,
-        role,
-        estado,
-        tipo,
-        profile: {
-          ...profile,
-          nombre: profile?.nombre ?? nombre,
-          apellido: profile?.apellido ?? apellido,
-          fechaNacimiento: profile?.fechaNacimiento ?? fechaNacimiento,
-        },
-      });
-
-      return res.status(201).json({ user: mapUserPublic(user) });
-    } catch (error) {
-      console.error("Error adminCreateUser:", error);
-
-      if (String(error?.message) === "EMAIL_DUPLICADO") {
-        return res.status(409).json({ error: "Ese email ya está registrado" });
-      }
-      if (String(error?.message) === "ROL_INVALIDO") {
-        return res.status(400).json({ error: "Rol inválido" });
-      }
-
-      return res.status(500).json({ error: "Error en el servidor" });
-    }
-  };
-
-  adminGetUserById = async (req, res) => {
-    try {
-      const { id } = req.params;
-
-      const user = await this.servicio.adminGetUserById(id);
-      if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
-
-      return res.json({ user: mapUserPublic(user) });
-    } catch (error) {
-      console.error("Error adminGetUserById:", error);
-      return res.status(500).json({ error: "Error en el servidor" });
-    }
-  };
-
-  adminUpdateUser = async (req, res) => {
-    try {
-      const { id } = req.params;
-      const updates = req.body || {};
-
-      const user = await this.servicio.adminUpdateUser(id, updates);
-      return res.json({ user: mapUserPublic(user) });
-    } catch (error) {
-      console.error("Error adminUpdateUser:", error);
-
-      const msg = String(error?.message || "");
-      if (msg === "NOT_FOUND") return res.status(404).json({ error: "Usuario no encontrado" });
-      if (msg === "EMAIL_DUPLICADO") return res.status(409).json({ error: "Ese email ya está registrado" });
-      if (msg === "ROL_INVALIDO") return res.status(400).json({ error: "Rol inválido" });
-
-      return res.status(500).json({ error: "Error en el servidor" });
-    }
-  };
-
-  adminDeleteUser = async (req, res) => {
-    try {
-      const { id } = req.params;
-
-      const r = await this.servicio.adminDeleteUser(id);
-      if (r?.deletedCount === 0) return res.status(404).json({ error: "Usuario no encontrado" });
-
-      return res.json({ message: "Usuario eliminado" });
-    } catch (error) {
-      console.error("Error adminDeleteUser:", error);
-      return res.status(500).json({ error: "Error en el servidor" });
-    }
-  };
-
-  adminCreateInvitation = async (req, res) => {
-  try {
-    const data = req.body || {};
-
-    const invitation = await this.servicio.adminCreateInvitation({
-      ...data,
-      invitedBy: req.user?._id || null,
-    });
-
-    return res.status(201).json({
-      invitation: mapInvitationPublic(invitation),
-    });
-  } catch (error) {
-    console.error("Error adminCreateInvitation:", error);
-
-    const msg = String(error?.message || "");
-
-    if (msg === "NOMBRE_REQUERIDO") {
-      return res.status(400).json({ error: "Ingresá el nombre" });
-    }
-
-    if (msg === "APELLIDO_REQUERIDO") {
-      return res.status(400).json({ error: "Ingresá el apellido" });
-    }
-
-    if (msg === "EMAIL_REQUERIDO") {
-      return res.status(400).json({ error: "Ingresá el email" });
-    }
-
-    if (msg === "EMAIL_INVALIDO") {
-      return res.status(400).json({ error: "Ingresá un email válido" });
-    }
-
-    if (msg === "ROL_INVALIDO") {
-      return res.status(400).json({ error: "Rol inválido" });
-    }
-
-    if (msg === "PLAN_INVALIDO") {
-      return res.status(400).json({ error: "Plan inválido" });
-    }
-
-    if (msg === "USUARIO_YA_EXISTE") {
-      return res.status(409).json({ error: "Ya existe un usuario con ese email" });
-    }
-
-    if (msg === "INVITACION_PENDIENTE_EXISTENTE") {
-      return res.status(409).json({ error: "Ya existe una invitación pendiente para ese email" });
-    }
-
-    return res.status(500).json({ error: "Error en el servidor" });
-  }
-};
-
-  googleCallback = async (req, res) => {
-    const frontendBase =
-      process.env.FRONTEND_URL ||
-      process.env.APP_PUBLIC_URL ||
-      "http://localhost:5173";
-
-    const parsed = decodeState(req.query?.state);
-    const returnTo = parsed?.returnTo || `${frontendBase}/auth`;
-
-    try {
-      console.log("✅ [GOOGLE] callback entrando");
-      console.log("✅ [GOOGLE] query.state =", req.query?.state);
-      console.log("✅ [GOOGLE] parsed.state =", parsed);
-      console.log("✅ [GOOGLE] returnTo efectivo =", returnTo);
-      console.log("✅ [GOOGLE] req.user =", req.user);
-
-      const payload = req.user;
-      if (!payload?.email || !payload?.googleId) {
-        console.log("❌ [GOOGLE] payload inválido, faltan email/googleId");
-        return res.redirect(`${frontendBase}/auth?google=fail`);
-      }
-
-      console.log("✅ [GOOGLE] llamando servicio.loginOrRegisterWithGoogle con:", {
-        email: payload.email,
-        googleId: payload.googleId,
-        nombre: payload.nombre,
-        apellido: payload.apellido,
-      });
-
-      const result = await this.servicio.loginOrRegisterWithGoogle(payload);
-
-      console.log("✅ [GOOGLE] servicio respondió:", {
-        hasToken: !!result?.token,
-        tokenPreview: maskToken(result?.token),
-      });
-
-      const token = result?.token;
-      if (!token) {
-        console.log("❌ [GOOGLE] servicio NO devolvió token");
-        return res.redirect(`${frontendBase}/auth?google=error`);
-      }
-
-      const cookieOptions = { ...getCookieOptions(), maxAge: 7 * 24 * 60 * 60 * 1000 };
-      res.cookie("access_token", token, cookieOptions);
-
-      console.log("✅ [GOOGLE] cookie seteada -> options:", cookieOptions);
-      console.log("✅ [GOOGLE] set-cookie header =", res.getHeader("set-cookie"));
-
-      const redirectUrl = appendQuery(returnTo, { token, oauth: 1 });
-
-      console.log("✅ [GOOGLE] redirect final a:", redirectUrl);
-      return res.redirect(redirectUrl);
-    } catch (error) {
-      const msg = String(error?.message || "");
-      console.error("❌ Error googleCallback:", error);
-
-      if (msg === "EMAIL_PENDIENTE") {
-        return res.redirect(`${frontendBase}/auth?pending=1`);
-      }
-
-      return res.redirect(`${frontendBase}/auth?google=error`);
-    }
-  };
-
   obtenerPerfil = async (req, res) => {
     try {
       const { id } = req.user;
 
-      // ✅ actividad real del usuario
       await this.servicio.touchLastActivity(id);
 
       const user = await this.servicio.getById(id);
@@ -796,6 +608,509 @@ class ControladorUsuarios {
     } catch (error) {
       console.error("Error subirAvatar:", error);
       return res.status(500).json({ error: "Error al subir avatar" });
+    }
+  };
+
+  // =========================
+  // ADMIN: INVITATIONS
+  // =========================
+  adminCreateInvitation = async (req, res) => {
+    try {
+      const data = req.body || {};
+
+      const invitation = await this.servicio.adminCreateInvitation({
+        ...data,
+        invitedBy: req.user?.id || req.user?._id || null,
+      });
+
+      return res.status(201).json({
+        ok: true,
+        invitation,
+      });
+    } catch (error) {
+      console.error("Error adminCreateInvitation:", error);
+
+      const msg = String(error?.message || "");
+
+      if (msg === "NOMBRE_REQUERIDO") {
+        return res.status(400).json({ error: "Ingresá el nombre" });
+      }
+      if (msg === "APELLIDO_REQUERIDO") {
+        return res.status(400).json({ error: "Ingresá el apellido" });
+      }
+      if (msg === "EMAIL_REQUERIDO") {
+        return res.status(400).json({ error: "Ingresá el email" });
+      }
+      if (msg === "EMAIL_INVALIDO") {
+        return res.status(400).json({ error: "Ingresá un email válido" });
+      }
+      if (msg === "ROL_INVALIDO") {
+        return res.status(400).json({ error: "Rol inválido" });
+      }
+      if (msg === "PLAN_INVALIDO") {
+        return res.status(400).json({ error: "Plan inválido" });
+      }
+      if (msg === "COACH_PROFILE_REQUERIDO") {
+        return res.status(400).json({ error: "Falta configurar el perfil del coach" });
+      }
+      if (msg === "COACH_SPECIALTIES_REQUERIDAS") {
+        return res.status(400).json({ error: "Elegí al menos una especialidad para el coach" });
+      }
+      if (msg === "USUARIO_YA_EXISTE") {
+        return res.status(409).json({ error: "Ya existe un usuario con ese email" });
+      }
+      if (msg === "EMAIL_PENDIENTE") {
+        return res.status(409).json({ error: "Ese email ya está pendiente de validación" });
+      }
+      if (msg === "INVITACION_PENDIENTE_EXISTENTE") {
+        return res.status(409).json({ error: "Ya existe una invitación pendiente para ese email" });
+      }
+
+      return res.status(500).json({
+        error: error?.message || "Error en el servidor",
+      });
+    }
+  };
+
+  adminListInvitations = async (req, res) => {
+    try {
+      const {
+        search = "",
+        status = "todos",
+        role = "todos",
+        limit = 100,
+        skip = 0,
+      } = req.query || {};
+
+      const data = await this.servicio.adminListInvitations({
+        search: String(search || "").trim(),
+        status: String(status || "").trim(),
+        role: String(role || "").trim(),
+        limit: Number(limit || 100),
+        skip: Number(skip || 0),
+      });
+
+      return res.json(data);
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminGetInvitationById = async (req, res) => {
+    try {
+      const { invitationId } = req.params;
+      const invitation = await this.servicio.adminGetInvitationById(invitationId);
+      return res.json({ invitation });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminCancelInvitation = async (req, res) => {
+    try {
+      const { invitationId } = req.params;
+      const invitation = await this.servicio.adminCancelInvitation(invitationId);
+      return res.json({ ok: true, invitation });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminDeleteInvitation = async (req, res) => {
+    try {
+      const { invitationId } = req.params;
+      const result = await this.servicio.adminDeleteInvitation(invitationId);
+      return res.json({ ok: true, ...result });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  // =========================
+  // ADMIN: USERS CRUD
+  // =========================
+  adminListUsers = async (req, res) => {
+    try {
+      const { search = "", role = "todos", estado = "todos", tipo = "todos" } = req.query || {};
+
+      const data = await this.servicio.adminListUsers({
+        search: String(search || "").trim(),
+        role: String(role || "").trim(),
+        estado: String(estado || "").trim(),
+        tipo: String(tipo || "").trim(),
+        limit: Number(req.query?.limit || 50),
+        skip: Number(req.query?.skip || 0),
+      });
+
+      return res.json(data);
+    } catch (error) {
+      console.error("Error adminListUsers:", error);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+  };
+
+  adminCreateUser = async (req, res) => {
+    try {
+      const {
+        email,
+        password,
+        role = "cliente",
+        plan = "free",
+        estado = "activo",
+        tipo = "entrenado",
+        profile = {},
+        fechaNacimiento,
+        nombre,
+        apellido,
+      } = req.body || {};
+
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email y contraseña son requeridos" });
+      }
+
+      const user = await this.servicio.adminCreateUser({
+        email,
+        password,
+        role,
+        plan,
+        estado,
+        tipo,
+        profile: {
+          ...profile,
+          nombre: profile?.nombre ?? nombre,
+          apellido: profile?.apellido ?? apellido,
+          fechaNacimiento: profile?.fechaNacimiento ?? fechaNacimiento,
+        },
+      });
+
+      return res.status(201).json({ user: mapUserPublic(user) });
+    } catch (error) {
+      console.error("Error adminCreateUser:", error);
+
+      const msg = String(error?.message || "");
+      if (msg === "EMAIL_DUPLICADO") {
+        return res.status(409).json({ error: "Ese email ya está registrado" });
+      }
+      if (msg === "ROL_INVALIDO") {
+        return res.status(400).json({ error: "Rol inválido" });
+      }
+      if (msg === "PLAN_INVALIDO") {
+        return res.status(400).json({ error: "Plan inválido" });
+      }
+      if (msg === "PASSWORD_CORTA") {
+        return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
+      }
+
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+  };
+
+  adminGetUserById = async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const user = await this.servicio.adminGetUserById(id);
+      if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
+
+      return res.json({ user: mapUserPublic(user) });
+    } catch (error) {
+      console.error("Error adminGetUserById:", error);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+  };
+
+  adminUpdateUser = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body || {};
+
+      const user = await this.servicio.adminUpdateUser(id, updates);
+      return res.json({ user: mapUserPublic(user) });
+    } catch (error) {
+      console.error("Error adminUpdateUser:", error);
+
+      const msg = String(error?.message || "");
+      if (msg === "NOT_FOUND") return res.status(404).json({ error: "Usuario no encontrado" });
+      if (msg === "EMAIL_DUPLICADO") return res.status(409).json({ error: "Ese email ya está registrado" });
+      if (msg === "ROL_INVALIDO") return res.status(400).json({ error: "Rol inválido" });
+      if (msg === "PLAN_INVALIDO") return res.status(400).json({ error: "Plan inválido" });
+      if (msg === "PASSWORD_CORTA") {
+        return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
+      }
+
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+  };
+
+  adminDeleteUser = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const r = await this.servicio.adminDeleteUser(id);
+
+      const notDeleted =
+        r === null ||
+        r === undefined ||
+        r?.deletedCount === 0 ||
+        r?.acknowledged === true && r?.deletedCount === 0;
+
+      if (notDeleted) {
+        return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+
+      return res.json({ message: "Usuario eliminado" });
+    } catch (error) {
+      console.error("Error adminDeleteUser:", error);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+  };
+
+  // =========================
+  // ADMIN: HELPERS
+  // =========================
+  adminListCoaches = async (req, res) => {
+    try {
+      const { search = "", limit = 100, skip = 0 } = req.query || {};
+      const data = await this.servicio.adminListCoaches({
+        search: String(search || "").trim(),
+        limit: Number(limit || 100),
+        skip: Number(skip || 0),
+      });
+
+      return res.json({
+        coaches: (data?.coaches || []).map((u) => mapUserPublic(u)),
+        total: data?.total || 0,
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminListUnassignedClients = async (req, res) => {
+    try {
+      const { search = "", limit = 100, skip = 0 } = req.query || {};
+      const data = await this.servicio.adminListUnassignedClients({
+        search: String(search || "").trim(),
+        limit: Number(limit || 100),
+        skip: Number(skip || 0),
+      });
+
+      return res.json({
+        clients: (data?.clients || []).map((u) => mapUserPublic(u)),
+        total: data?.total || 0,
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  // =========================
+  // ADMIN: STATUS / PLAN / META
+  // =========================
+  adminUpdateStatus = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { estado } = req.body || {};
+
+      const user = await this.servicio.adminUpdateStatus(id, estado);
+      return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminUpdatePlan = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { plan } = req.body || {};
+
+      const user = await this.servicio.adminUpdatePlan(id, plan);
+      return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminUpdateAdminMeta = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await this.servicio.adminUpdateAdminMeta(id, req.body || {});
+      return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminResetOnboarding = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await this.servicio.adminResetOnboarding(id);
+      return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  // =========================
+  // ADMIN: GOALS / DAILY GOALS
+  // =========================
+  adminUpdateGoals = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await this.servicio.adminUpdateGoals(id, req.body || {});
+      return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminUpdateDailyGoals = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { metasDiarias = {} } = req.body || {};
+      const user = await this.servicio.adminUpdateDailyGoals(id, metasDiarias);
+      return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  // =========================
+  // ADMIN: RELACIÓN COACH <-> CLIENTE
+  // =========================
+  adminAssignCoach = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { coachId } = req.body || {};
+
+      const user = await this.servicio.adminAssignCoach({
+        clientId: id,
+        coachId,
+        adminId: req.user?.id || req.user?._id || null,
+      });
+
+      return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminUnassignCoach = async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const user = await this.servicio.adminUnassignCoach({
+        clientId: id,
+        adminId: req.user?.id || req.user?._id || null,
+      });
+
+      return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminGetCoachClients = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const data = await this.servicio.adminGetCoachClients(id);
+
+      return res.json({
+        coach: mapUserPublic(data.coach),
+        clients: (data.clients || []).map((u) => mapUserPublic(u)),
+        total: data.total || 0,
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  // =========================
+  // ADMIN: COACH PROFILE / CAPABILITIES
+  // =========================
+  adminUpdateCoachProfile = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await this.servicio.adminUpdateCoachProfile(id, req.body || {});
+      return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminUpdateCoachCapabilities = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await this.servicio.adminUpdateCoachCapabilities(id, req.body || {});
+      return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  // =========================
+  // GOOGLE CALLBACK
+  // =========================
+  googleCallback = async (req, res) => {
+    const frontendBase =
+      process.env.FRONTEND_URL ||
+      process.env.APP_PUBLIC_URL ||
+      "http://localhost:5173";
+
+    const parsed = decodeState(req.query?.state);
+    const returnTo = parsed?.returnTo || `${frontendBase}/auth`;
+
+    try {
+      console.log("✅ [GOOGLE] callback entrando");
+      console.log("✅ [GOOGLE] query.state =", req.query?.state);
+      console.log("✅ [GOOGLE] parsed.state =", parsed);
+      console.log("✅ [GOOGLE] returnTo efectivo =", returnTo);
+      console.log("✅ [GOOGLE] req.user =", req.user);
+
+      const payload = req.user;
+      if (!payload?.email || !payload?.googleId) {
+        console.log("❌ [GOOGLE] payload inválido, faltan email/googleId");
+        return res.redirect(`${frontendBase}/auth?google=fail`);
+      }
+
+      console.log("✅ [GOOGLE] llamando servicio.loginOrRegisterWithGoogle con:", {
+        email: payload.email,
+        googleId: payload.googleId,
+        nombre: payload.nombre,
+        apellido: payload.apellido,
+      });
+
+      const result = await this.servicio.loginOrRegisterWithGoogle(payload);
+
+      console.log("✅ [GOOGLE] servicio respondió:", {
+        hasToken: !!result?.token,
+        tokenPreview: maskToken(result?.token),
+      });
+
+      const token = result?.token;
+      if (!token) {
+        console.log("❌ [GOOGLE] servicio NO devolvió token");
+        return res.redirect(`${frontendBase}/auth?google=error`);
+      }
+
+      const cookieOptions = { ...getCookieOptions(), maxAge: 7 * 24 * 60 * 60 * 1000 };
+      res.cookie("access_token", token, cookieOptions);
+
+      console.log("✅ [GOOGLE] cookie seteada -> options:", cookieOptions);
+      console.log("✅ [GOOGLE] set-cookie header =", res.getHeader("set-cookie"));
+
+      const redirectUrl = appendQuery(returnTo, { token, oauth: 1 });
+
+      console.log("✅ [GOOGLE] redirect final a:", redirectUrl);
+      return res.redirect(redirectUrl);
+    } catch (error) {
+      const msg = String(error?.message || "");
+      console.error("❌ Error googleCallback:", error);
+
+      if (msg === "EMAIL_PENDIENTE") {
+        return res.redirect(`${frontendBase}/auth?pending=1`);
+      }
+
+      return res.redirect(`${frontendBase}/auth?google=error`);
     }
   };
 }

@@ -1,4 +1,3 @@
-// src/router/usuarios.js
 import express from "express";
 import multer from "multer";
 import { rateLimit } from "express-rate-limit";
@@ -6,7 +5,7 @@ import passport from "../auth/google.js";
 
 import ControladorUsuarios from "../controlador/usuarios.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
-import { requireRole } from "../middleware/requireRole.js"; // ✅ BACKEND middleware
+import { requireRole } from "../middleware/requireRole.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -31,7 +30,6 @@ const codeSendLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// ✅ encode state para llevar returnTo a callback
 function encodeState(obj) {
   try {
     return Buffer.from(JSON.stringify(obj), "utf8").toString("base64url");
@@ -55,18 +53,12 @@ class RouterUsuarios {
     const auth = express.Router();
 
     auth.post("/register", this.controladorUsuarios.registerCliente);
-
     auth.post("/verify-email", this.controladorUsuarios.verifyEmail);
     auth.post("/resend-code", codeSendLimiter, this.controladorUsuarios.resendVerifyCode);
-
     auth.post("/login", loginLimiter, this.controladorUsuarios.login);
-
     auth.post("/forgot-password", codeSendLimiter, this.controladorUsuarios.forgotPassword);
     auth.post("/reset-password", this.controladorUsuarios.resetPassword);
 
-    // =========================
-    // ✅ GOOGLE OAuth (state)
-    // =========================
     auth.get("/google", (req, res, next) => {
       const frontendBase =
         process.env.FRONTEND_URL ||
@@ -101,28 +93,25 @@ class RouterUsuarios {
     this.router.use("/auth", auth);
 
     // =========================
-    // ✅ ONBOARDING (self)
+    // SELF / ONBOARDING
     // =========================
-    // ✅ Ruta final: PATCH /api/usuarios/me/onboarding
-    // (Esto es lo que tu front está llamando)
     this.router.patch(
       "/me/onboarding",
       authMiddleware,
-      this.controladorUsuarios.actualizarOnboardingCliente // 👈 agregá este método en el controlador
+      this.controladorUsuarios.actualizarOnboardingCliente
     );
 
-    // =========================
-    // USERS (self)
-    // =========================
     const users = express.Router();
-        users.get(
-  "/me/updatedAt",
-  authMiddleware,
-  this.controladorUsuarios.getUpdatedAt
-);
 
+    users.get("/me/updatedAt", authMiddleware, this.controladorUsuarios.getUpdatedAt);
     users.get("/me", authMiddleware, this.controladorUsuarios.obtenerPerfil);
     users.patch("/me", authMiddleware, this.controladorUsuarios.actualizarPerfil);
+    users.patch(
+      "/me/coach-welcome-seen",
+      authMiddleware,
+      this.controladorUsuarios.markCoachWelcomeSeen
+    );
+
     users.post(
       "/me/avatar",
       authMiddleware,
@@ -130,25 +119,65 @@ class RouterUsuarios {
       this.controladorUsuarios.subirAvatar
     );
 
-
-
-
     this.router.use("/users", users);
 
     // =========================
-    // ✅ ADMIN: USERS CRUD
+    // ADMIN
     // =========================
     const admin = express.Router();
 
-    // POST /api/usuarios/admin/invitations
-admin.post(
-  "/invitations",
-  authMiddleware,
-  requireRole("admin"),
-  this.controladorUsuarios.adminCreateInvitation
-);
+    // -------- Invitaciones --------
+    admin.post(
+      "/invitations",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminCreateInvitation
+    );
 
-    // GET /api/usuarios/admin/users?search=&role=&tipo=&estado=
+    admin.get(
+      "/invitations",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminListInvitations
+    );
+
+    admin.get(
+      "/invitations/:invitationId",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminGetInvitationById
+    );
+
+    admin.patch(
+      "/invitations/:invitationId/cancel",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminCancelInvitation
+    );
+
+    admin.delete(
+      "/invitations/:invitationId",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminDeleteInvitation
+    );
+
+    // -------- Helpers para panel admin --------
+    admin.get(
+      "/coaches",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminListCoaches
+    );
+
+    admin.get(
+      "/clients/unassigned",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminListUnassignedClients
+    );
+
+    // -------- CRUD users --------
     admin.get(
       "/users",
       authMiddleware,
@@ -156,7 +185,6 @@ admin.post(
       this.controladorUsuarios.adminListUsers
     );
 
-    // POST /api/usuarios/admin/users
     admin.post(
       "/users",
       authMiddleware,
@@ -164,7 +192,6 @@ admin.post(
       this.controladorUsuarios.adminCreateUser
     );
 
-    // GET /api/usuarios/admin/users/:id
     admin.get(
       "/users/:id",
       authMiddleware,
@@ -172,7 +199,6 @@ admin.post(
       this.controladorUsuarios.adminGetUserById
     );
 
-    // PATCH /api/usuarios/admin/users/:id
     admin.patch(
       "/users/:id",
       authMiddleware,
@@ -180,12 +206,92 @@ admin.post(
       this.controladorUsuarios.adminUpdateUser
     );
 
-    // DELETE /api/usuarios/admin/users/:id
     admin.delete(
       "/users/:id",
       authMiddleware,
       requireRole("admin"),
       this.controladorUsuarios.adminDeleteUser
+    );
+
+    // -------- Cuenta / estado / plan --------
+    admin.patch(
+      "/users/:id/status",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminUpdateStatus
+    );
+
+    admin.patch(
+      "/users/:id/plan",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminUpdatePlan
+    );
+
+    admin.patch(
+      "/users/:id/admin-meta",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminUpdateAdminMeta
+    );
+
+    admin.patch(
+      "/users/:id/reset-onboarding",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminResetOnboarding
+    );
+
+    // -------- Cliente: objetivos / metas --------
+    admin.patch(
+      "/users/:id/goals",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminUpdateGoals
+    );
+
+    admin.patch(
+      "/users/:id/daily-goals",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminUpdateDailyGoals
+    );
+
+    // -------- Relación coach <-> cliente --------
+    admin.patch(
+      "/users/:id/assign-coach",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminAssignCoach
+    );
+
+    admin.patch(
+      "/users/:id/unassign-coach",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminUnassignCoach
+    );
+
+    admin.get(
+      "/users/:id/clients",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminGetCoachClients
+    );
+
+    // -------- Coach: perfil / permisos / límites --------
+    admin.patch(
+      "/users/:id/coach-profile",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminUpdateCoachProfile
+    );
+
+    admin.patch(
+      "/users/:id/coach-capabilities",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminUpdateCoachCapabilities
     );
 
     this.router.use("/admin", admin);

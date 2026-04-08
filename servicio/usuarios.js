@@ -10,20 +10,21 @@ import ModelMongoDBPasswordResets from "../model/DAO/passwordResetMongoDB.js";
 import ModelMongoDBInvitedUsers from "../model/DAO/invitedUsersMongoDB.js";
 
 // =========================
-// ✅ Defaults del usuario (shape inicial)
+// ✅ Defaults del usuario
 // =========================
 function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" } = {}) {
   const now = new Date();
 
   return {
     role,
-    plan, // "free" | "premium" | "premium2"
-    tipo, // "entrenado" | "entrenador"
+    plan, // free | premium | premium2
+    tipo, // entrenado | entrenador | admin
 
     estado: "activo",
     emailVerificado: false,
 
     onboarding: {
+      enabled: tipo === "entrenado",
       done: false,
       step: 1,
       startedAt: now,
@@ -35,6 +36,7 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
       entrenadorId: null,
       assignedAt: null,
       assignedByAdminId: null,
+      source: null,
     },
 
     billing: {
@@ -44,6 +46,51 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
       provider: null,
       providerCustomerId: null,
       providerSubscriptionId: null,
+    },
+
+    coachProfile:
+      role === "coach"
+        ? {
+            title: "",
+            bio: "",
+            specialties: {
+              training: false,
+              nutrition: false,
+            },
+          }
+        : null,
+
+    coachCapabilities:
+      role === "coach"
+        ? {
+            maxClients: 20,
+            canInviteClients: true,
+            canManageTraining: true,
+            canManageNutrition: true,
+            menus: {
+              automatic: true,
+              semiautomatic: true,
+              fixed: true,
+              hybrid: true,
+            },
+            routines: {
+              automatic: false,
+              semiautomatic: true,
+              manual: true,
+              hybrid: false,
+            },
+            canUseTemplates: true,
+            canDuplicatePlans: true,
+            canExportData: false,
+            canSeeAdvancedMetrics: true,
+          }
+        : null,
+
+    adminMeta: {
+      internalNote: "",
+      tags: [],
+      priority: "normal",
+      lastReviewedAt: null,
     },
 
     antropometriaActual: {
@@ -174,30 +221,26 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
 
 // =========================
 // ✅ Helpers de roles / planes
-// Mantienen compatibilidad con lo viejo
 // =========================
-const STAFF_INVITE_ROLES = [
-  "admin",
-  "entrenador",
-  "nutricionista",
-  "entrenador_nutricionista",
-];
-
 function normalizeRole(role) {
   const r = String(role || "").trim().toLowerCase();
 
-  if (r === "trainer" || r === "coach") return "entrenador";
-  if (r === "nutritionist") return "nutricionista";
+  if (r === "trainer") return "coach";
+  if (r === "nutritionist") return "coach";
   if (
     r === "trainer_nutritionist" ||
     r === "trainernutri" ||
     r === "coach_nutrition" ||
     r === "entrenador+nutricion"
   ) {
-    return "entrenador_nutricionista";
+    return "coach";
   }
 
   if (r === "client" || r === "customer") return "cliente";
+
+  if (r === "coach") return "coach";
+  if (r === "admin") return "admin";
+  if (r === "cliente") return "cliente";
 
   return r;
 }
@@ -209,7 +252,7 @@ function toDbPlan(plan) {
   if (p === "pro") return "premium";
   if (p === "vip") return "premium2";
 
-  // compatibilidad si ya viene en formato viejo
+  // compatibilidad
   if (p === "premium" || p === "premium2") return p;
 
   return null;
@@ -217,7 +260,9 @@ function toDbPlan(plan) {
 
 function inferTipoFromRole(role) {
   const r = normalizeRole(role);
-  return r === "cliente" ? "entrenado" : "entrenador";
+  if (r === "cliente") return "entrenado";
+  if (r === "coach") return "entrenador";
+  return "admin";
 }
 
 class ServicioUsuarios {
@@ -250,7 +295,7 @@ class ServicioUsuarios {
   }
 
   // -------------------------
-  // Helpers
+  // Helpers base
   // -------------------------
   async _findUserByEmail(email) {
     if (!email) return null;
@@ -275,10 +320,10 @@ class ServicioUsuarios {
     return await this.invitedModel.findPendingByEmail(String(email).toLowerCase().trim());
   }
 
- async _deleteInviteById(id) {
-  if (!id) return null;
-  return await this.invitedModel.deleteById(id);
-}
+  async _deleteInviteById(id) {
+    if (!id) return null;
+    return await this.invitedModel.deleteById(id);
+  }
 
   _normalizeUser(u) {
     if (!u) return null;
@@ -307,6 +352,67 @@ class ServicioUsuarios {
     throw new Error("El modelo no implementa updateById/actualizarPorId/actualizarPerfil");
   }
 
+  _isCoachUser(u) {
+    return normalizeRole(u?.role) === "coach";
+  }
+
+  _isClientUser(u) {
+    return normalizeRole(u?.role) === "cliente";
+  }
+
+  async _listAllUsersNormalized() {
+    if (typeof this.model.obtenerUsuarios !== "function") {
+      throw new Error("MODEL_SIN_LISTADO_USUARIOS");
+    }
+
+    const raw = await this.model.obtenerUsuarios();
+    const arr = Array.isArray(raw) ? raw : raw?.users || raw?.usuarios || [];
+    return arr.map((u) => this._normalizeUser(u));
+  }
+
+  async _listCoachesBase() {
+    if (typeof this.model.listByRole === "function") {
+      const arr = await this.model.listByRole("coach");
+      return (arr || []).map((u) => this._normalizeUser(u));
+    }
+
+    const arr = await this._listAllUsersNormalized();
+    return arr.filter((u) => this._isCoachUser(u));
+  }
+
+  async _listUnassignedClientsBase() {
+    if (typeof this.model.listUnassignedClients === "function") {
+      const arr = await this.model.listUnassignedClients();
+      return (arr || []).map((u) => this._normalizeUser(u));
+    }
+
+    const arr = await this._listAllUsersNormalized();
+    return arr.filter((u) => this._isClientUser(u) && !u?.coach?.entrenadorId);
+  }
+
+  async _listClientsForCoach(coachId) {
+    if (typeof this.model.listClientsByCoachId === "function") {
+      const arr = await this.model.listClientsByCoachId(coachId);
+      return (arr || []).map((u) => this._normalizeUser(u));
+    }
+
+    const arr = await this._listAllUsersNormalized();
+    return arr.filter(
+      (u) =>
+        this._isClientUser(u) &&
+        String(u?.coach?.entrenadorId || "") === String(coachId)
+    );
+  }
+
+  async _countClientsForCoach(coachId) {
+    if (typeof this.model.countClientsByCoachId === "function") {
+      return await this.model.countClientsByCoachId(coachId);
+    }
+
+    const clients = await this._listClientsForCoach(coachId);
+    return clients.length;
+  }
+
   _generateOTP6() {
     return String(Math.floor(100000 + Math.random() * 900000));
   }
@@ -320,7 +426,6 @@ class ServicioUsuarios {
     return new Date(Date.now() + ttlMin * 60 * 1000);
   }
 
-  // ✅ shape compatible para devolver usuario desde servicio
   _buildCompatUser(user) {
     const u = this._normalizeUser(user);
     if (!u) return null;
@@ -339,9 +444,13 @@ class ServicioUsuarios {
       estado: u.estado || "activo",
 
       profile: u.profile || {},
+      coachProfile: u.coachProfile || null,
+      coachCapabilities: u.coachCapabilities || null,
+      coachWelcome: u.coachWelcome || null,
       settings: u.settings || {},
-      metas: u.metas || {},
+      adminMeta: u.adminMeta || {},
 
+      metas: u.metas || {},
       onboarding: u.onboarding || {},
 
       coach: u.coach || {},
@@ -364,8 +473,12 @@ class ServicioUsuarios {
     };
   }
 
+  _sanitizeUser(u) {
+    return this._buildCompatUser(u);
+  }
+
   // -------------------------
-  // ✅ Email wrappers
+  // Mail wrappers
   // -------------------------
   sendVerifyEmail = async (to, code) => sendVerifyCodeEmail({ to, code });
   sendPasswordResetEmail = async (to, code) => sendPasswordResetCodeEmail({ to, code });
@@ -609,6 +722,9 @@ class ServicioUsuarios {
     return { ok: true };
   };
 
+  // -------------------------
+  // LAST ACTIVITY
+  // -------------------------
   touchLastActivity = async (userId) => {
     if (!userId) return null;
 
@@ -621,14 +737,9 @@ class ServicioUsuarios {
     if (!user) return null;
 
     const now = new Date();
-
-    const last = user.lastActivityAt
-      ? new Date(user.lastActivityAt).getTime()
-      : 0;
-
+    const last = user.lastActivityAt ? new Date(user.lastActivityAt).getTime() : 0;
     const diffMs = now.getTime() - last;
 
-    // no escribir si pasaron menos de 5 minutos
     if (diffMs < 5 * 60 * 1000) {
       return user;
     }
@@ -642,10 +753,7 @@ class ServicioUsuarios {
   };
 
   // -------------------------
-  // ✅ GOOGLE LOGIN / REGISTER
-  // Mantiene compatibilidad:
-  // - si hay invited_user pendiente, usa esa invitación
-  // - si no hay invitación, sigue creando cliente como antes
+  // GOOGLE LOGIN / REGISTER
   // -------------------------
   loginOrRegisterWithGoogle = async ({ email, googleId, nombre, apellido, avatarUrl }) => {
     if (!process.env.JWT_SECRET) throw new Error("Falta JWT_SECRET en .env");
@@ -666,7 +774,37 @@ class ServicioUsuarios {
 
         const role = normalizeRole(invite.role);
         const plan = invite.plan || "free";
-        const tipo = inferTipoFromRole(role);
+
+        const tipo =
+          role === "cliente"
+            ? "entrenado"
+            : role === "coach"
+            ? "entrenador"
+            : "admin";
+
+        const normalizedCoachProfile =
+          role === "coach"
+            ? {
+                specialties: {
+                  training: !!invite?.coachProfile?.specialties?.training,
+                  nutrition: !!invite?.coachProfile?.specialties?.nutrition,
+                },
+              }
+            : null;
+
+        const coachWelcome =
+          role === "coach"
+            ? {
+                show: true,
+                invitedAt: invite?.invitedAt || new Date(),
+                plan: invite?.plan || "free",
+                specialties: {
+                  training: !!invite?.coachProfile?.specialties?.training,
+                  nutrition: !!invite?.coachProfile?.specialties?.nutrition,
+                },
+                seenAt: null,
+              }
+            : null;
 
         userRaw = await this._createUser({
           email,
@@ -681,19 +819,20 @@ class ServicioUsuarios {
             apellido: invite?.profile?.apellido || apellido || "",
             avatarUrl: avatarUrl || "",
           },
+          coachProfile: normalizedCoachProfile,
+          coachWelcome,
           settings: {},
 
           createdAt: new Date(),
           updatedAt: null,
         });
 
-try {
-  await this._deleteInviteById(invite._id);
-} catch (e) {
-  console.error("No se pudo eliminar la invitación:", e);
-}
+        try {
+          await this._deleteInviteById(invite._id);
+        } catch (e) {
+          console.error("No se pudo eliminar la invitación:", e);
+        }
       } else {
-        // comportamiento original: si no hay invitación, crea cliente normal
         const randomPass = crypto.randomBytes(32).toString("hex");
         const passwordHash = await bcrypt.hash(randomPass, 10);
 
@@ -710,6 +849,7 @@ try {
 
           emailVerificado: true,
           profile: { nombre, apellido, avatarUrl },
+          coachProfile: null,
           settings: {},
 
           createdAt: new Date(),
@@ -756,23 +896,28 @@ try {
     return this._normalizeUser(updated);
   };
 
-  // =========================
-  // ✅ ADMIN: CRUD USERS
-  // =========================
-  _sanitizeUser(u) {
-    const user = this._buildCompatUser(u);
-    return user;
-  }
+  markCoachWelcomeSeen = async (userId) => {
+    const user = await this.getById(userId);
+    if (!user) throw new Error("NOT_FOUND");
+
+    const updated = await this.updateById(userId, {
+      "coachWelcome.show": false,
+      "coachWelcome.seenAt": new Date(),
+      updatedAt: new Date(),
+    });
+
+    return this._normalizeUser(updated);
+  };
 
   // =========================
-  // ✅ ADMIN: CREATE INVITATION
-  // Este es el método que llama el controlador
+  // ADMIN: INVITATIONS
   // =========================
   adminCreateInvitation = async ({
     email,
     role,
     plan,
     profile = {},
+    coachProfile = null,
     invitedBy = null,
   }) => {
     email = String(email || "").trim().toLowerCase();
@@ -788,10 +933,33 @@ try {
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     if (!emailOk) throw new Error("EMAIL_INVALIDO");
 
-    if (!STAFF_INVITE_ROLES.includes(role)) throw new Error("ROL_INVALIDO");
+    const validRoles = ["admin", "coach", "cliente"];
+    if (!validRoles.includes(role)) throw new Error("ROL_INVALIDO");
 
     const dbPlan = role === "admin" ? null : toDbPlan(plan);
     if (role !== "admin" && !dbPlan) throw new Error("PLAN_INVALIDO");
+
+    let normalizedCoachProfile = null;
+
+    if (role === "coach") {
+      const training = !!coachProfile?.specialties?.training;
+      const nutrition = !!coachProfile?.specialties?.nutrition;
+
+      if (!coachProfile || !coachProfile.specialties) {
+        throw new Error("COACH_PROFILE_REQUERIDO");
+      }
+
+      if (!training && !nutrition) {
+        throw new Error("COACH_SPECIALTIES_REQUERIDAS");
+      }
+
+      normalizedCoachProfile = {
+        specialties: {
+          training,
+          nutrition,
+        },
+      };
+    }
 
     const existingUser = await this._findUserByEmail(email);
     if (existingUser) throw new Error("USUARIO_YA_EXISTE");
@@ -811,6 +979,7 @@ try {
         nombre,
         apellido,
       },
+      coachProfile: normalizedCoachProfile,
       invitedBy,
       invitedAt: new Date(),
       acceptedAt: null,
@@ -822,26 +991,196 @@ try {
     return created;
   };
 
+  adminListInvitations = async ({
+    search = "",
+    status = "todos",
+    role = "todos",
+    limit = 100,
+    skip = 0,
+  } = {}) => {
+    const result = await this.invitedModel.listAdmin({
+      search,
+      status,
+      role,
+      limit,
+      skip,
+    });
+
+    return {
+      invitations: result?.items || [],
+      total: result?.total || 0,
+    };
+  };
+
+  adminGetInvitationById = async (invitationId) => {
+    if (typeof this.invitedModel.getById !== "function") {
+      throw new Error("INVITATION_NOT_FOUND");
+    }
+    const invitation = await this.invitedModel.getById(invitationId);
+    if (!invitation) throw new Error("INVITATION_NOT_FOUND");
+    return invitation;
+  };
+
+  adminCancelInvitation = async (invitationId) => {
+    const invitation = await this.adminGetInvitationById(invitationId);
+    if (String(invitation?.status || "pending") !== "pending") {
+      throw new Error("INVITATION_ALREADY_FINALIZED");
+    }
+
+    if (typeof this.invitedModel.updateById !== "function") {
+      throw new Error("INVITATION_NOT_FOUND");
+    }
+
+    await this.invitedModel.updateById(invitationId, {
+      status: "cancelled",
+      cancelledAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    return await this.adminGetInvitationById(invitationId);
+  };
+
+  adminDeleteInvitation = async (invitationId) => {
+    if (typeof this.invitedModel.deleteById !== "function") {
+      throw new Error("INVITATION_NOT_FOUND");
+    }
+
+    const result = await this.invitedModel.deleteById(invitationId);
+    return { deleted: true, result };
+  };
+
+  // =========================
+  // ADMIN: LIST USERS / COACHES / CLIENTS
+  // =========================
+  adminListUsers = async ({
+    search = "",
+    role = "todos",
+    tipo = "todos",
+    estado = "todos",
+    limit = 100,
+    skip = 0,
+  } = {}) => {
+    limit = Math.min(Number(limit) || 100, 500);
+    skip = Math.max(Number(skip) || 0, 0);
+
+    if (typeof this.model.obtenerUsuarios !== "function") {
+      throw new Error("El modelo no implementa obtenerUsuarios");
+    }
+
+    const raw = await this.model.obtenerUsuarios();
+    let arr = Array.isArray(raw) ? raw : raw?.users || raw?.usuarios || [];
+
+    const s = String(search || "").trim().toLowerCase();
+    if (s) {
+      arr = arr.filter((u) => {
+        const email = String(u?.email || "").toLowerCase();
+        const nombre = String(u?.profile?.nombre || "").toLowerCase();
+        const apellido = String(u?.profile?.apellido || "").toLowerCase();
+        return (
+          email.includes(s) ||
+          nombre.includes(s) ||
+          apellido.includes(s) ||
+          `${nombre} ${apellido}`.includes(s)
+        );
+      });
+    }
+
+    if (role && role !== "todos") arr = arr.filter((u) => normalizeRole(u?.role || u?.rol) === normalizeRole(role));
+    if (tipo && tipo !== "todos") arr = arr.filter((u) => (u?.tipo || "") === tipo);
+    if (estado && estado !== "todos") arr = arr.filter((u) => (u?.estado || "activo") === estado);
+
+    const total = arr.length;
+    arr = arr.slice(skip, skip + limit);
+
+    return {
+      users: arr.map((u) => this._sanitizeUser(u)),
+      total,
+    };
+  };
+
+  adminListCoaches = async ({ search = "", limit = 100, skip = 0 } = {}) => {
+    let arr = await this._listCoachesBase();
+
+    const s = String(search || "").trim().toLowerCase();
+    if (s) {
+      arr = arr.filter((u) => {
+        const email = String(u?.email || "").toLowerCase();
+        const nombre = String(u?.profile?.nombre || "").toLowerCase();
+        const apellido = String(u?.profile?.apellido || "").toLowerCase();
+        return (
+          email.includes(s) ||
+          nombre.includes(s) ||
+          apellido.includes(s) ||
+          `${nombre} ${apellido}`.includes(s)
+        );
+      });
+    }
+
+    const total = arr.length;
+    arr = arr.slice(skip, skip + limit);
+
+    const coaches = await Promise.all(
+      arr.map(async (u) => {
+        const clientsCount = await this._countClientsForCoach(u._id);
+        return {
+          ...u,
+          coachStats: {
+            ...(u?.coachStats || {}),
+            currentClients: clientsCount,
+          },
+        };
+      })
+    );
+
+    return { coaches, total };
+  };
+
+  adminListUnassignedClients = async ({ search = "", limit = 100, skip = 0 } = {}) => {
+    let arr = await this._listUnassignedClientsBase();
+
+    const s = String(search || "").trim().toLowerCase();
+    if (s) {
+      arr = arr.filter((u) => {
+        const email = String(u?.email || "").toLowerCase();
+        const nombre = String(u?.profile?.nombre || "").toLowerCase();
+        const apellido = String(u?.profile?.apellido || "").toLowerCase();
+        return (
+          email.includes(s) ||
+          nombre.includes(s) ||
+          apellido.includes(s) ||
+          `${nombre} ${apellido}`.includes(s)
+        );
+      });
+    }
+
+    const total = arr.length;
+    arr = arr.slice(skip, skip + limit);
+
+    return { clients: arr, total };
+  };
+
+  adminGetUserById = async (id) => {
+    const u = await this.getById(id);
+    return u ? this._sanitizeUser(u) : null;
+  };
+
+  // =========================
+  // ADMIN: CREATE USER
+  // =========================
   adminCreateUser = async ({
     email,
     password,
     role = "cliente",
     plan = "free",
     estado = "activo",
-    tipo = "entrenado",
+    tipo = null,
     profile = {},
   }) => {
     if (!email || !password) throw new Error("Email y password requeridos");
 
     role = normalizeRole(role);
 
-    const validRoles = [
-      "admin",
-      "cliente",
-      "entrenador",
-      "nutricionista",
-      "entrenador_nutricionista",
-    ];
+    const validRoles = ["admin", "cliente", "coach"];
     if (!validRoles.includes(role)) throw new Error("ROL_INVALIDO");
 
     const dbPlan = toDbPlan(plan);
@@ -853,12 +1192,13 @@ try {
     if (exists) throw new Error("EMAIL_DUPLICADO");
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const resolvedTipo = tipo || inferTipoFromRole(role);
 
     const userToCreate = {
       email,
       passwordHash,
 
-      ...getUserDefaults({ role, plan: dbPlan, tipo }),
+      ...getUserDefaults({ role, plan: dbPlan, tipo: resolvedTipo }),
 
       estado,
       emailVerificado: false,
@@ -875,7 +1215,381 @@ try {
   };
 
   // =========================
-  // ✅ ONBOARDING (CLIENTE)
+  // ADMIN: UPDATE / DELETE USER
+  // =========================
+  adminUpdateUser = async (id, updates = {}) => {
+    const currentRaw = await this.model.obtenerPorId(id);
+    if (!currentRaw) throw new Error("NOT_FOUND");
+
+    const patch = { ...updates };
+
+    if (patch.email !== undefined) {
+      const email = String(patch.email).trim().toLowerCase();
+      if (!email) {
+        delete patch.email;
+      } else {
+        const other = await this._findUserByEmail(email);
+        const otherId = other ? (other._id?.toString?.() || other.id) : null;
+        if (other && String(otherId) !== String(id)) throw new Error("EMAIL_DUPLICADO");
+        patch.email = email;
+      }
+    }
+
+    if (patch.role !== undefined) {
+      patch.role = normalizeRole(patch.role);
+
+      const validRoles = ["admin", "cliente", "coach"];
+      if (!validRoles.includes(patch.role)) throw new Error("ROL_INVALIDO");
+
+      if (patch.tipo === undefined) {
+        patch.tipo = inferTipoFromRole(patch.role);
+      }
+    }
+
+    if (patch.plan !== undefined) {
+      if (patch.plan === null || String(patch.plan).trim() === "") {
+        patch.plan = null;
+      } else {
+        const dbPlan = toDbPlan(patch.plan);
+        if (!dbPlan) throw new Error("PLAN_INVALIDO");
+        patch.plan = dbPlan;
+      }
+    }
+
+    if (patch.password !== undefined) {
+      const pass = String(patch.password || "");
+      if (pass.length < 6) throw new Error("PASSWORD_CORTA");
+      patch.passwordHash = await bcrypt.hash(pass, 10);
+      delete patch.password;
+    }
+
+    if (patch._id) delete patch._id;
+
+    const updated = await this._updateById(id, patch);
+    return this._sanitizeUser(updated);
+  };
+
+  adminDeleteUser = async (id) => {
+    if (typeof this.model.borrarUsuario !== "function") {
+      throw new Error("El modelo no implementa borrarUsuario");
+    }
+    return await this.model.borrarUsuario(id);
+  };
+
+  // =========================
+  // ADMIN: STATUS / PLAN / META
+  // =========================
+  adminUpdateStatus = async (id, estado) => {
+    const valid = ["activo", "bloqueado", "inactivo"];
+    const next = String(estado || "").trim().toLowerCase();
+    if (!valid.includes(next)) throw new Error("ESTADO_INVALIDO");
+
+    const user = await this.getById(id);
+    if (!user) throw new Error("NOT_FOUND");
+
+    return await this.updateById(id, {
+      estado: next,
+      updatedAt: new Date(),
+    });
+  };
+
+  adminUpdatePlan = async (id, plan) => {
+    const dbPlan = toDbPlan(plan);
+    if (!dbPlan) throw new Error("PLAN_INVALIDO");
+
+    const user = await this.getById(id);
+    if (!user) throw new Error("NOT_FOUND");
+
+    const billing = {
+      ...(user?.billing || {}),
+      status: dbPlan === "free" ? "free" : (user?.billing?.status || "inactive"),
+    };
+
+    return await this.updateById(id, {
+      plan: dbPlan,
+      billing,
+      updatedAt: new Date(),
+    });
+  };
+
+  adminUpdateAdminMeta = async (id, payload = {}) => {
+    const user = await this.getById(id);
+    if (!user) throw new Error("NOT_FOUND");
+
+    const current = user?.adminMeta || {};
+    const next = {
+      ...current,
+      ...(payload?.internalNote !== undefined
+        ? { internalNote: String(payload.internalNote || "") }
+        : {}),
+      ...(Array.isArray(payload?.tags) ? { tags: payload.tags.map((t) => String(t)) } : {}),
+      ...(payload?.priority !== undefined ? { priority: String(payload.priority || "normal") } : {}),
+      lastReviewedAt: new Date(),
+    };
+
+    return await this.updateById(id, {
+      adminMeta: next,
+      updatedAt: new Date(),
+    });
+  };
+
+  adminResetOnboarding = async (id) => {
+    const user = await this.getById(id);
+    if (!user) throw new Error("NOT_FOUND");
+
+    return await this.updateById(id, {
+      onboarding: {
+        ...(user?.onboarding || {}),
+        done: false,
+        step: 1,
+        startedAt: new Date(),
+        completedAt: null,
+        lastSeenAt: null,
+      },
+      updatedAt: new Date(),
+    });
+  };
+
+  // =========================
+  // ADMIN: GOALS / DAILY GOALS
+  // =========================
+  adminUpdateGoals = async (id, payload = {}) => {
+    const user = await this.getById(id);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(user)) throw new Error("USER_NOT_CLIENT");
+
+    const nextGoal = {
+      ...(user?.goal || {}),
+      ...(payload?.goal || {}),
+      updatedAt: new Date(),
+    };
+
+    const nextMetas = {
+      ...(user?.metasActuales || {}),
+      ...(payload?.metasActuales || {}),
+      macros: {
+        ...(user?.metasActuales?.macros || {}),
+        ...(payload?.metasActuales?.macros || {}),
+      },
+      updatedAt: new Date(),
+    };
+
+    return await this.updateById(id, {
+      goal: nextGoal,
+      metasActuales: nextMetas,
+      updatedAt: new Date(),
+    });
+  };
+
+  adminUpdateDailyGoals = async (id, metasDiarias = {}) => {
+    const user = await this.getById(id);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(user)) throw new Error("USER_NOT_CLIENT");
+
+    return await this.updateById(id, {
+      metasDiarias,
+      updatedAt: new Date(),
+    });
+  };
+
+  actualizarPerfil = async (id, updates = {}) => {
+    const current = await this.getById(id);
+    if (!current) throw new Error("NOT_FOUND");
+
+    const patch = { ...updates };
+
+    if (patch.email !== undefined) {
+      const email = String(patch.email || "").trim().toLowerCase();
+      if (!email) {
+        delete patch.email;
+      } else {
+        const other = await this._findUserByEmail(email);
+        const otherId = other ? (other._id?.toString?.() || other.id) : null;
+        if (other && String(otherId) !== String(id)) {
+          throw new Error("EMAIL_DUPLICADO");
+        }
+        patch.email = email;
+      }
+    }
+
+    if (patch.password !== undefined) {
+      const pass = String(patch.password || "");
+      if (pass.length < 6) throw new Error("PASSWORD_CORTA");
+      patch.passwordHash = await bcrypt.hash(pass, 10);
+      delete patch.password;
+    }
+
+    if (patch._id) delete patch._id;
+    if (patch.role) delete patch.role;
+    if (patch.plan) delete patch.plan;
+    if (patch.estado) delete patch.estado;
+    if (patch.tipo) delete patch.tipo;
+    if (patch.coachCapabilities) delete patch.coachCapabilities;
+    if (patch.adminMeta) delete patch.adminMeta;
+
+    const updated = await this.updateById(id, patch);
+    return this._normalizeUser(updated);
+  };
+
+
+  // =========================
+  // ADMIN: RELACIÓN COACH <-> CLIENTE
+  // =========================
+  adminAssignCoach = async ({ clientId, coachId, adminId = null }) => {
+    if (!coachId) throw new Error("COACH_ID_REQUIRED");
+    if (String(clientId) === String(coachId)) throw new Error("CANNOT_ASSIGN_SELF");
+
+    const client = await this.getById(clientId);
+    if (!client) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(client)) throw new Error("USER_NOT_CLIENT");
+
+    const coach = await this.getById(coachId);
+    if (!coach) throw new Error("COACH_NOT_FOUND");
+    if (!this._isCoachUser(coach)) throw new Error("USER_NOT_COACH");
+
+    const currentCoachId = client?.coach?.entrenadorId || null;
+    const maxClients = Number(coach?.coachCapabilities?.maxClients ?? 0);
+
+    if (String(currentCoachId || "") !== String(coachId)) {
+      const currentCount = await this._countClientsForCoach(coachId);
+      if (maxClients > 0 && currentCount >= maxClients) {
+        throw new Error("COACH_CLIENT_LIMIT_REACHED");
+      }
+    }
+
+    return await this.updateById(clientId, {
+      coach: {
+        ...(client?.coach || {}),
+        entrenadorId: coach._id,
+        assignedAt: new Date(),
+        assignedByAdminId: adminId,
+        source: "admin",
+      },
+      updatedAt: new Date(),
+    });
+  };
+
+  adminUnassignCoach = async ({ clientId, adminId = null }) => {
+    const client = await this.getById(clientId);
+    if (!client) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(client)) throw new Error("USER_NOT_CLIENT");
+
+    return await this.updateById(clientId, {
+      coach: {
+        ...(client?.coach || {}),
+        entrenadorId: null,
+        assignedAt: null,
+        assignedByAdminId: adminId,
+        source: null,
+      },
+      updatedAt: new Date(),
+    });
+  };
+
+  adminGetCoachClients = async (coachId) => {
+    const coach = await this.getById(coachId);
+    if (!coach) throw new Error("COACH_NOT_FOUND");
+    if (!this._isCoachUser(coach)) throw new Error("USER_NOT_COACH");
+
+    const clients = await this._listClientsForCoach(coachId);
+
+    return {
+      coach,
+      clients,
+      total: clients.length,
+    };
+  };
+
+  // =========================
+  // ADMIN: COACH PROFILE / CAPABILITIES
+  // =========================
+  adminUpdateCoachProfile = async (id, payload = {}) => {
+    const user = await this.getById(id);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isCoachUser(user)) throw new Error("USER_NOT_COACH");
+
+    const current = user?.coachProfile || {};
+    const currentSpecs = current?.specialties || {};
+
+    const next = {
+      ...current,
+      ...(payload?.title !== undefined ? { title: String(payload.title || "") } : {}),
+      ...(payload?.bio !== undefined ? { bio: String(payload.bio || "") } : {}),
+      specialties: {
+        ...currentSpecs,
+        ...(payload?.specialties?.training !== undefined
+          ? { training: !!payload.specialties.training }
+          : {}),
+        ...(payload?.specialties?.nutrition !== undefined
+          ? { nutrition: !!payload.specialties.nutrition }
+          : {}),
+      },
+    };
+
+    if (
+      payload?.specialties &&
+      !next.specialties.training &&
+      !next.specialties.nutrition
+    ) {
+      throw new Error("SPECIALTIES_INVALIDAS");
+    }
+
+    return await this.updateById(id, {
+      coachProfile: next,
+      updatedAt: new Date(),
+    });
+  };
+
+  adminUpdateCoachCapabilities = async (id, payload = {}) => {
+    const user = await this.getById(id);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isCoachUser(user)) throw new Error("USER_NOT_COACH");
+
+    const current = user?.coachCapabilities || {};
+
+    const maxClients =
+      payload?.maxClients !== undefined
+        ? Number(payload.maxClients)
+        : current?.maxClients;
+
+    if (payload?.maxClients !== undefined && (!Number.isFinite(maxClients) || maxClients < 0)) {
+      throw new Error("MAX_CLIENTS_INVALIDO");
+    }
+
+    const next = {
+      ...current,
+      ...(payload?.maxClients !== undefined ? { maxClients } : {}),
+      ...(payload?.canInviteClients !== undefined ? { canInviteClients: !!payload.canInviteClients } : {}),
+      ...(payload?.canManageTraining !== undefined ? { canManageTraining: !!payload.canManageTraining } : {}),
+      ...(payload?.canManageNutrition !== undefined ? { canManageNutrition: !!payload.canManageNutrition } : {}),
+      ...(payload?.canUseTemplates !== undefined ? { canUseTemplates: !!payload.canUseTemplates } : {}),
+      ...(payload?.canDuplicatePlans !== undefined ? { canDuplicatePlans: !!payload.canDuplicatePlans } : {}),
+      ...(payload?.canExportData !== undefined ? { canExportData: !!payload.canExportData } : {}),
+      ...(payload?.canSeeAdvancedMetrics !== undefined ? { canSeeAdvancedMetrics: !!payload.canSeeAdvancedMetrics } : {}),
+      menus: {
+        ...(current?.menus || {}),
+        ...(payload?.menus?.automatic !== undefined ? { automatic: !!payload.menus.automatic } : {}),
+        ...(payload?.menus?.semiautomatic !== undefined ? { semiautomatic: !!payload.menus.semiautomatic } : {}),
+        ...(payload?.menus?.fixed !== undefined ? { fixed: !!payload.menus.fixed } : {}),
+        ...(payload?.menus?.hybrid !== undefined ? { hybrid: !!payload.menus.hybrid } : {}),
+      },
+      routines: {
+        ...(current?.routines || {}),
+        ...(payload?.routines?.automatic !== undefined ? { automatic: !!payload.routines.automatic } : {}),
+        ...(payload?.routines?.semiautomatic !== undefined ? { semiautomatic: !!payload.routines.semiautomatic } : {}),
+        ...(payload?.routines?.manual !== undefined ? { manual: !!payload.routines.manual } : {}),
+        ...(payload?.routines?.hybrid !== undefined ? { hybrid: !!payload.routines.hybrid } : {}),
+      },
+    };
+
+    return await this.updateById(id, {
+      coachCapabilities: next,
+      updatedAt: new Date(),
+    });
+  };
+
+  // =========================
+  // ONBOARDING (CLIENTE)
   // =========================
   actualizarOnboardingCliente = async (userId, step, data = {}) => {
     const now = new Date();
@@ -902,9 +1616,7 @@ try {
     const patch = { updatedAt: now };
     const has = (k) => Object.prototype.hasOwnProperty.call(data, k);
 
-    // ----------------
-    // STEP 1 (BASICS)
-    // ----------------
+    // STEP 1
     if (s === 1) {
       if (has("genero") && data.genero != null) basics.genero = String(data.genero);
       if (has("sexo") && data.sexo != null) basics.genero = String(data.sexo);
@@ -1013,9 +1725,7 @@ try {
       };
     }
 
-    // ----------------
-    // STEP 2 (GOAL)
-    // ----------------
+    // STEP 2
     if (s === 2) {
       const isWizardV2 = String(data?.__wizard || "") === "v2";
 
@@ -1074,9 +1784,7 @@ try {
       }
     }
 
-    // ----------------
-    // STEP 3 (PROGRAM)
-    // ----------------
+    // STEP 3
     if (s === 3) {
       const isWizardV2 = String(data?.__wizard || "") === "v2";
 
@@ -1152,122 +1860,6 @@ try {
 
   getUpdatedAt = async (userId) => {
     return await this.model.getUpdatedAtById(userId);
-  };
-
-  // =========================
-  // ✅ ADMIN: LIST USERS
-  // =========================
-  adminListUsers = async ({
-    search = "",
-    role = "todos",
-    tipo = "todos",
-    estado = "todos",
-    limit = 100,
-    skip = 0,
-  } = {}) => {
-    limit = Math.min(Number(limit) || 100, 500);
-    skip = Math.max(Number(skip) || 0, 0);
-
-    if (typeof this.model.obtenerUsuarios !== "function") {
-      throw new Error("El modelo no implementa obtenerUsuarios");
-    }
-
-    const raw = await this.model.obtenerUsuarios();
-    let arr = Array.isArray(raw) ? raw : raw?.users || raw?.usuarios || [];
-
-    const s = String(search || "").trim().toLowerCase();
-    if (s) {
-      arr = arr.filter((u) => {
-        const email = String(u?.email || "").toLowerCase();
-        const nombre = String(u?.profile?.nombre || "").toLowerCase();
-        const apellido = String(u?.profile?.apellido || "").toLowerCase();
-        return (
-          email.includes(s) ||
-          nombre.includes(s) ||
-          apellido.includes(s) ||
-          `${nombre} ${apellido}`.includes(s)
-        );
-      });
-    }
-
-    if (role && role !== "todos") arr = arr.filter((u) => (u?.role || u?.rol) === role);
-    if (tipo && tipo !== "todos") arr = arr.filter((u) => (u?.tipo || "") === tipo);
-    if (estado && estado !== "todos") arr = arr.filter((u) => (u?.estado || "activo") === estado);
-
-    const total = arr.length;
-    arr = arr.slice(skip, skip + limit);
-
-    return {
-      users: arr.map((u) => this._sanitizeUser(u)),
-      total,
-    };
-  };
-
-  adminGetUserById = async (id) => {
-    const u = await this.getById(id);
-    return u ? this._sanitizeUser(u) : null;
-  };
-
-  adminUpdateUser = async (id, updates = {}) => {
-    const currentRaw = await this.model.obtenerPorId(id);
-    if (!currentRaw) throw new Error("NOT_FOUND");
-
-    const patch = { ...updates };
-
-    if (patch.email !== undefined) {
-      const email = String(patch.email).trim().toLowerCase();
-      if (!email) {
-        delete patch.email;
-      } else {
-        const other = await this._findUserByEmail(email);
-        const otherId = other ? (other._id?.toString?.() || other.id) : null;
-        if (other && String(otherId) !== String(id)) throw new Error("EMAIL_DUPLICADO");
-        patch.email = email;
-      }
-    }
-
-    if (patch.role !== undefined) {
-      patch.role = normalizeRole(patch.role);
-
-      const validRoles = [
-        "admin",
-        "cliente",
-        "entrenador",
-        "nutricionista",
-        "entrenador_nutricionista",
-      ];
-
-      if (!validRoles.includes(patch.role)) throw new Error("ROL_INVALIDO");
-    }
-
-    if (patch.plan !== undefined) {
-      if (patch.plan === null || String(patch.plan).trim() === "") {
-        patch.plan = null;
-      } else {
-        const dbPlan = toDbPlan(patch.plan);
-        if (!dbPlan) throw new Error("PLAN_INVALIDO");
-        patch.plan = dbPlan;
-      }
-    }
-
-    if (patch.password !== undefined) {
-      const pass = String(patch.password || "");
-      if (pass.length < 6) throw new Error("PASSWORD_CORTA");
-      patch.passwordHash = await bcrypt.hash(pass, 10);
-      delete patch.password;
-    }
-
-    if (patch._id) delete patch._id;
-
-    const updated = await this._updateById(id, patch);
-    return this._sanitizeUser(updated);
-  };
-
-  adminDeleteUser = async (id) => {
-    if (typeof this.model.borrarUsuario !== "function") {
-      throw new Error("El modelo no implementa borrarUsuario");
-    }
-    return await this.model.borrarUsuario(id);
   };
 }
 
