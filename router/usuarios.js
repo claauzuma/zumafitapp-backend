@@ -107,6 +107,34 @@ class RouterUsuarios {
 
     users.get("/me/updatedAt", authMiddleware, this.controladorUsuarios.getUpdatedAt);
     users.get("/me", authMiddleware, this.controladorUsuarios.obtenerPerfil);
+    users.get("/me/coach-clients", authMiddleware, this.controladorUsuarios.getMyCoachClients);
+    users.get(
+      "/me/coach-clients/:clientId",
+      authMiddleware,
+      requireRole("coach"),
+      this.controladorUsuarios.getMyCoachClientDetail
+    );
+    users.patch(
+      "/me/coach-clients/:clientId/nutrition",
+      authMiddleware,
+      requireRole("coach"),
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.coachUpdateClientNutrition
+    );
+    users.patch(
+      "/me/coach-clients/:clientId/menu",
+      authMiddleware,
+      requireRole("coach"),
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.coachUpdateClientMenu
+    );
+    users.patch(
+      "/me/coach-clients/:clientId/routine",
+      authMiddleware,
+      requireRole("coach"),
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.coachUpdateClientRoutine
+    );
     users.patch("/me", authMiddleware, denyWriteWhenReadOnlyImpersonation, this.controladorUsuarios.actualizarPerfil);
     users.patch(
       "/me/coach-welcome-seen",

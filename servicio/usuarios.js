@@ -302,6 +302,52 @@ function toMongoIdOrString(id) {
   return ObjectId.isValid(value) ? new ObjectId(value) : value;
 }
 
+function idToString(id) {
+  return id?.toString?.() || String(id || "");
+}
+
+function numberOrNull(value, { min = null, max = null } = {}) {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  if (!Number.isFinite(n)) throw new Error("PAYLOAD_INVALIDO");
+  if (min !== null && n < min) throw new Error("PAYLOAD_INVALIDO");
+  if (max !== null && n > max) throw new Error("PAYLOAD_INVALIDO");
+  return n;
+}
+
+function cleanString(value, max = 4000) {
+  if (value === null || value === undefined) return "";
+  return String(value).slice(0, max);
+}
+
+function isPlainObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value);
+}
+
+function cleanStringArray(value, maxItems = 24, maxLen = 120) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => cleanString(item, maxLen).trim())
+    .filter(Boolean)
+    .slice(0, maxItems);
+}
+
+function normalizeBuilderMode(mode, fallback = "manual") {
+  const m = String(mode || fallback).trim().toLowerCase();
+  if (["automatic", "auto", "automatica", "automatico"].includes(m)) return "automatic";
+  if (["semiautomatic", "semi", "semi_automatic", "semiautomatica", "semiautomatico"].includes(m)) {
+    return "semiautomatic";
+  }
+  if (["hybrid", "hibrido", "hibrida"].includes(m)) return "hybrid";
+  return "manual";
+}
+
+function featureKeyForMode(mode) {
+  if (mode === "automatic") return "automaticGenerator";
+  if (mode === "semiautomatic" || mode === "hybrid") return "semiAutomaticBuilder";
+  return "manualBuilder";
+}
+
 function inferTipoFromRole(role) {
   const r = normalizeRole(role);
   if (r === "cliente") return "entrenado";
@@ -1909,6 +1955,268 @@ class ServicioUsuarios {
       clients,
       total: clients.length,
     };
+  };
+
+  getMyCoachClients = async (coachId) => {
+    if (!coachId) throw new Error("COACH_NOT_FOUND");
+
+    const coach = await this.getById(coachId);
+    if (!coach) throw new Error("COACH_NOT_FOUND");
+    if (!this._isCoachUser(coach)) throw new Error("USER_NOT_COACH");
+
+    const clients = await this._listClientsForCoach(coach._id || coach.id || coachId);
+
+    return {
+      coach,
+      clients,
+      total: clients.length,
+    };
+  };
+
+  _assertCoachFeature(coach, section, mode = "manual") {
+    const specialties = coach?.coachProfile?.specialties || {};
+
+    if (section === "menus" && !specialties.nutrition) {
+      throw new Error("COACH_NUTRITION_NOT_ALLOWED");
+    }
+
+    if (section === "routines" && !specialties.training) {
+      throw new Error("COACH_TRAINING_NOT_ALLOWED");
+    }
+
+    const effective = coach?.effectiveCapabilities || {};
+    const featureKey = featureKeyForMode(mode);
+    const sectionFeatures = effective?.features?.[section] || {};
+
+    if (effective?.isTrialExpired || !sectionFeatures?.[featureKey]) {
+      throw new Error("COACH_FEATURE_NOT_ALLOWED");
+    }
+  }
+
+  _assertNutritionEditAllowed(coach) {
+    const specialties = coach?.coachProfile?.specialties || {};
+    if (!specialties.nutrition) throw new Error("COACH_NUTRITION_NOT_ALLOWED");
+
+    const features = coach?.effectiveCapabilities?.features?.menus || {};
+    if (
+      coach?.effectiveCapabilities?.isTrialExpired ||
+      !(
+        features.manualBuilder ||
+        features.semiAutomaticBuilder ||
+        features.automaticGenerator
+      )
+    ) {
+      throw new Error("COACH_FEATURE_NOT_ALLOWED");
+    }
+  }
+
+  _getCoachClientPair = async ({ coachId, clientId }) => {
+    if (!coachId) throw new Error("COACH_NOT_FOUND");
+    if (!clientId) throw new Error("NOT_FOUND");
+
+    const coach = await this.getById(coachId);
+    if (!coach) throw new Error("COACH_NOT_FOUND");
+    if (!this._isCoachUser(coach)) throw new Error("USER_NOT_COACH");
+
+    const client = await this.getById(clientId);
+    if (!client) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(client)) throw new Error("USER_NOT_CLIENT");
+
+    const assignedCoachId = client?.coach?.entrenadorId;
+    if (idToString(assignedCoachId) !== idToString(coach._id || coach.id || coachId)) {
+      throw new Error("CLIENT_NOT_ASSIGNED_TO_COACH");
+    }
+
+    return { coach, client };
+  };
+
+  getMyCoachClientDetail = async ({ coachId, clientId }) => {
+    return await this._getCoachClientPair({ coachId, clientId });
+  };
+
+  coachUpdateClientNutrition = async ({ coachId, clientId, payload = {} }) => {
+    const { coach, client } = await this._getCoachClientPair({ coachId, clientId });
+    this._assertNutritionEditAllowed(coach);
+
+    const incoming = isPlainObject(payload?.nutrition) ? payload.nutrition : payload;
+    const now = new Date();
+
+    const currentMetas = client?.metasActuales || {};
+    const currentMacros = currentMetas?.macros || {};
+    const incomingMacros = isPlainObject(incoming?.macros) ? incoming.macros : {};
+
+    const nextMetas = {
+      ...currentMetas,
+      ...(incoming?.kcal !== undefined
+        ? { kcal: numberOrNull(incoming.kcal, { min: 800, max: 7000 }) }
+        : {}),
+      macros: {
+        ...currentMacros,
+        ...(incomingMacros?.p !== undefined ? { p: numberOrNull(incomingMacros.p, { min: 0, max: 500 }) } : {}),
+        ...(incomingMacros?.c !== undefined ? { c: numberOrNull(incomingMacros.c, { min: 0, max: 900 }) } : {}),
+        ...(incomingMacros?.g !== undefined ? { g: numberOrNull(incomingMacros.g, { min: 0, max: 400 }) } : {}),
+      },
+      updatedAt: now,
+      updatedByCoachId: toMongoIdOrString(coach._id || coach.id || coachId),
+    };
+
+    const currentGoal = client?.goal || {};
+    const nextGoal = {
+      ...currentGoal,
+      ...(incoming?.goalType !== undefined ? { type: cleanString(incoming.goalType, 60) || null } : {}),
+      ...(incoming?.targetWeightKg !== undefined
+        ? { targetWeightKg: numberOrNull(incoming.targetWeightKg, { min: 30, max: 250 }) }
+        : {}),
+      ...(incoming?.approach !== undefined ? { approach: cleanString(incoming.approach, 120) || null } : {}),
+      updatedAt: now,
+      updatedByCoachId: toMongoIdOrString(coach._id || coach.id || coachId),
+    };
+
+    const updated = await this.updateById(clientId, {
+      metasActuales: nextMetas,
+      goal: nextGoal,
+      updatedAt: now,
+    });
+
+    return { coach, client: updated };
+  };
+
+  coachUpdateClientMenu = async ({ coachId, clientId, payload = {} }) => {
+    const { coach, client } = await this._getCoachClientPair({ coachId, clientId });
+    const incoming = isPlainObject(payload?.menu) ? payload.menu : payload;
+    const modeType = normalizeBuilderMode(incoming?.mode?.type || incoming?.modeType || incoming?.type);
+    this._assertCoachFeature(coach, "menus", modeType);
+
+    const now = new Date();
+    const current = client?.menu || {};
+    const mealConfig = isPlainObject(incoming?.mealConfig) ? incoming.mealConfig : {};
+    const restrictions = isPlainObject(incoming?.restrictions) ? incoming.restrictions : {};
+    const weeklyPlan = isPlainObject(incoming?.weeklyPlan) ? incoming.weeklyPlan : {};
+
+    const nextMenu = {
+      ...current,
+      mode: {
+        ...(current?.mode || {}),
+        ...(isPlainObject(incoming?.mode) ? incoming.mode : {}),
+        type: modeType,
+        lockedByCoach:
+          incoming?.mode?.lockedByCoach !== undefined
+            ? !!incoming.mode.lockedByCoach
+            : !!current?.mode?.lockedByCoach,
+        source: "coach",
+        updatedByCoachId: toMongoIdOrString(coach._id || coach.id || coachId),
+      },
+      mealConfig: {
+        ...(current?.mealConfig || {}),
+        ...(mealConfig?.mealsPerDay !== undefined
+          ? { mealsPerDay: numberOrNull(mealConfig.mealsPerDay, { min: 1, max: 8 }) }
+          : {}),
+        ...(mealConfig?.distribution !== undefined ? { distribution: cleanString(mealConfig.distribution, 80) } : {}),
+        ...(mealConfig?.weekendBoost !== undefined ? { weekendBoost: !!mealConfig.weekendBoost } : {}),
+        ...(mealConfig?.weekendBoostPct !== undefined
+          ? { weekendBoostPct: numberOrNull(mealConfig.weekendBoostPct, { min: 0, max: 50 }) }
+          : {}),
+        ...(mealConfig?.snackLibre !== undefined ? { snackLibre: !!mealConfig.snackLibre } : {}),
+        ...(mealConfig?.snackLibreKcal !== undefined
+          ? { snackLibreKcal: numberOrNull(mealConfig.snackLibreKcal, { min: 0, max: 1200 }) }
+          : {}),
+      },
+      restrictions: {
+        ...(current?.restrictions || {}),
+        ...(restrictions?.allergies !== undefined ? { allergies: cleanStringArray(restrictions.allergies) } : {}),
+        ...(restrictions?.intolerances !== undefined ? { intolerances: cleanStringArray(restrictions.intolerances) } : {}),
+        ...(restrictions?.excludedFoods !== undefined ? { excludedFoods: cleanStringArray(restrictions.excludedFoods) } : {}),
+        ...(restrictions?.preferredFoods !== undefined ? { preferredFoods: cleanStringArray(restrictions.preferredFoods) } : {}),
+        ...(restrictions?.favoriteFoods !== undefined ? { favoriteFoods: cleanStringArray(restrictions.favoriteFoods) } : {}),
+        ...(restrictions?.favoriteMeals !== undefined ? { favoriteMeals: cleanStringArray(restrictions.favoriteMeals) } : {}),
+      },
+      weeklyPlan: {
+        ...(current?.weeklyPlan || {}),
+        ...(isPlainObject(weeklyPlan?.caloriesByDay) ? { caloriesByDay: weeklyPlan.caloriesByDay } : {}),
+        ...(isPlainObject(weeklyPlan?.macrosByDay) ? { macrosByDay: weeklyPlan.macrosByDay } : {}),
+        ...(isPlainObject(weeklyPlan?.mealsByDay) ? { mealsByDay: weeklyPlan.mealsByDay } : {}),
+        generatedBy: "coach",
+        generatorMode: modeType,
+        updatedAt: now,
+      },
+      coachNotes: cleanString(incoming?.coachNotes, 3000),
+      updatedAt: now,
+      updatedByCoachId: toMongoIdOrString(coach._id || coach.id || coachId),
+    };
+
+    const updated = await this.updateById(clientId, {
+      menu: nextMenu,
+      updatedAt: now,
+    });
+
+    return { coach, client: updated };
+  };
+
+  coachUpdateClientRoutine = async ({ coachId, clientId, payload = {} }) => {
+    const { coach, client } = await this._getCoachClientPair({ coachId, clientId });
+    const incoming = isPlainObject(payload?.routine) ? payload.routine : payload;
+    const modeType = normalizeBuilderMode(incoming?.mode?.type || incoming?.modeType || incoming?.type);
+    this._assertCoachFeature(coach, "routines", modeType);
+
+    const now = new Date();
+    const current = client?.routine || {};
+    const structure = isPlainObject(incoming?.structure) ? incoming.structure : {};
+    const currentPlan = isPlainObject(incoming?.currentPlan) ? incoming.currentPlan : {};
+    const progression = isPlainObject(incoming?.progression) ? incoming.progression : {};
+
+    const nextRoutine = {
+      ...current,
+      mode: {
+        ...(current?.mode || {}),
+        ...(isPlainObject(incoming?.mode) ? incoming.mode : {}),
+        type: modeType,
+        editableByCoach: true,
+        source: "coach",
+        updatedByCoachId: toMongoIdOrString(coach._id || coach.id || coachId),
+      },
+      structure: {
+        ...(current?.structure || {}),
+        ...(structure?.split !== undefined ? { split: cleanString(structure.split, 120) || null } : {}),
+        ...(structure?.trainingDaysPerWeek !== undefined
+          ? { trainingDaysPerWeek: numberOrNull(structure.trainingDaysPerWeek, { min: 1, max: 7 }) }
+          : {}),
+        ...(structure?.preferredDays !== undefined ? { preferredDays: cleanStringArray(structure.preferredDays, 7, 40) } : {}),
+        ...(structure?.sessionDurationMin !== undefined
+          ? { sessionDurationMin: numberOrNull(structure.sessionDurationMin, { min: 10, max: 240 }) }
+          : {}),
+        ...(structure?.focus !== undefined ? { focus: cleanStringArray(structure.focus, 12, 80) } : {}),
+      },
+      currentPlan: {
+        ...(current?.currentPlan || {}),
+        ...(currentPlan?.name !== undefined ? { name: cleanString(currentPlan.name, 160) || null } : {}),
+        ...(currentPlan?.description !== undefined ? { description: cleanString(currentPlan.description, 2000) || null } : {}),
+        ...(currentPlan?.startDate !== undefined ? { startDate: cleanString(currentPlan.startDate, 40) || null } : {}),
+        ...(currentPlan?.endDate !== undefined ? { endDate: cleanString(currentPlan.endDate, 40) || null } : {}),
+        ...(currentPlan?.isActive !== undefined ? { isActive: !!currentPlan.isActive } : {}),
+        ...(Array.isArray(currentPlan?.days) ? { days: currentPlan.days.slice(0, 14) } : {}),
+        generatedBy: "coach",
+        generatorMode: modeType,
+        updatedAt: now,
+      },
+      progression: {
+        ...(current?.progression || {}),
+        ...(progression?.mode !== undefined ? { mode: cleanString(progression.mode, 80) || "manual" } : {}),
+        ...(progression?.deloadEnabled !== undefined ? { deloadEnabled: !!progression.deloadEnabled } : {}),
+        ...(progression?.progressionRule !== undefined
+          ? { progressionRule: cleanString(progression.progressionRule, 1000) || null }
+          : {}),
+      },
+      coachNotes: cleanString(incoming?.coachNotes, 3000),
+      updatedAt: now,
+      updatedByCoachId: toMongoIdOrString(coach._id || coach.id || coachId),
+    };
+
+    const updated = await this.updateById(clientId, {
+      routine: nextRoutine,
+      updatedAt: now,
+    });
+
+    return { coach, client: updated };
   };
 
   // =========================

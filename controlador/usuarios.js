@@ -69,6 +69,19 @@ function adminError(res, error) {
   if (msg === "COACH_ID_REQUIRED") return res.status(400).json({ error: "Falta coachId" });
   if (msg === "COACH_NOT_ACTIVE") return res.status(400).json({ error: "El coach no esta activo" });
   if (msg === "COACH_NOT_AVAILABLE") return res.status(409).json({ error: "El coach no tiene permisos activos para recibir clientes" });
+  if (msg === "CLIENT_NOT_ASSIGNED_TO_COACH") {
+    return res.status(403).json({ error: "Este cliente no esta asignado a tu cuenta profesional" });
+  }
+  if (msg === "COACH_NUTRITION_NOT_ALLOWED") {
+    return res.status(403).json({ error: "Tu perfil profesional no tiene acceso a nutricion" });
+  }
+  if (msg === "COACH_TRAINING_NOT_ALLOWED") {
+    return res.status(403).json({ error: "Tu perfil profesional no tiene acceso a rutinas" });
+  }
+  if (msg === "COACH_FEATURE_NOT_ALLOWED") {
+    return res.status(403).json({ error: "Tu plan no permite esta accion" });
+  }
+  if (msg === "PAYLOAD_INVALIDO") return res.status(400).json({ error: "Datos invalidos" });
   if (msg === "CANNOT_ASSIGN_SELF") {
     return res.status(400).json({ error: "No podés asignar el mismo usuario como coach y cliente" });
   }
@@ -1084,6 +1097,96 @@ class ControladorUsuarios {
         coach: mapUserPublic(data.coach),
         clients: (data.clients || []).map((u) => mapUserPublic(u)),
         total: data.total || 0,
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  getMyCoachClients = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const data = await this.servicio.getMyCoachClients(coachId);
+
+      return res.json({
+        coach: mapUserPublic(data.coach),
+        clients: (data.clients || []).map((u) => mapUserPublic(u)),
+        total: data.total || 0,
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  getMyCoachClientDetail = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const { clientId } = req.params;
+      const data = await this.servicio.getMyCoachClientDetail({ coachId, clientId });
+
+      return res.json({
+        coach: mapUserPublic(data.coach),
+        client: mapUserPublic(data.client),
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  coachUpdateClientNutrition = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const { clientId } = req.params;
+      const data = await this.servicio.coachUpdateClientNutrition({
+        coachId,
+        clientId,
+        payload: req.body || {},
+      });
+
+      return res.json({
+        ok: true,
+        coach: mapUserPublic(data.coach),
+        client: mapUserPublic(data.client),
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  coachUpdateClientMenu = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const { clientId } = req.params;
+      const data = await this.servicio.coachUpdateClientMenu({
+        coachId,
+        clientId,
+        payload: req.body || {},
+      });
+
+      return res.json({
+        ok: true,
+        coach: mapUserPublic(data.coach),
+        client: mapUserPublic(data.client),
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  coachUpdateClientRoutine = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const { clientId } = req.params;
+      const data = await this.servicio.coachUpdateClientRoutine({
+        coachId,
+        clientId,
+        payload: req.body || {},
+      });
+
+      return res.json({
+        ok: true,
+        coach: mapUserPublic(data.coach),
+        client: mapUserPublic(data.client),
       });
     } catch (error) {
       return adminError(res, error);
