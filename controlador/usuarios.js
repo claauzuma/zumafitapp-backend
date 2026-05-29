@@ -63,7 +63,12 @@ function adminError(res, error) {
 
   if (msg === "USER_NOT_CLIENT") return res.status(400).json({ error: "El usuario no es cliente" });
   if (msg === "USER_NOT_COACH") return res.status(400).json({ error: "El usuario no es coach" });
+  if (msg === "ADMIN_REQUIRED") return res.status(403).json({ error: "Se requiere rol admin" });
+  if (msg === "CANNOT_IMPERSONATE_ADMIN") return res.status(400).json({ error: "No se puede simular un usuario admin" });
+  if (msg === "ROLE_NOT_IMPERSONABLE") return res.status(400).json({ error: "Este rol no se puede simular" });
   if (msg === "COACH_ID_REQUIRED") return res.status(400).json({ error: "Falta coachId" });
+  if (msg === "COACH_NOT_ACTIVE") return res.status(400).json({ error: "El coach no esta activo" });
+  if (msg === "COACH_NOT_AVAILABLE") return res.status(409).json({ error: "El coach no tiene permisos activos para recibir clientes" });
   if (msg === "CANNOT_ASSIGN_SELF") {
     return res.status(400).json({ error: "No podés asignar el mismo usuario como coach y cliente" });
   }
@@ -72,6 +77,8 @@ function adminError(res, error) {
   if (msg === "ESTADO_INVALIDO") return res.status(400).json({ error: "Estado inválido" });
   if (msg === "MAX_CLIENTS_INVALIDO") return res.status(400).json({ error: "maxClients inválido" });
   if (msg === "SPECIALTIES_INVALIDAS") return res.status(400).json({ error: "Especialidades inválidas" });
+  if (msg === "PLAN_NOT_FOUND") return res.status(404).json({ error: "Plan no encontrado" });
+  if (msg === "PLAN_CONFIG_MODEL_UNAVAILABLE") return res.status(500).json({ error: "Configuracion de planes no disponible" });
   if (msg === "PASSWORD_CORTA") {
     return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
   }
@@ -105,6 +112,9 @@ function mapUserPublic(user) {
     profile: user.profile || {},
     coachProfile: user.coachProfile || null,
     coachCapabilities: user.coachCapabilities || null,
+    coachOverrides: user.coachOverrides || null,
+    effectiveCapabilities: user.effectiveCapabilities || null,
+    coachStats: user.coachStats || null,
     coachWelcome: user.coachWelcome || null,
     settings: user.settings || {},
     adminMeta: user.adminMeta || {},
@@ -113,6 +123,7 @@ function mapUserPublic(user) {
     onboarding: user.onboarding || {},
     coach: user.coach || {},
     billing: user.billing || {},
+    subscription: user.subscription || {},
 
     antropometriaActual: user.antropometriaActual || {},
     metasActuales: user.metasActuales || {},
@@ -316,13 +327,27 @@ class ControladorUsuarios {
 
       const { id } = req.user;
 
-      await this.servicio.touchLastActivity(id);
+      if (!req.user?.impersonation) {
+        await this.servicio.touchLastActivity(id);
+      }
 
       const user = await this.servicio.getById(id);
       if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
 
       return res.json({
-        user: mapUserPublic(user),
+        user: {
+          ...mapUserPublic(user),
+          impersonation: req.user?.impersonation
+            ? {
+                active: true,
+                readOnly: !!req.user?.readOnly,
+                actorAdminId: req.user?.actorAdminId || null,
+                targetUserId: req.user?.targetUserId || id,
+                sessionId: req.user?.impersonationSessionId || null,
+                startedAt: req.user?.impersonationStartedAt || null,
+              }
+            : null,
+        },
       });
     } catch (error) {
       console.error("Error me:", error);
@@ -545,7 +570,9 @@ class ControladorUsuarios {
     try {
       const { id } = req.user;
 
-      await this.servicio.touchLastActivity(id);
+      if (!req.user?.impersonation) {
+        await this.servicio.touchLastActivity(id);
+      }
 
       const user = await this.servicio.getById(id);
       if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
@@ -845,22 +872,25 @@ class ControladorUsuarios {
   adminDeleteUser = async (req, res) => {
     try {
       const { id } = req.params;
-      const r = await this.servicio.adminDeleteUser(id);
+      const r = await this.servicio.adminDeleteUser(id, req.user?.id || req.user?._id || null);
 
       const notDeleted =
         r === null ||
         r === undefined ||
+        r?.result?.deletedCount === 0 ||
         r?.deletedCount === 0 ||
-        r?.acknowledged === true && r?.deletedCount === 0;
+        (r?.acknowledged === true && r?.deletedCount === 0);
 
       if (notDeleted) {
         return res.status(404).json({ error: "Usuario no encontrado" });
       }
 
-      return res.json({ message: "Usuario eliminado" });
+      return res.json({
+        message: "Usuario eliminado",
+        unassignedClients: r?.unassignedClients || { matchedCount: 0, modifiedCount: 0 },
+      });
     } catch (error) {
-      console.error("Error adminDeleteUser:", error);
-      return res.status(500).json({ error: "Error en el servidor" });
+      return adminError(res, error);
     }
   };
 
@@ -921,10 +951,46 @@ class ControladorUsuarios {
   adminUpdatePlan = async (req, res) => {
     try {
       const { id } = req.params;
-      const { plan } = req.body || {};
+      const { plan, resetOverrides = false } = req.body || {};
 
-      const user = await this.servicio.adminUpdatePlan(id, plan);
+      const user = await this.servicio.adminUpdatePlan(id, plan, { resetOverrides });
       return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminListCoachPlans = async (req, res) => {
+    try {
+      const plans = await this.servicio.adminListCoachPlans();
+      return res.json({ plans });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminGetCoachPlan = async (req, res) => {
+    try {
+      const plan = await this.servicio.adminGetCoachPlan(req.params.planCode);
+      return res.json({ plan });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminUpdateCoachPlanConfig = async (req, res) => {
+    try {
+      const plan = await this.servicio.adminUpdateCoachPlanConfig(req.params.planCode, req.body || {});
+      return res.json({ ok: true, plan });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminResetCoachPlanConfig = async (req, res) => {
+    try {
+      const plan = await this.servicio.adminResetCoachPlanConfig(req.params.planCode);
+      return res.json({ ok: true, plan });
     } catch (error) {
       return adminError(res, error);
     }
@@ -1037,6 +1103,98 @@ class ControladorUsuarios {
     }
   };
 
+  adminUpdateCoachPlan = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await this.servicio.adminUpdateCoachPlan(id, req.body || {});
+      return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminUpdateCoachOverrides = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await this.servicio.adminUpdateCoachOverrides(id, req.body || {});
+      return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminDeleteCoachOverrides = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await this.servicio.adminDeleteCoachOverrides(id);
+      return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminGetEffectiveCapabilities = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const data = await this.servicio.adminGetEffectiveCapabilities(id);
+      return res.json({
+        user: mapUserPublic(data.user),
+        effectiveCapabilities: data.effectiveCapabilities,
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminStartImpersonation = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const data = await this.servicio.adminStartImpersonation({
+        adminId: req.user?.id || req.user?._id,
+        targetUserId: id,
+      });
+
+      return res.json({
+        ok: true,
+        token: data.token,
+        expiresAt: data.expiresAt,
+        sessionId: data.sessionId,
+        actorAdminId: data.actorAdminId,
+        targetUser: mapUserPublic(data.targetUser),
+        readOnly: true,
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminStopImpersonation = async (req, res) => {
+    try {
+      const data = await this.servicio.adminStopImpersonation(req.user || {});
+      return res.json({ ok: true, ...data });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminGetCurrentImpersonation = async (req, res) => {
+    try {
+      const data = await this.servicio.adminGetCurrentImpersonation(req.user || {});
+      if (!data?.active) return res.json({ active: false });
+
+      return res.json({
+        active: true,
+        readOnly: data.readOnly,
+        actorAdminId: data.actorAdminId,
+        sessionId: data.sessionId,
+        startedAt: data.startedAt,
+        targetUser: mapUserPublic(data.targetUser),
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
   adminUpdateCoachCapabilities = async (req, res) => {
     try {
       const { id } = req.params;
@@ -1108,6 +1266,10 @@ class ControladorUsuarios {
 
       if (msg === "EMAIL_PENDIENTE") {
         return res.redirect(`${frontendBase}/auth?pending=1`);
+      }
+
+      if (msg === "USUARIO_BLOQUEADO") {
+        return res.redirect(`${frontendBase}/auth?blocked=1`);
       }
 
       return res.redirect(`${frontendBase}/auth?google=error`);

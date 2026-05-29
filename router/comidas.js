@@ -3,6 +3,7 @@ import rateLimit from "express-rate-limit";
 import ControladorComidas from "../controlador/comidas.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { requireRole } from "../middleware/requireRole.js";
+import { denyWriteWhenReadOnlyImpersonation } from "../middleware/denyWriteWhenReadOnlyImpersonation.js";
 
 const createLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
@@ -22,11 +23,11 @@ class RouterComidas {
 
     const comidas = express.Router();
 
-    comidas.post("/", authMiddleware, createLimiter, this.controladorComidas.crearComida);
+    comidas.post("/", authMiddleware, denyWriteWhenReadOnlyImpersonation, createLimiter, this.controladorComidas.crearComida);
     comidas.get("/", authMiddleware, this.controladorComidas.listarComidas);
     comidas.get("/:id", authMiddleware, this.controladorComidas.obtenerComidaPorId);
-    comidas.patch("/:id", authMiddleware, this.controladorComidas.actualizarComida);
-    comidas.delete("/:id", authMiddleware, this.controladorComidas.eliminarComida);
+    comidas.patch("/:id", authMiddleware, denyWriteWhenReadOnlyImpersonation, this.controladorComidas.actualizarComida);
+    comidas.delete("/:id", authMiddleware, denyWriteWhenReadOnlyImpersonation, this.controladorComidas.eliminarComida);
 
     comidas.get(
       "/admin/todas",

@@ -2,22 +2,38 @@ import ModelFactory from "../model/DAO/usuariosFactory.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { ObjectId } from "mongodb";
 
 import { sendVerifyCodeEmail, sendPasswordResetCodeEmail } from "./mailer.js";
 
 import ModelMongoDBPendingUsers from "../model/DAO/pendingUsersMongoDB.js";
 import ModelMongoDBPasswordResets from "../model/DAO/passwordResetMongoDB.js";
 import ModelMongoDBInvitedUsers from "../model/DAO/invitedUsersMongoDB.js";
+import ModelMongoDBCoachPlanConfigs from "../model/DAO/coachPlanConfigsMongoDB.js";
+import ModelMongoDBImpersonationAudit from "../model/DAO/impersonationAuditMongoDB.js";
+import {
+  createEmptyCoachOverrides,
+  createTrialSubscription,
+  normalizeCoachOverrides,
+  normalizeCoachPlanCode,
+  normalizePlanConfig,
+  resolveEffectiveCoachCapabilities,
+} from "./coachPlans.js";
 
 // =========================
 // ✅ Defaults del usuario
 // =========================
 function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" } = {}) {
   const now = new Date();
+  const normalizedRole = normalizeRole(role);
+  const effectivePlan =
+    normalizedRole === "coach"
+      ? normalizeCoachPlanCode(plan) || "trial_pro"
+      : (plan || "free");
 
   return {
-    role,
-    plan, // free | premium | premium2
+    role: normalizedRole,
+    plan: effectivePlan,
     tipo, // entrenado | entrenador | admin
 
     estado: "activo",
@@ -40,7 +56,7 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
     },
 
     billing: {
-      status: plan === "free" ? "free" : "inactive",
+      status: effectivePlan === "free" ? "free" : "inactive",
       paidUntil: null,
       lastPaymentAt: null,
       provider: null,
@@ -48,8 +64,18 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
       providerSubscriptionId: null,
     },
 
+    subscription:
+      normalizedRole === "coach"
+        ? createTrialSubscription({ planCode: effectivePlan, now })
+        : {
+            status: effectivePlan === "free" ? "free" : "active",
+            trialStartedAt: null,
+            trialEndsAt: null,
+            paidUntil: null,
+          },
+
     coachProfile:
-      role === "coach"
+      normalizedRole === "coach"
         ? {
             title: "",
             bio: "",
@@ -57,11 +83,11 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
               training: false,
               nutrition: false,
             },
-          }
+        }
         : null,
 
     coachCapabilities:
-      role === "coach"
+      normalizedRole === "coach"
         ? {
             maxClients: 20,
             canInviteClients: true,
@@ -83,8 +109,11 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
             canDuplicatePlans: true,
             canExportData: false,
             canSeeAdvancedMetrics: true,
-          }
+        }
         : null,
+
+    coachOverrides:
+      normalizedRole === "coach" ? createEmptyCoachOverrides() : null,
 
     adminMeta: {
       internalNote: "",
@@ -258,6 +287,21 @@ function toDbPlan(plan) {
   return null;
 }
 
+function toCoachPlan(plan) {
+  return normalizeCoachPlanCode(plan);
+}
+
+function normalizePlanForRole(plan, role) {
+  const r = normalizeRole(role);
+  if (r === "coach") return toCoachPlan(plan);
+  return toDbPlan(plan);
+}
+
+function toMongoIdOrString(id) {
+  const value = String(id || "");
+  return ObjectId.isValid(value) ? new ObjectId(value) : value;
+}
+
 function inferTipoFromRole(role) {
   const r = normalizeRole(role);
   if (r === "cliente") return "entrenado";
@@ -292,6 +336,16 @@ class ServicioUsuarios {
     if (typeof this.invitedModel.ensureIndexes === "function") {
       this.invitedModel.ensureIndexes().catch(() => {});
     }
+
+    this.coachPlanModel = new ModelMongoDBCoachPlanConfigs();
+    if (typeof this.coachPlanModel.ensureSeedDefaults === "function") {
+      this.coachPlanModel.ensureSeedDefaults().catch(() => {});
+    }
+
+    this.impersonationAuditModel = new ModelMongoDBImpersonationAudit();
+    if (typeof this.impersonationAuditModel.ensureIndexes === "function") {
+      this.impersonationAuditModel.ensureIndexes().catch(() => {});
+    }
   }
 
   // -------------------------
@@ -323,6 +377,15 @@ class ServicioUsuarios {
   async _deleteInviteById(id) {
     if (!id) return null;
     return await this.invitedModel.deleteById(id);
+  }
+
+  async _acceptInviteById(id) {
+    if (!id || typeof this.invitedModel.updateById !== "function") return null;
+    return await this.invitedModel.updateById(id, {
+      status: "accepted",
+      acceptedAt: new Date(),
+      updatedAt: new Date(),
+    });
   }
 
   _normalizeUser(u) {
@@ -413,6 +476,65 @@ class ServicioUsuarios {
     return clients.length;
   }
 
+  async _unassignAllClientsFromCoach(coachId, adminId = null) {
+    if (typeof this.model.unassignClientsByCoachId === "function") {
+      return await this.model.unassignClientsByCoachId(coachId, adminId);
+    }
+
+    const clients = await this._listClientsForCoach(coachId);
+    for (const client of clients) {
+      await this._updateById(client._id, {
+        coach: {
+          ...(client?.coach || {}),
+          entrenadorId: null,
+          assignedAt: null,
+          assignedByAdminId: adminId,
+          source: null,
+        },
+        updatedAt: new Date(),
+      });
+    }
+
+    return { matchedCount: clients.length, modifiedCount: clients.length };
+  }
+
+  async _getCoachPlanConfig(planCode) {
+    const code = normalizeCoachPlanCode(planCode) || "trial_pro";
+    if (typeof this.coachPlanModel?.getByCode === "function") {
+      return await this.coachPlanModel.getByCode(code);
+    }
+    return normalizePlanConfig(code);
+  }
+
+  async _resolveEffectiveCapabilities(coach) {
+    if (!coach || !this._isCoachUser(coach)) return null;
+    const currentClients = await this._countClientsForCoach(coach._id || coach.id);
+    const planConfig = await this._getCoachPlanConfig(coach.plan);
+
+    return resolveEffectiveCoachCapabilities({
+      coach,
+      planConfig,
+      currentClients,
+    });
+  }
+
+  async _withEffectiveCapabilities(user) {
+    const normalized = this._normalizeUser(user);
+    if (!normalized || !this._isCoachUser(normalized)) return normalized;
+
+    const effectiveCapabilities = await this._resolveEffectiveCapabilities(normalized);
+    return {
+      ...normalized,
+      plan: effectiveCapabilities?.planCode || normalizeCoachPlanCode(normalized.plan) || "trial_pro",
+      coachOverrides: normalizeCoachOverrides(normalized.coachOverrides || {}),
+      effectiveCapabilities,
+      coachStats: {
+        ...(normalized.coachStats || {}),
+        currentClients: effectiveCapabilities?.currentClients || 0,
+      },
+    };
+  }
+
   _generateOTP6() {
     return String(Math.floor(100000 + Math.random() * 900000));
   }
@@ -446,7 +568,11 @@ class ServicioUsuarios {
       profile: u.profile || {},
       coachProfile: u.coachProfile || null,
       coachCapabilities: u.coachCapabilities || null,
+      coachOverrides: u.coachOverrides || null,
+      effectiveCapabilities: u.effectiveCapabilities || null,
+      coachStats: u.coachStats || null,
       coachWelcome: u.coachWelcome || null,
+      subscription: u.subscription || {},
       settings: u.settings || {},
       adminMeta: u.adminMeta || {},
 
@@ -773,7 +899,19 @@ class ServicioUsuarios {
         const passwordHash = await bcrypt.hash(randomPass, 10);
 
         const role = normalizeRole(invite.role);
-        const plan = invite.plan || "free";
+        const plan =
+          role === "coach"
+            ? (toCoachPlan(invite.plan) || "trial_pro")
+            : (invite.plan || "free");
+        const now = new Date();
+        const subscription =
+          role === "coach"
+            ? createTrialSubscription({
+                planCode: plan,
+                now,
+                durationDays: (await this._getCoachPlanConfig(plan))?.durationDays || 7,
+              })
+            : undefined;
 
         const tipo =
           role === "cliente"
@@ -796,12 +934,13 @@ class ServicioUsuarios {
           role === "coach"
             ? {
                 show: true,
-                invitedAt: invite?.invitedAt || new Date(),
-                plan: invite?.plan || "free",
+                invitedAt: invite?.invitedAt || now,
+                plan,
                 specialties: {
                   training: !!invite?.coachProfile?.specialties?.training,
                   nutrition: !!invite?.coachProfile?.specialties?.nutrition,
                 },
+                trialEndsAt: subscription?.trialEndsAt || null,
                 seenAt: null,
               }
             : null;
@@ -819,16 +958,18 @@ class ServicioUsuarios {
             apellido: invite?.profile?.apellido || apellido || "",
             avatarUrl: avatarUrl || "",
           },
+          ...(subscription ? { subscription } : {}),
           coachProfile: normalizedCoachProfile,
+          coachOverrides: role === "coach" ? createEmptyCoachOverrides() : null,
           coachWelcome,
           settings: {},
 
-          createdAt: new Date(),
+          createdAt: now,
           updatedAt: null,
         });
 
         try {
-          await this._deleteInviteById(invite._id);
+          await this._acceptInviteById(invite._id);
         } catch (e) {
           console.error("No se pudo eliminar la invitación:", e);
         }
@@ -859,6 +1000,9 @@ class ServicioUsuarios {
     }
 
     const user = this._normalizeUser(userRaw);
+    if (["bloqueado", "inactivo"].includes(String(user?.estado || "").toLowerCase())) {
+      throw new Error("USUARIO_BLOQUEADO");
+    }
 
     try {
       const patch = { lastLoginAt: new Date() };
@@ -888,7 +1032,7 @@ class ServicioUsuarios {
       throw new Error("El modelo no implementa obtenerPorId");
     }
     const user = await this.model.obtenerPorId(id);
-    return this._normalizeUser(user);
+    return await this._withEffectiveCapabilities(user);
   };
 
   updateById = async (id, updates) => {
@@ -936,7 +1080,12 @@ class ServicioUsuarios {
     const validRoles = ["admin", "coach", "cliente"];
     if (!validRoles.includes(role)) throw new Error("ROL_INVALIDO");
 
-    const dbPlan = role === "admin" ? null : toDbPlan(plan);
+    const dbPlan =
+      role === "admin"
+        ? null
+        : role === "coach"
+        ? (toCoachPlan(plan) || "trial_pro")
+        : toDbPlan(plan);
     if (role !== "admin" && !dbPlan) throw new Error("PLAN_INVALIDO");
 
     let normalizedCoachProfile = null;
@@ -1092,8 +1241,12 @@ class ServicioUsuarios {
     const total = arr.length;
     arr = arr.slice(skip, skip + limit);
 
+    const users = await Promise.all(
+      arr.map(async (u) => this._sanitizeUser(await this._withEffectiveCapabilities(u)))
+    );
+
     return {
-      users: arr.map((u) => this._sanitizeUser(u)),
+      users,
       total,
     };
   };
@@ -1120,16 +1273,7 @@ class ServicioUsuarios {
     arr = arr.slice(skip, skip + limit);
 
     const coaches = await Promise.all(
-      arr.map(async (u) => {
-        const clientsCount = await this._countClientsForCoach(u._id);
-        return {
-          ...u,
-          coachStats: {
-            ...(u?.coachStats || {}),
-            currentClients: clientsCount,
-          },
-        };
-      })
+      arr.map(async (u) => this._sanitizeUser(await this._withEffectiveCapabilities(u)))
     );
 
     return { coaches, total };
@@ -1183,7 +1327,7 @@ class ServicioUsuarios {
     const validRoles = ["admin", "cliente", "coach"];
     if (!validRoles.includes(role)) throw new Error("ROL_INVALIDO");
 
-    const dbPlan = toDbPlan(plan);
+    const dbPlan = normalizePlanForRole(plan, role);
     if (!dbPlan) throw new Error("PLAN_INVALIDO");
 
     email = String(email).trim().toLowerCase();
@@ -1193,6 +1337,7 @@ class ServicioUsuarios {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const resolvedTipo = tipo || inferTipoFromRole(role);
+    const coachPlanConfig = role === "coach" ? await this._getCoachPlanConfig(dbPlan) : null;
 
     const userToCreate = {
       email,
@@ -1202,6 +1347,16 @@ class ServicioUsuarios {
 
       estado,
       emailVerificado: false,
+      ...(role === "coach"
+        ? {
+            subscription: createTrialSubscription({
+              planCode: dbPlan,
+              now: new Date(),
+              durationDays: coachPlanConfig?.durationDays || 7,
+            }),
+          }
+        : {}),
+      coachOverrides: role === "coach" ? createEmptyCoachOverrides() : null,
 
       profile: profile || {},
       settings: {},
@@ -1250,7 +1405,7 @@ class ServicioUsuarios {
       if (patch.plan === null || String(patch.plan).trim() === "") {
         patch.plan = null;
       } else {
-        const dbPlan = toDbPlan(patch.plan);
+        const dbPlan = normalizePlanForRole(patch.plan, patch.role || currentRaw.role);
         if (!dbPlan) throw new Error("PLAN_INVALIDO");
         patch.plan = dbPlan;
       }
@@ -1269,11 +1424,25 @@ class ServicioUsuarios {
     return this._sanitizeUser(updated);
   };
 
-  adminDeleteUser = async (id) => {
+  adminDeleteUser = async (id, adminId = null) => {
+    const user = await this.getById(id);
+    if (!user) throw new Error("NOT_FOUND");
+
+    let unassignedClients = { matchedCount: 0, modifiedCount: 0 };
+    if (this._isCoachUser(user)) {
+      unassignedClients = await this._unassignAllClientsFromCoach(id, adminId);
+    }
+
     if (typeof this.model.borrarUsuario !== "function") {
       throw new Error("El modelo no implementa borrarUsuario");
     }
-    return await this.model.borrarUsuario(id);
+    const result = await this.model.borrarUsuario(id);
+    return {
+      deleted: true,
+      role: user.role,
+      unassignedClients,
+      result,
+    };
   };
 
   // =========================
@@ -1293,23 +1462,258 @@ class ServicioUsuarios {
     });
   };
 
-  adminUpdatePlan = async (id, plan) => {
-    const dbPlan = toDbPlan(plan);
-    if (!dbPlan) throw new Error("PLAN_INVALIDO");
-
+  adminUpdatePlan = async (id, plan, options = {}) => {
     const user = await this.getById(id);
     if (!user) throw new Error("NOT_FOUND");
 
+    const isCoach = this._isCoachUser(user);
+    const dbPlan = normalizePlanForRole(plan, user.role);
+    if (!dbPlan) throw new Error("PLAN_INVALIDO");
+
     const billing = {
       ...(user?.billing || {}),
-      status: dbPlan === "free" ? "free" : (user?.billing?.status || "inactive"),
+      status: isCoach
+        ? (dbPlan === "trial_pro" ? "trial" : "active")
+        : (dbPlan === "free" ? "free" : (user?.billing?.status || "inactive")),
     };
 
-    return await this.updateById(id, {
+    const patch = {
       plan: dbPlan,
       billing,
       updatedAt: new Date(),
+    };
+
+    if (isCoach) {
+      const coachPlanConfig = await this._getCoachPlanConfig(dbPlan);
+      patch.subscription = createTrialSubscription({
+        planCode: dbPlan,
+        now: new Date(),
+        existing: user?.subscription || {},
+        durationDays: coachPlanConfig?.durationDays || 7,
+      });
+
+      if (options?.resetOverrides) {
+        patch.coachOverrides = createEmptyCoachOverrides();
+      }
+    }
+
+    const updated = await this.updateById(id, patch);
+    return await this._withEffectiveCapabilities(updated);
+  };
+
+  adminListCoachPlans = async () => {
+    if (typeof this.coachPlanModel?.list !== "function") {
+      return ["trial_pro", "pro", "vip"].map((code) => normalizePlanConfig(code));
+    }
+    return await this.coachPlanModel.list();
+  };
+
+  adminGetCoachPlan = async (planCode) => {
+    const code = normalizeCoachPlanCode(planCode);
+    if (!code) throw new Error("PLAN_NOT_FOUND");
+
+    const plan = await this._getCoachPlanConfig(code);
+    if (!plan) throw new Error("PLAN_NOT_FOUND");
+    return plan;
+  };
+
+  adminUpdateCoachPlanConfig = async (planCode, payload = {}) => {
+    const code = normalizeCoachPlanCode(planCode);
+    if (!code) throw new Error("PLAN_NOT_FOUND");
+    if (typeof this.coachPlanModel?.updateByCode !== "function") {
+      throw new Error("PLAN_CONFIG_MODEL_UNAVAILABLE");
+    }
+
+    const patch = { ...payload };
+    delete patch._id;
+    delete patch.id;
+    delete patch.code;
+
+    return await this.coachPlanModel.updateByCode(code, patch);
+  };
+
+  adminResetCoachPlanConfig = async (planCode) => {
+    const code = normalizeCoachPlanCode(planCode);
+    if (!code) throw new Error("PLAN_NOT_FOUND");
+    if (typeof this.coachPlanModel?.resetByCode !== "function") {
+      throw new Error("PLAN_CONFIG_MODEL_UNAVAILABLE");
+    }
+
+    return await this.coachPlanModel.resetByCode(code);
+  };
+
+  adminUpdateCoachPlan = async (id, payload = {}) => {
+    const user = await this.getById(id);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isCoachUser(user)) throw new Error("USER_NOT_COACH");
+
+    return await this.adminUpdatePlan(id, payload?.plan, {
+      resetOverrides: !!payload?.resetOverrides,
     });
+  };
+
+  adminUpdateCoachOverrides = async (id, payload = {}) => {
+    const user = await this.getById(id);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isCoachUser(user)) throw new Error("USER_NOT_COACH");
+
+    const nextOverrides = normalizeCoachOverrides({
+      ...(user?.coachOverrides || {}),
+      ...payload,
+      features: {
+        ...(user?.coachOverrides?.features || {}),
+        ...(payload?.features || {}),
+        routines: {
+          ...(user?.coachOverrides?.features?.routines || {}),
+          ...(payload?.features?.routines || {}),
+        },
+        menus: {
+          ...(user?.coachOverrides?.features?.menus || {}),
+          ...(payload?.features?.menus || {}),
+        },
+        metrics: {
+          ...(user?.coachOverrides?.features?.metrics || {}),
+          ...(payload?.features?.metrics || {}),
+        },
+        exports: {
+          ...(user?.coachOverrides?.features?.exports || {}),
+          ...(payload?.features?.exports || {}),
+        },
+      },
+    });
+
+    const updated = await this.updateById(id, {
+      coachOverrides: nextOverrides,
+      updatedAt: new Date(),
+    });
+
+    return await this._withEffectiveCapabilities(updated);
+  };
+
+  adminDeleteCoachOverrides = async (id) => {
+    const user = await this.getById(id);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isCoachUser(user)) throw new Error("USER_NOT_COACH");
+
+    const updated = await this.updateById(id, {
+      coachOverrides: createEmptyCoachOverrides(),
+      updatedAt: new Date(),
+    });
+
+    return await this._withEffectiveCapabilities(updated);
+  };
+
+  adminGetEffectiveCapabilities = async (id) => {
+    const user = await this.getById(id);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isCoachUser(user)) throw new Error("USER_NOT_COACH");
+
+    return {
+      user: await this._withEffectiveCapabilities(user),
+      effectiveCapabilities: await this._resolveEffectiveCapabilities(user),
+    };
+  };
+
+  adminStartImpersonation = async ({ adminId, targetUserId }) => {
+    if (!process.env.JWT_SECRET) throw new Error("Falta JWT_SECRET en .env");
+
+    const admin = await this.getById(adminId);
+    if (!admin) throw new Error("NOT_FOUND");
+    if (normalizeRole(admin?.role) !== "admin") throw new Error("ADMIN_REQUIRED");
+
+    const target = await this.getById(targetUserId);
+    if (!target) throw new Error("NOT_FOUND");
+
+    const targetRole = normalizeRole(target?.role);
+    if (targetRole === "admin") throw new Error("CANNOT_IMPERSONATE_ADMIN");
+    if (!["cliente", "coach"].includes(targetRole)) throw new Error("ROLE_NOT_IMPERSONABLE");
+
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 30 * 60 * 1000);
+    const sessionId = crypto.randomUUID();
+
+    const targetWithCapabilities = await this._withEffectiveCapabilities(target);
+
+    try {
+      await this.impersonationAuditModel.record({
+        sessionId,
+        action: "impersonation_started",
+        adminId: admin._id,
+        targetUserId: target._id,
+        targetRole,
+        startedAt: now,
+      });
+    } catch (error) {
+      console.error("No se pudo registrar auditoria de simulacion:", error?.message || error);
+    }
+
+    const token = jwt.sign(
+      {
+        uid: target._id,
+        email: target.email,
+        role: targetRole,
+        actorAdminId: admin._id,
+        targetUserId: target._id,
+        targetRole,
+        impersonation: true,
+        readOnly: true,
+        sessionId,
+        startedAt: now.toISOString(),
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "30m" }
+    );
+
+    return {
+      token,
+      expiresAt,
+      sessionId,
+      actorAdminId: admin._id,
+      targetUser: this._sanitizeUser(targetWithCapabilities),
+    };
+  };
+
+  adminStopImpersonation = async (impersonation = {}) => {
+    if (!impersonation?.impersonation) {
+      return { active: false };
+    }
+
+    const endedAt = new Date();
+    try {
+      await this.impersonationAuditModel.record({
+        sessionId: impersonation.impersonationSessionId || null,
+        action: "impersonation_ended",
+        adminId: impersonation.actorAdminId,
+        targetUserId: impersonation.targetUserId || impersonation.id,
+        targetRole: impersonation.targetRole || impersonation.role,
+        startedAt: impersonation.impersonationStartedAt
+          ? new Date(impersonation.impersonationStartedAt)
+          : null,
+        endedAt,
+      });
+    } catch (error) {
+      console.error("No se pudo registrar cierre de simulacion:", error?.message || error);
+    }
+
+    return { active: false, endedAt };
+  };
+
+  adminGetCurrentImpersonation = async (impersonation = {}) => {
+    if (!impersonation?.impersonation) {
+      return { active: false };
+    }
+
+    const target = await this.getById(impersonation.targetUserId || impersonation.id);
+    if (!target) return { active: false };
+
+    return {
+      active: true,
+      readOnly: !!impersonation.readOnly,
+      actorAdminId: impersonation.actorAdminId || null,
+      sessionId: impersonation.impersonationSessionId || null,
+      startedAt: impersonation.impersonationStartedAt || null,
+      targetUser: this._sanitizeUser(await this._withEffectiveCapabilities(target)),
+    };
   };
 
   adminUpdateAdminMeta = async (id, payload = {}) => {
@@ -1446,13 +1850,20 @@ class ServicioUsuarios {
     const coach = await this.getById(coachId);
     if (!coach) throw new Error("COACH_NOT_FOUND");
     if (!this._isCoachUser(coach)) throw new Error("USER_NOT_COACH");
+    if (String(coach?.estado || "activo").toLowerCase() !== "activo") {
+      throw new Error("COACH_NOT_ACTIVE");
+    }
 
     const currentCoachId = client?.coach?.entrenadorId || null;
-    const maxClients = Number(coach?.coachCapabilities?.maxClients ?? 0);
+    const effectiveCapabilities =
+      coach?.effectiveCapabilities || (await this._resolveEffectiveCapabilities(coach));
 
     if (String(currentCoachId || "") !== String(coachId)) {
-      const currentCount = await this._countClientsForCoach(coachId);
-      if (maxClients > 0 && currentCount >= maxClients) {
+      if (!effectiveCapabilities?.features?.clients?.canAssign || effectiveCapabilities?.isTrialExpired) {
+        throw new Error("COACH_NOT_AVAILABLE");
+      }
+
+      if (!effectiveCapabilities?.canReceiveClients) {
         throw new Error("COACH_CLIENT_LIMIT_REACHED");
       }
     }
@@ -1460,7 +1871,7 @@ class ServicioUsuarios {
     return await this.updateById(clientId, {
       coach: {
         ...(client?.coach || {}),
-        entrenadorId: coach._id,
+        entrenadorId: toMongoIdOrString(coach._id),
         assignedAt: new Date(),
         assignedByAdminId: adminId,
         source: "admin",

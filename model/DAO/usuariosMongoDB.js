@@ -1,6 +1,14 @@
 import { ObjectId } from "mongodb";
 import CnxMongoDB from "../DBMongo.js";
 
+function coachIdQuery(coachId) {
+  const ids = [String(coachId)];
+  if (ObjectId.isValid(String(coachId))) {
+    ids.push(new ObjectId(String(coachId)));
+  }
+  return { $in: ids };
+}
+
 class ModelMongoDBUsuarios {
   _col() {
     if (!CnxMongoDB.connection) {
@@ -46,7 +54,7 @@ class ModelMongoDBUsuarios {
     return await this._col()
       .find({
         role: "cliente",
-        "coach.entrenadorId": String(coachId),
+        "coach.entrenadorId": coachIdQuery(coachId),
       })
       .toArray();
   };
@@ -55,8 +63,29 @@ class ModelMongoDBUsuarios {
   countClientsByCoachId = async (coachId) => {
     return await this._col().countDocuments({
       role: "cliente",
-      "coach.entrenadorId": String(coachId),
+      "coach.entrenadorId": coachIdQuery(coachId),
     });
+  };
+
+  unassignClientsByCoachId = async (coachId, adminId = null) => {
+    const now = new Date();
+    const r = await this._col().updateMany(
+      {
+        role: "cliente",
+        "coach.entrenadorId": coachIdQuery(coachId),
+      },
+      {
+        $set: {
+          "coach.entrenadorId": null,
+          "coach.assignedAt": null,
+          "coach.assignedByAdminId": adminId,
+          "coach.source": null,
+          updatedAt: now,
+        },
+      }
+    );
+
+    return { matchedCount: r.matchedCount, modifiedCount: r.modifiedCount };
   };
 
   // ✅ nuevo
@@ -209,6 +238,7 @@ class ModelMongoDBUsuarios {
     await col.createIndex({ tipo: 1 });
     await col.createIndex({ plan: 1 });
     await col.createIndex({ "coach.entrenadorId": 1 });
+    await col.createIndex({ "subscription.status": 1 });
     await col.createIndex({ "onboarding.step": 1 });
     await col.createIndex({ createdAt: -1 });
   }

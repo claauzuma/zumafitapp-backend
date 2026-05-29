@@ -6,6 +6,7 @@ import passport from "../auth/google.js";
 import ControladorUsuarios from "../controlador/usuarios.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { requireRole } from "../middleware/requireRole.js";
+import { denyWriteWhenReadOnlyImpersonation } from "../middleware/denyWriteWhenReadOnlyImpersonation.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -87,7 +88,7 @@ class RouterUsuarios {
       this.controladorUsuarios.googleCallback
     );
 
-    auth.post("/logout", authMiddleware, this.controladorUsuarios.logout);
+    auth.post("/logout", authMiddleware, denyWriteWhenReadOnlyImpersonation, this.controladorUsuarios.logout);
     auth.get("/me", authMiddleware, this.controladorUsuarios.me);
 
     this.router.use("/auth", auth);
@@ -98,6 +99,7 @@ class RouterUsuarios {
     this.router.patch(
       "/me/onboarding",
       authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
       this.controladorUsuarios.actualizarOnboardingCliente
     );
 
@@ -105,16 +107,18 @@ class RouterUsuarios {
 
     users.get("/me/updatedAt", authMiddleware, this.controladorUsuarios.getUpdatedAt);
     users.get("/me", authMiddleware, this.controladorUsuarios.obtenerPerfil);
-    users.patch("/me", authMiddleware, this.controladorUsuarios.actualizarPerfil);
+    users.patch("/me", authMiddleware, denyWriteWhenReadOnlyImpersonation, this.controladorUsuarios.actualizarPerfil);
     users.patch(
       "/me/coach-welcome-seen",
       authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
       this.controladorUsuarios.markCoachWelcomeSeen
     );
 
     users.post(
       "/me/avatar",
       authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
       upload.single("avatar"),
       this.controladorUsuarios.subirAvatar
     );
@@ -125,6 +129,18 @@ class RouterUsuarios {
     // ADMIN
     // =========================
     const admin = express.Router();
+
+    admin.post(
+      "/impersonation/stop",
+      authMiddleware,
+      this.controladorUsuarios.adminStopImpersonation
+    );
+
+    admin.get(
+      "/impersonation/current",
+      authMiddleware,
+      this.controladorUsuarios.adminGetCurrentImpersonation
+    );
 
     // -------- Invitaciones --------
     admin.post(
@@ -177,6 +193,35 @@ class RouterUsuarios {
       this.controladorUsuarios.adminListUnassignedClients
     );
 
+    // -------- Planes de coach --------
+    admin.get(
+      "/coach-plans",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminListCoachPlans
+    );
+
+    admin.get(
+      "/coach-plans/:planCode",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminGetCoachPlan
+    );
+
+    admin.patch(
+      "/coach-plans/:planCode",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminUpdateCoachPlanConfig
+    );
+
+    admin.post(
+      "/coach-plans/:planCode/reset",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminResetCoachPlanConfig
+    );
+
     // -------- CRUD users --------
     admin.get(
       "/users",
@@ -213,6 +258,13 @@ class RouterUsuarios {
       this.controladorUsuarios.adminDeleteUser
     );
 
+    admin.post(
+      "/users/:id/impersonation/start",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminStartImpersonation
+    );
+
     // -------- Cuenta / estado / plan --------
     admin.patch(
       "/users/:id/status",
@@ -226,6 +278,34 @@ class RouterUsuarios {
       authMiddleware,
       requireRole("admin"),
       this.controladorUsuarios.adminUpdatePlan
+    );
+
+    admin.patch(
+      "/users/:id/coach-plan",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminUpdateCoachPlan
+    );
+
+    admin.patch(
+      "/users/:id/coach-overrides",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminUpdateCoachOverrides
+    );
+
+    admin.delete(
+      "/users/:id/coach-overrides",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminDeleteCoachOverrides
+    );
+
+    admin.get(
+      "/users/:id/effective-capabilities",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminGetEffectiveCapabilities
     );
 
     admin.patch(
