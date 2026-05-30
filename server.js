@@ -11,6 +11,9 @@ import CnxMongoDB from "./model/DBMongo.js";
 import RouterAlimentos from "./router/alimentos.js";
 import RouterUsuarios from "./router/usuarios.js";
 import RouterComidas from "./router/comidas.js";
+import RouterEjercicios from "./router/ejercicios.js";
+import RouterRutinas from "./router/rutinas.js";
+import RouterClienteRutinas from "./router/clienteRutinas.js";
 
 import passport from "./auth/google.js";
 import { setupGoogleAuth } from "./auth/google.js";
@@ -19,6 +22,8 @@ import { setupGoogleAuth } from "./auth/google.js";
 import ModelMongoDBUsuarios from "./model/DAO/usuariosMongoDB.js";
 import ModelMongoDBPendingUsers from "./model/DAO/pendingUsersMongoDB.js";
 import ModelMongoDBPasswordResets from "./model/DAO/passwordResetMongoDB.js";
+import ModelMongoDBEjercicios from "./model/DAO/ejerciciosMongoDB.js";
+import ModelMongoDBRutinas from "./model/DAO/rutinasMongoDB.js";
 
 function getLanIPv4s() {
   const nets = os.networkInterfaces();
@@ -66,7 +71,9 @@ class Server {
         await new ModelMongoDBUsuarios().ensureIndexes();
         await new ModelMongoDBPendingUsers().ensureIndexes();
         await new ModelMongoDBPasswordResets().ensureIndexes();
-        console.log("✅ Índices asegurados (usuarios + pending + resets)");
+        await new ModelMongoDBEjercicios().ensureIndexes();
+        await new ModelMongoDBRutinas().ensureIndexes();
+        console.log("Indices asegurados (usuarios + pending + resets + rutinas)");
       } catch (e) {
         console.log("⚠️ No se pudieron asegurar índices:", e?.message || e);
       }
@@ -121,6 +128,9 @@ class Server {
     this.app.use("/api/alimentos", new RouterAlimentos(this.persistencia).start());
     this.app.use("/api/usuarios", new RouterUsuarios(this.persistencia).start());
     this.app.use("/api/comidas", new RouterComidas(this.persistencia).start());
+    this.app.use("/api/ejercicios", new RouterEjercicios(this.persistencia).start());
+    this.app.use("/api/rutinas", new RouterRutinas(this.persistencia).start());
+    this.app.use("/api/clientes", new RouterClienteRutinas(this.persistencia).start());
 
     this.app.use((req, res) => res.status(404).json({ status: false, errors: "not found" }));
 
