@@ -8,6 +8,11 @@ import {
 } from "../../servicio/coachPlans.js";
 
 class ModelMongoDBCoachPlanConfigs {
+  constructor() {
+    this.defaultsReady = false;
+    this.defaultsPromise = null;
+  }
+
   _col() {
     if (!CnxMongoDB.connection) {
       throw new Error("No hay conexion a la base de datos");
@@ -22,6 +27,19 @@ class ModelMongoDBCoachPlanConfigs {
   }
 
   async ensureSeedDefaults() {
+    if (this.defaultsReady) return;
+    if (this.defaultsPromise) return await this.defaultsPromise;
+
+    this.defaultsPromise = this._ensureSeedDefaults();
+    try {
+      await this.defaultsPromise;
+      this.defaultsReady = true;
+    } finally {
+      this.defaultsPromise = null;
+    }
+  }
+
+  async _ensureSeedDefaults() {
     await this.ensureIndexes();
     const col = this._col();
     const now = new Date();
@@ -54,7 +72,6 @@ class ModelMongoDBCoachPlanConfigs {
   }
 
   async getByCode(planCode) {
-    await this.ensureSeedDefaults();
     const code = normalizeCoachPlanCode(planCode);
     if (!code) return null;
 

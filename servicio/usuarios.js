@@ -552,23 +552,34 @@ class ServicioUsuarios {
     return normalizePlanConfig(code);
   }
 
-  async _resolveEffectiveCapabilities(coach) {
-    if (!coach || !this._isCoachUser(coach)) return null;
-    const currentClients = await this._countClientsForCoach(coach._id || coach.id);
-    const planConfig = await this._getCoachPlanConfig(coach.plan);
+  async _getCoachPlanConfigsMap() {
+    const plans =
+      typeof this.coachPlanModel?.list === "function"
+        ? await this.coachPlanModel.list()
+        : ["trial_pro", "pro", "vip"].map((code) => normalizePlanConfig(code));
 
-    return resolveEffectiveCoachCapabilities({
-      coach,
-      planConfig,
-      currentClients,
-    });
+    return new Map(
+      (plans || [])
+        .filter(Boolean)
+        .map((plan) => [normalizeCoachPlanCode(plan.code) || "trial_pro", plan])
+    );
   }
 
-  async _withEffectiveCapabilities(user) {
-    const normalized = this._normalizeUser(user);
-    if (!normalized || !this._isCoachUser(normalized)) return normalized;
+  async _countClientsForCoachIds(coachIds = []) {
+    const normalizedIds = [...new Set(coachIds.map((id) => idToString(id)).filter(Boolean))];
+    if (!normalizedIds.length) return new Map();
 
-    const effectiveCapabilities = await this._resolveEffectiveCapabilities(normalized);
+    if (typeof this.model.countClientsByCoachIds === "function") {
+      return await this.model.countClientsByCoachIds(normalizedIds);
+    }
+
+    const entries = await Promise.all(
+      normalizedIds.map(async (id) => [id, await this._countClientsForCoach(id)])
+    );
+    return new Map(entries);
+  }
+
+  _attachEffectiveCapabilities(normalized, effectiveCapabilities) {
     return {
       ...normalized,
       plan: effectiveCapabilities?.planCode || normalizeCoachPlanCode(normalized.plan) || "trial_pro",
@@ -579,6 +590,54 @@ class ServicioUsuarios {
         currentClients: effectiveCapabilities?.currentClients || 0,
       },
     };
+  }
+
+  async _resolveEffectiveCapabilities(coach, options = {}) {
+    if (!coach || !this._isCoachUser(coach)) return null;
+    const currentClients =
+      options.currentClients !== undefined
+        ? Number(options.currentClients || 0)
+        : await this._countClientsForCoach(coach._id || coach.id);
+    const planConfig = options.planConfig || (await this._getCoachPlanConfig(coach.plan));
+
+    return resolveEffectiveCoachCapabilities({
+      coach,
+      planConfig,
+      currentClients,
+    });
+  }
+
+  async _withEffectiveCapabilities(user, options = {}) {
+    const normalized = this._normalizeUser(user);
+    if (!normalized || !this._isCoachUser(normalized)) return normalized;
+
+    const effectiveCapabilities = await this._resolveEffectiveCapabilities(normalized, options);
+    return this._attachEffectiveCapabilities(normalized, effectiveCapabilities);
+  }
+
+  async _withEffectiveCapabilitiesMany(users = []) {
+    const normalized = (users || []).map((u) => this._normalizeUser(u)).filter(Boolean);
+    const coaches = normalized.filter((u) => this._isCoachUser(u));
+    if (!coaches.length) return normalized;
+
+    const [countsByCoachId, plansByCode] = await Promise.all([
+      this._countClientsForCoachIds(coaches.map((coach) => coach._id || coach.id)),
+      this._getCoachPlanConfigsMap(),
+    ]);
+
+    return normalized.map((user) => {
+      if (!this._isCoachUser(user)) return user;
+
+      const coachId = idToString(user._id || user.id);
+      const planCode = normalizeCoachPlanCode(user.plan) || "trial_pro";
+      const effectiveCapabilities = resolveEffectiveCoachCapabilities({
+        coach: user,
+        planConfig: plansByCode.get(planCode) || normalizePlanConfig(planCode),
+        currentClients: countsByCoachId.get(coachId) || 0,
+      });
+
+      return this._attachEffectiveCapabilities(user, effectiveCapabilities);
+    });
   }
 
   _generateOTP6() {
@@ -1258,38 +1317,46 @@ class ServicioUsuarios {
     limit = Math.min(Number(limit) || 100, 500);
     skip = Math.max(Number(skip) || 0, 0);
 
-    if (typeof this.model.obtenerUsuarios !== "function") {
-      throw new Error("El modelo no implementa obtenerUsuarios");
+    let arr = [];
+    let total = 0;
+
+    if (typeof this.model.adminListUsers === "function") {
+      const data = await this.model.adminListUsers({ search, role, tipo, estado, limit, skip });
+      arr = Array.isArray(data?.users) ? data.users : [];
+      total = Number(data?.total ?? arr.length);
+    } else {
+      if (typeof this.model.obtenerUsuarios !== "function") {
+        throw new Error("El modelo no implementa obtenerUsuarios");
+      }
+
+      const raw = await this.model.obtenerUsuarios();
+      arr = Array.isArray(raw) ? raw : raw?.users || raw?.usuarios || [];
+
+      const s = String(search || "").trim().toLowerCase();
+      if (s) {
+        arr = arr.filter((u) => {
+          const email = String(u?.email || "").toLowerCase();
+          const nombre = String(u?.profile?.nombre || "").toLowerCase();
+          const apellido = String(u?.profile?.apellido || "").toLowerCase();
+          return (
+            email.includes(s) ||
+            nombre.includes(s) ||
+            apellido.includes(s) ||
+            `${nombre} ${apellido}`.includes(s)
+          );
+        });
+      }
+
+      if (role && role !== "todos") arr = arr.filter((u) => normalizeRole(u?.role || u?.rol) === normalizeRole(role));
+      if (tipo && tipo !== "todos") arr = arr.filter((u) => (u?.tipo || "") === tipo);
+      if (estado && estado !== "todos") arr = arr.filter((u) => (u?.estado || "activo") === estado);
+
+      total = arr.length;
+      arr = arr.slice(skip, skip + limit);
     }
 
-    const raw = await this.model.obtenerUsuarios();
-    let arr = Array.isArray(raw) ? raw : raw?.users || raw?.usuarios || [];
-
-    const s = String(search || "").trim().toLowerCase();
-    if (s) {
-      arr = arr.filter((u) => {
-        const email = String(u?.email || "").toLowerCase();
-        const nombre = String(u?.profile?.nombre || "").toLowerCase();
-        const apellido = String(u?.profile?.apellido || "").toLowerCase();
-        return (
-          email.includes(s) ||
-          nombre.includes(s) ||
-          apellido.includes(s) ||
-          `${nombre} ${apellido}`.includes(s)
-        );
-      });
-    }
-
-    if (role && role !== "todos") arr = arr.filter((u) => normalizeRole(u?.role || u?.rol) === normalizeRole(role));
-    if (tipo && tipo !== "todos") arr = arr.filter((u) => (u?.tipo || "") === tipo);
-    if (estado && estado !== "todos") arr = arr.filter((u) => (u?.estado || "activo") === estado);
-
-    const total = arr.length;
-    arr = arr.slice(skip, skip + limit);
-
-    const users = await Promise.all(
-      arr.map(async (u) => this._sanitizeUser(await this._withEffectiveCapabilities(u)))
-    );
+    const usersWithCapabilities = await this._withEffectiveCapabilitiesMany(arr);
+    const users = usersWithCapabilities.map((u) => this._sanitizeUser(u));
 
     return {
       users,
@@ -1298,55 +1365,78 @@ class ServicioUsuarios {
   };
 
   adminListCoaches = async ({ search = "", limit = 100, skip = 0 } = {}) => {
-    let arr = await this._listCoachesBase();
+    limit = Math.min(Number(limit) || 100, 500);
+    skip = Math.max(Number(skip) || 0, 0);
 
-    const s = String(search || "").trim().toLowerCase();
-    if (s) {
-      arr = arr.filter((u) => {
-        const email = String(u?.email || "").toLowerCase();
-        const nombre = String(u?.profile?.nombre || "").toLowerCase();
-        const apellido = String(u?.profile?.apellido || "").toLowerCase();
-        return (
-          email.includes(s) ||
-          nombre.includes(s) ||
-          apellido.includes(s) ||
-          `${nombre} ${apellido}`.includes(s)
-        );
-      });
+    let arr = [];
+    let total = 0;
+
+    if (typeof this.model.adminListCoaches === "function") {
+      const data = await this.model.adminListCoaches({ search, limit, skip });
+      arr = Array.isArray(data?.coaches) ? data.coaches : [];
+      total = Number(data?.total ?? arr.length);
+    } else {
+      arr = await this._listCoachesBase();
+
+      const s = String(search || "").trim().toLowerCase();
+      if (s) {
+        arr = arr.filter((u) => {
+          const email = String(u?.email || "").toLowerCase();
+          const nombre = String(u?.profile?.nombre || "").toLowerCase();
+          const apellido = String(u?.profile?.apellido || "").toLowerCase();
+          return (
+            email.includes(s) ||
+            nombre.includes(s) ||
+            apellido.includes(s) ||
+            `${nombre} ${apellido}`.includes(s)
+          );
+        });
+      }
+
+      total = arr.length;
+      arr = arr.slice(skip, skip + limit);
     }
 
-    const total = arr.length;
-    arr = arr.slice(skip, skip + limit);
-
-    const coaches = await Promise.all(
-      arr.map(async (u) => this._sanitizeUser(await this._withEffectiveCapabilities(u)))
-    );
+    const coachesWithCapabilities = await this._withEffectiveCapabilitiesMany(arr);
+    const coaches = coachesWithCapabilities.map((u) => this._sanitizeUser(u));
 
     return { coaches, total };
   };
 
   adminListUnassignedClients = async ({ search = "", limit = 100, skip = 0 } = {}) => {
-    let arr = await this._listUnassignedClientsBase();
+    limit = Math.min(Number(limit) || 100, 500);
+    skip = Math.max(Number(skip) || 0, 0);
 
-    const s = String(search || "").trim().toLowerCase();
-    if (s) {
-      arr = arr.filter((u) => {
-        const email = String(u?.email || "").toLowerCase();
-        const nombre = String(u?.profile?.nombre || "").toLowerCase();
-        const apellido = String(u?.profile?.apellido || "").toLowerCase();
-        return (
-          email.includes(s) ||
-          nombre.includes(s) ||
-          apellido.includes(s) ||
-          `${nombre} ${apellido}`.includes(s)
-        );
-      });
+    let arr = [];
+    let total = 0;
+
+    if (typeof this.model.adminListUnassignedClients === "function") {
+      const data = await this.model.adminListUnassignedClients({ search, limit, skip });
+      arr = Array.isArray(data?.clients) ? data.clients : [];
+      total = Number(data?.total ?? arr.length);
+    } else {
+      arr = await this._listUnassignedClientsBase();
+
+      const s = String(search || "").trim().toLowerCase();
+      if (s) {
+        arr = arr.filter((u) => {
+          const email = String(u?.email || "").toLowerCase();
+          const nombre = String(u?.profile?.nombre || "").toLowerCase();
+          const apellido = String(u?.profile?.apellido || "").toLowerCase();
+          return (
+            email.includes(s) ||
+            nombre.includes(s) ||
+            apellido.includes(s) ||
+            `${nombre} ${apellido}`.includes(s)
+          );
+        });
+      }
+
+      total = arr.length;
+      arr = arr.slice(skip, skip + limit);
     }
 
-    const total = arr.length;
-    arr = arr.slice(skip, skip + limit);
-
-    return { clients: arr, total };
+    return { clients: arr.map((u) => this._sanitizeUser(u)), total };
   };
 
   adminGetUserById = async (id) => {
@@ -1654,9 +1744,11 @@ class ServicioUsuarios {
     if (!user) throw new Error("NOT_FOUND");
     if (!this._isCoachUser(user)) throw new Error("USER_NOT_COACH");
 
+    const userWithCapabilities = await this._withEffectiveCapabilities(user);
+
     return {
-      user: await this._withEffectiveCapabilities(user),
-      effectiveCapabilities: await this._resolveEffectiveCapabilities(user),
+      user: userWithCapabilities,
+      effectiveCapabilities: userWithCapabilities?.effectiveCapabilities || null,
     };
   };
 
@@ -1948,12 +2040,26 @@ class ServicioUsuarios {
     if (!coach) throw new Error("COACH_NOT_FOUND");
     if (!this._isCoachUser(coach)) throw new Error("USER_NOT_COACH");
 
-    const clients = await this._listClientsForCoach(coachId);
+    let clients = [];
+    let total = 0;
+
+    if (typeof this.model.adminListClientsByCoachId === "function") {
+      const data = await this.model.adminListClientsByCoachId(coachId, { limit: 500, skip: 0 });
+      clients = Array.isArray(data?.clients) ? data.clients : [];
+      total = Number(data?.total ?? clients.length);
+    } else {
+      clients = await this._listClientsForCoach(coachId);
+      total = clients.length;
+    }
+
+    const coachWithCapabilities = await this._withEffectiveCapabilities(coach, {
+      currentClients: total,
+    });
 
     return {
-      coach,
+      coach: coachWithCapabilities,
       clients,
-      total: clients.length,
+      total,
     };
   };
 
@@ -1964,12 +2070,27 @@ class ServicioUsuarios {
     if (!coach) throw new Error("COACH_NOT_FOUND");
     if (!this._isCoachUser(coach)) throw new Error("USER_NOT_COACH");
 
-    const clients = await this._listClientsForCoach(coach._id || coach.id || coachId);
+    const resolvedCoachId = coach._id || coach.id || coachId;
+    let clients = [];
+    let total = 0;
+
+    if (typeof this.model.adminListClientsByCoachId === "function") {
+      const data = await this.model.adminListClientsByCoachId(resolvedCoachId, { limit: 500, skip: 0 });
+      clients = Array.isArray(data?.clients) ? data.clients : [];
+      total = Number(data?.total ?? clients.length);
+    } else {
+      clients = await this._listClientsForCoach(resolvedCoachId);
+      total = clients.length;
+    }
+
+    const coachWithCapabilities = await this._withEffectiveCapabilities(coach, {
+      currentClients: total,
+    });
 
     return {
-      coach,
+      coach: coachWithCapabilities,
       clients,
-      total: clients.length,
+      total,
     };
   };
 

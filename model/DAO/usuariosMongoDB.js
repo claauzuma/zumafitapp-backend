@@ -9,6 +9,64 @@ function coachIdQuery(coachId) {
   return { $in: ids };
 }
 
+function coachIdQueryValues(coachIds = []) {
+  const strings = new Set();
+  const objectIds = [];
+
+  for (const raw of coachIds) {
+    const value = String(raw || "").trim();
+    if (!value) continue;
+
+    strings.add(value);
+    if (ObjectId.isValid(value)) {
+      objectIds.push(new ObjectId(value));
+    }
+  }
+
+  return [...strings, ...objectIds];
+}
+
+function escapeRegex(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizePaging({ limit = 100, skip = 0, max = 500 } = {}) {
+  return {
+    limit: Math.min(Math.max(Number(limit) || 100, 1), max),
+    skip: Math.max(Number(skip) || 0, 0),
+  };
+}
+
+function addSearchQuery(query, search) {
+  const s = String(search || "").trim();
+  if (!s) return query;
+
+  const rx = new RegExp(escapeRegex(s), "i");
+  const searchOr = [
+    { email: rx },
+    { "profile.nombre": rx },
+    { "profile.apellido": rx },
+  ];
+
+  if (query?.$or) {
+    return {
+      $and: [
+        query,
+        { $or: searchOr },
+      ],
+    };
+  }
+
+  return { ...query, $or: searchOr };
+}
+
+const LIST_PROJECTION = {
+  passwordHash: 0,
+  password: 0,
+  menu: 0,
+  routine: 0,
+};
+
 class ModelMongoDBUsuarios {
   _col() {
     if (!CnxMongoDB.connection) {
@@ -46,6 +104,7 @@ class ModelMongoDBUsuarios {
   listByRole = async (role) => {
     return await this._col()
       .find({ role: String(role || "").toLowerCase().trim() })
+      .project(LIST_PROJECTION)
       .toArray();
   };
 
@@ -56,7 +115,29 @@ class ModelMongoDBUsuarios {
         role: "cliente",
         "coach.entrenadorId": coachIdQuery(coachId),
       })
+      .project(LIST_PROJECTION)
       .toArray();
+  };
+
+  adminListClientsByCoachId = async (coachId, options = {}) => {
+    const col = this._col();
+    const { limit, skip } = normalizePaging({ ...options, max: 500 });
+    const query = {
+      role: "cliente",
+      "coach.entrenadorId": coachIdQuery(coachId),
+    };
+
+    const [clients, total] = await Promise.all([
+      col
+        .find(query, { projection: LIST_PROJECTION })
+        .sort({ "coach.assignedAt": -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .toArray(),
+      col.countDocuments(query),
+    ]);
+
+    return { clients, total };
   };
 
   // ✅ nuevo
@@ -65,6 +146,30 @@ class ModelMongoDBUsuarios {
       role: "cliente",
       "coach.entrenadorId": coachIdQuery(coachId),
     });
+  };
+
+  countClientsByCoachIds = async (coachIds = []) => {
+    const values = coachIdQueryValues(coachIds);
+    if (!values.length) return new Map();
+
+    const rows = await this._col()
+      .aggregate([
+        {
+          $match: {
+            role: "cliente",
+            "coach.entrenadorId": { $in: values },
+          },
+        },
+        {
+          $group: {
+            _id: { $toString: "$coach.entrenadorId" },
+            count: { $sum: 1 },
+          },
+        },
+      ])
+      .toArray();
+
+    return new Map(rows.map((row) => [String(row._id), Number(row.count || 0)]));
   };
 
   unassignClientsByCoachId = async (coachId, adminId = null) => {
@@ -99,7 +204,54 @@ class ModelMongoDBUsuarios {
           { coach: { $exists: false } },
         ],
       })
+      .project(LIST_PROJECTION)
       .toArray();
+  };
+
+  adminListUnassignedClients = async ({ search = "", limit = 100, skip = 0 } = {}) => {
+    const col = this._col();
+    const paging = normalizePaging({ limit, skip, max: 500 });
+    const query = addSearchQuery(
+      {
+        role: "cliente",
+        $or: [
+          { "coach.entrenadorId": null },
+          { "coach.entrenadorId": "" },
+          { coach: { $exists: false } },
+        ],
+      },
+      search
+    );
+
+    const [clients, total] = await Promise.all([
+      col
+        .find(query, { projection: LIST_PROJECTION })
+        .sort({ createdAt: -1 })
+        .skip(paging.skip)
+        .limit(paging.limit)
+        .toArray(),
+      col.countDocuments(query),
+    ]);
+
+    return { clients, total };
+  };
+
+  adminListCoaches = async ({ search = "", limit = 100, skip = 0 } = {}) => {
+    const col = this._col();
+    const paging = normalizePaging({ limit, skip, max: 500 });
+    const query = addSearchQuery({ role: "coach" }, search);
+
+    const [coaches, total] = await Promise.all([
+      col
+        .find(query, { projection: LIST_PROJECTION })
+        .sort({ createdAt: -1 })
+        .skip(paging.skip)
+        .limit(paging.limit)
+        .toArray(),
+      col.countDocuments(query),
+    ]);
+
+    return { coaches, total };
   };
 
   // ----- Escrituras -----
@@ -185,30 +337,31 @@ class ModelMongoDBUsuarios {
     skip = 0,
   }) => {
     const col = this._col();
-    const query = {};
+    let query = {};
 
-    if (role) query.role = role;
-    if (estado) query.estado = estado;
-    if (tipo) query.tipo = tipo;
+    const roleNorm = String(role || "").toLowerCase().trim();
+    const estadoNorm = String(estado || "").toLowerCase().trim();
+    const tipoNorm = String(tipo || "").toLowerCase().trim();
 
-    if (search) {
-      const s = String(search).trim();
-      query.$or = [
-        { email: { $regex: s, $options: "i" } },
-        { "profile.nombre": { $regex: s, $options: "i" } },
-        { "profile.apellido": { $regex: s, $options: "i" } },
-      ];
-    }
+    if (roleNorm && roleNorm !== "todos") query.role = roleNorm;
+    if (estadoNorm && estadoNorm !== "todos") query.estado = estadoNorm;
+    if (tipoNorm && tipoNorm !== "todos") query.tipo = tipoNorm;
 
-    const lim = Math.min(Number(limit) || 50, 200);
-    const sk = Math.max(Number(skip) || 0, 0);
+    query = addSearchQuery(query, search);
 
-    return await col
-      .find(query, { projection: { passwordHash: 0, password: 0 } })
-      .sort({ createdAt: -1 })
-      .skip(sk)
-      .limit(lim)
-      .toArray();
+    const paging = normalizePaging({ limit, skip, max: 500 });
+
+    const [users, total] = await Promise.all([
+      col
+        .find(query, { projection: LIST_PROJECTION })
+        .sort({ createdAt: -1 })
+        .skip(paging.skip)
+        .limit(paging.limit)
+        .toArray(),
+      col.countDocuments(query),
+    ]);
+
+    return { users, total };
   };
 
   async touchLastActivityById(id, date = new Date()) {
@@ -238,6 +391,9 @@ class ModelMongoDBUsuarios {
     await col.createIndex({ tipo: 1 });
     await col.createIndex({ plan: 1 });
     await col.createIndex({ "coach.entrenadorId": 1 });
+    await col.createIndex({ role: 1, createdAt: -1 });
+    await col.createIndex({ role: 1, estado: 1, createdAt: -1 });
+    await col.createIndex({ role: 1, "coach.entrenadorId": 1 });
     await col.createIndex({ "subscription.status": 1 });
     await col.createIndex({ "onboarding.step": 1 });
     await col.createIndex({ createdAt: -1 });
