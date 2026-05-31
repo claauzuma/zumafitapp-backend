@@ -332,6 +332,15 @@ function cleanStringArray(value, maxItems = 24, maxLen = 120) {
     .slice(0, maxItems);
 }
 
+function boolFrom(value, fallback = false) {
+  if (value === undefined || value === null) return !!fallback;
+  return !!value;
+}
+
+function anyTruthy(value = {}) {
+  return Object.values(value || {}).some(Boolean);
+}
+
 function normalizeBuilderMode(mode, fallback = "manual") {
   const m = String(mode || fallback).trim().toLowerCase();
   if (["automatic", "auto", "automatica", "automatico"].includes(m)) return "automatic";
@@ -425,13 +434,190 @@ class ServicioUsuarios {
     return await this.invitedModel.deleteById(id);
   }
 
-  async _acceptInviteById(id) {
+  async _acceptInviteById(id, acceptedUserId = null) {
     if (!id || typeof this.invitedModel.updateById !== "function") return null;
-    return await this.invitedModel.updateById(id, {
+    const patch = {
       status: "accepted",
       acceptedAt: new Date(),
       updatedAt: new Date(),
+    };
+
+    if (acceptedUserId) patch.acceptedUserId = toMongoIdOrString(acceptedUserId);
+
+    return await this.invitedModel.updateById(id, patch);
+  }
+
+  _isCoachClientInvite(invite) {
+    if (!invite) return false;
+    const role = normalizeRole(invite.targetRole || invite.role);
+    return String(invite.source || "") === "coach_invite" && role === "cliente";
+  }
+
+  async _findPendingInviteForEmail(email, inviteId = null) {
+    if (inviteId && typeof this.invitedModel.getById === "function") {
+      const invite = await this.invitedModel.getById(inviteId);
+      if (
+        invite &&
+        String(invite.email || "").toLowerCase().trim() === String(email || "").toLowerCase().trim() &&
+        String(invite.status || "") === "pending"
+      ) {
+        return invite;
+      }
+
+      throw new Error("INVITATION_NOT_FOUND");
+    }
+
+    return await this._findInviteByEmail(email);
+  }
+
+  async _prepareCoachClientInviteAcceptance(invite) {
+    if (!this._isCoachClientInvite(invite)) return null;
+    if (!invite?.assignedCoachId) throw new Error("COACH_NOT_FOUND");
+
+    const coach = await this.getById(idToString(invite.assignedCoachId));
+    if (!coach) throw new Error("COACH_NOT_FOUND");
+    if (!this._isCoachUser(coach)) throw new Error("USER_NOT_COACH");
+
+    if (String(coach?.estado || "activo").toLowerCase() !== "activo") {
+      throw new Error("COACH_NOT_ACTIVE");
+    }
+
+    if (coach?.coachCapabilities?.canInviteClients === false) {
+      throw new Error("COACH_INVITES_DISABLED");
+    }
+
+    const specialties = coach?.coachProfile?.specialties || {};
+    if (!specialties.training && !specialties.nutrition) {
+      throw new Error("COACH_SPECIALTIES_REQUERIDAS");
+    }
+
+    const coachRealId = coach._id || coach.id || invite.assignedCoachId;
+    const assignedClients = await this._countClientsForCoach(coachRealId);
+    const pendingInvitations = await this._countPendingClientInvitationsForCoach(coachRealId);
+    const reservedWithoutCurrentInvite = assignedClients + Math.max(pendingInvitations - 1, 0);
+    const effectiveCapabilities = await this._resolveEffectiveCapabilities(coach, {
+      currentClients: reservedWithoutCurrentInvite,
     });
+
+    if (effectiveCapabilities?.isTrialExpired || !effectiveCapabilities?.features?.clients?.canAssign) {
+      throw new Error("COACH_NOT_AVAILABLE");
+    }
+
+    if (!effectiveCapabilities?.canReceiveClients) {
+      throw new Error("COACH_CLIENT_LIMIT_REACHED");
+    }
+
+    const coachIdToStore = toMongoIdOrString(coachRealId);
+
+    return {
+      coach,
+      effectiveCapabilities,
+      clientPermissions: this._sanitizeClientPermissionsForCoach(
+        coach,
+        effectiveCapabilities,
+        invite.clientPermissions || {}
+      ),
+      coachAssignment: {
+        entrenadorId: coachIdToStore,
+        assignedAt: new Date(),
+        assignedByAdminId: null,
+        assignedByCoachId: coachIdToStore,
+        source: "coach_invite",
+      },
+    };
+  }
+
+  async _buildUserFromInvite({
+    invite,
+    email,
+    passwordHash,
+    googleId = null,
+    profile = {},
+  }) {
+    if (!invite) return null;
+
+    const now = new Date();
+    const coachInviteAcceptance = await this._prepareCoachClientInviteAcceptance(invite);
+    const role = coachInviteAcceptance
+      ? "cliente"
+      : normalizeRole(invite.targetRole || invite.role || "cliente");
+
+    const plan =
+      role === "coach"
+        ? (toCoachPlan(invite.plan) || "trial_pro")
+        : role === "admin"
+        ? (invite.plan || "free")
+        : (invite.plan || "free");
+
+    const tipo =
+      role === "cliente"
+        ? "entrenado"
+        : role === "coach"
+        ? "entrenador"
+        : "admin";
+
+    const subscription =
+      role === "coach"
+        ? createTrialSubscription({
+            planCode: plan,
+            now,
+            durationDays: (await this._getCoachPlanConfig(plan))?.durationDays || 7,
+          })
+        : undefined;
+
+    const normalizedCoachProfile =
+      role === "coach"
+        ? {
+            specialties: {
+              training: !!invite?.coachProfile?.specialties?.training,
+              nutrition: !!invite?.coachProfile?.specialties?.nutrition,
+            },
+          }
+        : null;
+
+    const coachWelcome =
+      role === "coach"
+        ? {
+            show: true,
+            invitedAt: invite?.invitedAt || now,
+            plan,
+            specialties: {
+              training: !!invite?.coachProfile?.specialties?.training,
+              nutrition: !!invite?.coachProfile?.specialties?.nutrition,
+            },
+            trialEndsAt: subscription?.trialEndsAt || null,
+            seenAt: null,
+          }
+        : null;
+
+    return {
+      email,
+      passwordHash,
+      googleId,
+
+      ...getUserDefaults({ role, plan, tipo }),
+
+      emailVerificado: true,
+      profile: {
+        ...(profile || {}),
+        nombre: invite?.profile?.nombre || profile?.nombre || "",
+        apellido: invite?.profile?.apellido || profile?.apellido || "",
+      },
+      ...(subscription ? { subscription } : {}),
+      coachProfile: normalizedCoachProfile,
+      coachOverrides: role === "coach" ? createEmptyCoachOverrides() : null,
+      coachWelcome,
+      ...(coachInviteAcceptance?.coachAssignment
+        ? { coach: coachInviteAcceptance.coachAssignment }
+        : {}),
+      ...(coachInviteAcceptance?.clientPermissions
+        ? { clientPermissions: coachInviteAcceptance.clientPermissions }
+        : {}),
+      settings: {},
+
+      createdAt: now,
+      updatedAt: null,
+    };
   }
 
   _normalizeUser(u) {
@@ -680,6 +866,7 @@ class ServicioUsuarios {
       subscription: u.subscription || {},
       settings: u.settings || {},
       adminMeta: u.adminMeta || {},
+      clientPermissions: u.clientPermissions || {},
 
       metas: u.metas || {},
       onboarding: u.onboarding || {},
@@ -770,6 +957,22 @@ class ServicioUsuarios {
     const pending = await this.pendingModel.findByEmail(email);
     if (pending) throw new Error("EMAIL_PENDIENTE");
 
+    const invite = await this._findInviteByEmail(email);
+    const inviteRole = invite ? normalizeRole(invite.targetRole || invite.role || "cliente") : null;
+    const role = this._isCoachClientInvite(invite) ? "cliente" : (inviteRole || "cliente");
+    const plan =
+      role === "coach"
+        ? (toCoachPlan(invite?.plan) || "trial_pro")
+        : role === "admin"
+        ? (invite?.plan || "free")
+        : (invite?.plan || "free");
+    const tipo =
+      role === "cliente"
+        ? "entrenado"
+        : role === "coach"
+        ? "entrenador"
+        : "admin";
+
     const passwordHash = await bcrypt.hash(password, 10);
 
     const code = this._generateOTP6();
@@ -779,10 +982,16 @@ class ServicioUsuarios {
     await this.pendingModel.create({
       email,
       passwordHash,
-      role: "cliente",
-      plan: "free",
-      tipo: "entrenado",
-      profile,
+      role,
+      plan,
+      tipo,
+      profile: {
+        ...(profile || {}),
+        ...(invite?.profile?.nombre ? { nombre: invite.profile.nombre } : {}),
+        ...(invite?.profile?.apellido ? { apellido: invite.profile.apellido } : {}),
+      },
+      inviteId: invite?._id || null,
+      invitationSource: invite?.source || null,
       codeHash,
       expiresAt,
       attempts: 0,
@@ -821,26 +1030,41 @@ class ServicioUsuarios {
       throw new Error("CODIGO_INVALIDO");
     }
 
+    const invite = await this._findPendingInviteForEmail(email, pending.inviteId);
+
     const role = pending.role || "cliente";
     const plan = pending.plan || "free";
     const tipo = pending.tipo || "entrenado";
 
-    const userToCreate = {
-      email,
-      passwordHash: pending.passwordHash,
-      googleId: pending.googleId || null,
+    const userToCreate = invite
+      ? await this._buildUserFromInvite({
+          invite,
+          email,
+          passwordHash: pending.passwordHash,
+          googleId: pending.googleId || null,
+          profile: pending.profile || {},
+        })
+      : {
+          email,
+          passwordHash: pending.passwordHash,
+          googleId: pending.googleId || null,
 
-      ...getUserDefaults({ role, plan, tipo }),
+          ...getUserDefaults({ role, plan, tipo }),
 
-      emailVerificado: true,
-      profile: pending.profile || {},
-      settings: {},
+          emailVerificado: true,
+          profile: pending.profile || {},
+          settings: {},
 
-      createdAt: new Date(),
-      updatedAt: null,
-    };
+          createdAt: new Date(),
+          updatedAt: null,
+        };
 
     const created = await this._createUser(userToCreate);
+
+    if (invite?._id) {
+      await this._acceptInviteById(invite._id, created?._id || created?.id);
+    }
+
     await this.pendingModel.deleteByEmail(email);
 
     return this._normalizeUser(created);
@@ -1003,78 +1227,20 @@ class ServicioUsuarios {
         const randomPass = crypto.randomBytes(32).toString("hex");
         const passwordHash = await bcrypt.hash(randomPass, 10);
 
-        const role = normalizeRole(invite.role);
-        const plan =
-          role === "coach"
-            ? (toCoachPlan(invite.plan) || "trial_pro")
-            : (invite.plan || "free");
-        const now = new Date();
-        const subscription =
-          role === "coach"
-            ? createTrialSubscription({
-                planCode: plan,
-                now,
-                durationDays: (await this._getCoachPlanConfig(plan))?.durationDays || 7,
-              })
-            : undefined;
-
-        const tipo =
-          role === "cliente"
-            ? "entrenado"
-            : role === "coach"
-            ? "entrenador"
-            : "admin";
-
-        const normalizedCoachProfile =
-          role === "coach"
-            ? {
-                specialties: {
-                  training: !!invite?.coachProfile?.specialties?.training,
-                  nutrition: !!invite?.coachProfile?.specialties?.nutrition,
-                },
-              }
-            : null;
-
-        const coachWelcome =
-          role === "coach"
-            ? {
-                show: true,
-                invitedAt: invite?.invitedAt || now,
-                plan,
-                specialties: {
-                  training: !!invite?.coachProfile?.specialties?.training,
-                  nutrition: !!invite?.coachProfile?.specialties?.nutrition,
-                },
-                trialEndsAt: subscription?.trialEndsAt || null,
-                seenAt: null,
-              }
-            : null;
-
-        userRaw = await this._createUser({
+        userRaw = await this._createUser(await this._buildUserFromInvite({
+          invite,
           email,
           passwordHash,
           googleId,
-
-          ...getUserDefaults({ role, plan, tipo }),
-
-          emailVerificado: true,
           profile: {
-            nombre: invite?.profile?.nombre || nombre || "",
-            apellido: invite?.profile?.apellido || apellido || "",
+            nombre: nombre || "",
+            apellido: apellido || "",
             avatarUrl: avatarUrl || "",
           },
-          ...(subscription ? { subscription } : {}),
-          coachProfile: normalizedCoachProfile,
-          coachOverrides: role === "coach" ? createEmptyCoachOverrides() : null,
-          coachWelcome,
-          settings: {},
-
-          createdAt: now,
-          updatedAt: null,
-        });
+        }));
 
         try {
-          await this._acceptInviteById(invite._id);
+          await this._acceptInviteById(invite._id, userRaw?._id || userRaw?.id);
         } catch (e) {
           console.error("No se pudo eliminar la invitación:", e);
         }
@@ -1235,8 +1401,16 @@ class ServicioUsuarios {
       },
       coachProfile: normalizedCoachProfile,
       invitedBy,
+      invitedByType: "admin",
+      source: "admin_invite",
+      assignedCoachId: null,
+      targetRole: role,
+      clientPermissions: null,
+      acceptedUserId: null,
+      coachSnapshot: null,
       invitedAt: new Date(),
       acceptedAt: null,
+      cancelledAt: null,
       expiresAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -1295,6 +1469,327 @@ class ServicioUsuarios {
   };
 
   adminDeleteInvitation = async (invitationId) => {
+    if (typeof this.invitedModel.deleteById !== "function") {
+      throw new Error("INVITATION_NOT_FOUND");
+    }
+
+    const result = await this.invitedModel.deleteById(invitationId);
+    return { deleted: true, result };
+  };
+
+  // =========================
+  // COACH: CLIENT INVITATIONS
+  // =========================
+  _countPendingClientInvitationsForCoach = async (coachId) => {
+    if (!coachId) return 0;
+
+    if (typeof this.invitedModel.countPendingByCoach === "function") {
+      return Number(await this.invitedModel.countPendingByCoach(coachId)) || 0;
+    }
+
+    if (typeof this.invitedModel.listByCoach === "function") {
+      const data = await this.invitedModel.listByCoach({
+        coachId,
+        status: "pending",
+        limit: 1,
+        skip: 0,
+      });
+      return Number(data?.total || 0);
+    }
+
+    return 0;
+  };
+
+  _sanitizeClientPermissionsForCoach(coach, effectiveCapabilities, raw = {}) {
+    const permissions = isPlainObject(raw) ? raw : {};
+    const menuInput = isPlainObject(permissions.menu) ? permissions.menu : {};
+    const routineInput = isPlainObject(permissions.routine) ? permissions.routine : {};
+    const progressInput = isPlainObject(permissions.progress) ? permissions.progress : {};
+
+    const specialties = coach?.coachProfile?.specialties || {};
+    const features = effectiveCapabilities?.features || {};
+    const trialExpired = !!effectiveCapabilities?.isTrialExpired;
+
+    const menuFeatures = features?.menus || {};
+    const routineFeatures = features?.routines || {};
+    const metricFeatures = features?.metrics || {};
+
+    const canMenu = !!specialties.nutrition && !trialExpired && anyTruthy(menuFeatures);
+    const canRoutine = !!specialties.training && !trialExpired && anyTruthy(routineFeatures);
+    const canProgress = (canMenu || canRoutine) && !trialExpired;
+
+    return {
+      menu: {
+        canViewMenu: canMenu && boolFrom(menuInput.canViewMenu, true),
+        canEditPreferences: canMenu && boolFrom(menuInput.canEditPreferences, true),
+        canUseAutomaticMenu:
+          canMenu &&
+          !!menuFeatures.automaticGenerator &&
+          boolFrom(menuInput.canUseAutomaticMenu, false),
+        canUseSemiAutomaticMenu:
+          canMenu &&
+          !!menuFeatures.semiAutomaticBuilder &&
+          boolFrom(menuInput.canUseSemiAutomaticMenu, false),
+        canRequestMenuChanges: canMenu && boolFrom(menuInput.canRequestMenuChanges, true),
+      },
+      routine: {
+        canViewRoutine: canRoutine && boolFrom(routineInput.canViewRoutine, true),
+        canLogWorkout: canRoutine && boolFrom(routineInput.canLogWorkout, true),
+        canEditWeights: canRoutine && boolFrom(routineInput.canEditWeights, true),
+        canUseAutomaticRoutine:
+          canRoutine &&
+          !!routineFeatures.automaticGenerator &&
+          boolFrom(routineInput.canUseAutomaticRoutine, false),
+        canUseSemiAutomaticRoutine:
+          canRoutine &&
+          !!routineFeatures.semiAutomaticBuilder &&
+          boolFrom(routineInput.canUseSemiAutomaticRoutine, false),
+        canRequestRoutineChanges:
+          canRoutine && boolFrom(routineInput.canRequestRoutineChanges, true),
+      },
+      progress: {
+        canLogWeight: canProgress && boolFrom(progressInput.canLogWeight, true),
+        canUploadProgressPhotos:
+          canProgress && boolFrom(progressInput.canUploadProgressPhotos, true),
+        canViewAdvancedMetrics:
+          canProgress &&
+          !!metricFeatures.advanced &&
+          boolFrom(progressInput.canViewAdvancedMetrics, false),
+      },
+    };
+  }
+
+  _isCoachOwnerOfInvitation(invitation, coachId) {
+    if (!invitation || String(invitation?.source || "") !== "coach_invite") return false;
+    const id = idToString(coachId);
+    return (
+      idToString(invitation?.assignedCoachId) === id ||
+      (String(invitation?.invitedByType || "") === "coach" &&
+        idToString(invitation?.invitedBy) === id)
+    );
+  }
+
+  _assertCoachCanInviteClients = async (coachId) => {
+    if (!coachId) throw new Error("COACH_NOT_FOUND");
+
+    const coach = await this.getById(coachId);
+    if (!coach) throw new Error("COACH_NOT_FOUND");
+    if (!this._isCoachUser(coach)) throw new Error("USER_NOT_COACH");
+
+    if (String(coach?.estado || "activo").toLowerCase() !== "activo") {
+      throw new Error("COACH_NOT_ACTIVE");
+    }
+
+    if (coach?.coachCapabilities?.canInviteClients === false) {
+      throw new Error("COACH_INVITES_DISABLED");
+    }
+
+    const specialties = coach?.coachProfile?.specialties || {};
+    if (!specialties.training && !specialties.nutrition) {
+      throw new Error("COACH_SPECIALTIES_REQUERIDAS");
+    }
+
+    const coachRealId = coach._id || coach.id || coachId;
+    const assignedClients = Number(coach?.effectiveCapabilities?.currentClients || 0);
+    const pendingInvitations = await this._countPendingClientInvitationsForCoach(coachRealId);
+    const reservedClients = assignedClients + pendingInvitations;
+    const effectiveCapabilities = await this._resolveEffectiveCapabilities(coach, {
+      currentClients: reservedClients,
+    });
+
+    if (effectiveCapabilities?.isTrialExpired || !effectiveCapabilities?.features?.clients?.canAssign) {
+      throw new Error("COACH_NOT_AVAILABLE");
+    }
+
+    if (!effectiveCapabilities?.canReceiveClients) {
+      throw new Error("COACH_CLIENT_LIMIT_REACHED");
+    }
+
+    return {
+      coach,
+      effectiveCapabilities,
+      assignedClients,
+      pendingInvitations,
+      reservedClients,
+    };
+  };
+
+  _getCoachOwnedClientInvitation = async ({ coachId, invitationId }) => {
+    if (typeof this.invitedModel.getById !== "function") {
+      throw new Error("INVITATION_NOT_FOUND");
+    }
+
+    const invitation = await this.invitedModel.getById(invitationId);
+    if (!this._isCoachOwnerOfInvitation(invitation, coachId)) {
+      throw new Error("INVITATION_NOT_FOUND");
+    }
+
+    return invitation;
+  };
+
+  coachListClientInvitations = async ({
+    coachId,
+    search = "",
+    status = "todos",
+    limit = 100,
+    skip = 0,
+  } = {}) => {
+    const coach = await this.getById(coachId);
+    if (!coach) throw new Error("COACH_NOT_FOUND");
+    if (!this._isCoachUser(coach)) throw new Error("USER_NOT_COACH");
+
+    if (typeof this.invitedModel.listByCoach !== "function") {
+      return { invitations: [], total: 0 };
+    }
+
+    const result = await this.invitedModel.listByCoach({
+      coachId: coach._id || coach.id || coachId,
+      search,
+      status,
+      limit,
+      skip,
+    });
+
+    return {
+      invitations: result?.items || [],
+      total: result?.total || 0,
+    };
+  };
+
+  coachGetClientInvitation = async ({ coachId, invitationId }) => {
+    const coach = await this.getById(coachId);
+    if (!coach) throw new Error("COACH_NOT_FOUND");
+    if (!this._isCoachUser(coach)) throw new Error("USER_NOT_COACH");
+
+    return await this._getCoachOwnedClientInvitation({
+      coachId: coach._id || coach.id || coachId,
+      invitationId,
+    });
+  };
+
+  coachCreateClientInvitation = async ({
+    coachId,
+    email,
+    profile = {},
+    clientPermissions = {},
+  }) => {
+    email = String(email || "").trim().toLowerCase();
+    const nombre = String(profile?.nombre || "").trim();
+    const apellido = String(profile?.apellido || "").trim();
+
+    if (!nombre) throw new Error("NOMBRE_REQUERIDO");
+    if (!apellido) throw new Error("APELLIDO_REQUERIDO");
+    if (!email) throw new Error("EMAIL_REQUERIDO");
+
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!emailOk) throw new Error("EMAIL_INVALIDO");
+
+    const {
+      coach,
+      effectiveCapabilities,
+      assignedClients,
+      pendingInvitations,
+      reservedClients,
+    } = await this._assertCoachCanInviteClients(coachId);
+
+    const existingUser = await this._findUserByEmail(email);
+    if (existingUser) throw new Error("USUARIO_YA_EXISTE");
+
+    const existingPending = await this.pendingModel.findByEmail(email);
+    if (existingPending) throw new Error("EMAIL_PENDIENTE");
+
+    const existingInvite = await this._findInviteByEmail(email);
+    if (existingInvite) throw new Error("INVITACION_PENDIENTE_EXISTENTE");
+
+    const sanitizedPermissions = this._sanitizeClientPermissionsForCoach(
+      coach,
+      effectiveCapabilities,
+      clientPermissions
+    );
+
+    const coachIdToStore = toMongoIdOrString(coach._id || coach.id || coachId);
+    const coachProfile = coach?.profile || {};
+
+    const created = await this.invitedModel.create({
+      email,
+      role: "cliente",
+      plan: "free",
+      status: "pending",
+      profile: { nombre, apellido },
+      coachProfile: null,
+      invitedBy: coachIdToStore,
+      invitedByType: "coach",
+      source: "coach_invite",
+      assignedCoachId: coachIdToStore,
+      targetRole: "cliente",
+      clientPermissions: sanitizedPermissions,
+      acceptedUserId: null,
+      coachSnapshot: {
+        id: idToString(coach._id || coach.id || coachId),
+        email: coach.email,
+        nombre: coachProfile.nombre || "",
+        apellido: coachProfile.apellido || "",
+        plan: effectiveCapabilities?.planCode || coach.plan || null,
+        specialties: {
+          training: !!coach?.coachProfile?.specialties?.training,
+          nutrition: !!coach?.coachProfile?.specialties?.nutrition,
+        },
+      },
+      invitedAt: new Date(),
+      acceptedAt: null,
+      cancelledAt: null,
+      expiresAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    return {
+      invitation: created,
+      capacity: {
+        maxClients: effectiveCapabilities?.maxClients ?? null,
+        assignedClients,
+        pendingInvitations,
+        reservedClients,
+      },
+    };
+  };
+
+  coachCancelClientInvitation = async ({ coachId, invitationId }) => {
+    const coach = await this.getById(coachId);
+    if (!coach) throw new Error("COACH_NOT_FOUND");
+    if (!this._isCoachUser(coach)) throw new Error("USER_NOT_COACH");
+
+    const resolvedCoachId = coach._id || coach.id || coachId;
+    const invitation = await this._getCoachOwnedClientInvitation({
+      coachId: resolvedCoachId,
+      invitationId,
+    });
+    if (String(invitation?.status || "pending") !== "pending") {
+      throw new Error("INVITATION_ALREADY_FINALIZED");
+    }
+
+    await this.invitedModel.updateById(invitationId, {
+      status: "cancelled",
+      cancelledAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    return await this._getCoachOwnedClientInvitation({
+      coachId: resolvedCoachId,
+      invitationId,
+    });
+  };
+
+  coachDeleteClientInvitation = async ({ coachId, invitationId }) => {
+    const coach = await this.getById(coachId);
+    if (!coach) throw new Error("COACH_NOT_FOUND");
+    if (!this._isCoachUser(coach)) throw new Error("USER_NOT_COACH");
+
+    await this._getCoachOwnedClientInvitation({
+      coachId: coach._id || coach.id || coachId,
+      invitationId,
+    });
+
     if (typeof this.invitedModel.deleteById !== "function") {
       throw new Error("INVITATION_NOT_FOUND");
     }

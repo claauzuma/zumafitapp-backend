@@ -57,6 +57,24 @@ function appendQuery(url, params = {}) {
 function adminError(res, error) {
   const msg = String(error?.message || "");
 
+  if (msg === "NOMBRE_REQUERIDO") return res.status(400).json({ error: "Ingresa el nombre" });
+  if (msg === "APELLIDO_REQUERIDO") return res.status(400).json({ error: "Ingresa el apellido" });
+  if (msg === "EMAIL_REQUERIDO") return res.status(400).json({ error: "Ingresa el email" });
+  if (msg === "EMAIL_INVALIDO") return res.status(400).json({ error: "Ingresa un email valido" });
+  if (msg === "USUARIO_YA_EXISTE") return res.status(409).json({ error: "Ya existe un usuario con ese email" });
+  if (msg === "EMAIL_PENDIENTE") {
+    return res.status(409).json({ error: "Ese email ya esta pendiente de validacion" });
+  }
+  if (msg === "INVITACION_PENDIENTE_EXISTENTE") {
+    return res.status(409).json({ error: "Ya existe una invitacion pendiente para ese email" });
+  }
+  if (msg === "COACH_INVITES_DISABLED") {
+    return res.status(403).json({ error: "Tu cuenta profesional no tiene habilitada la invitacion de clientes" });
+  }
+  if (msg === "COACH_SPECIALTIES_REQUERIDAS") {
+    return res.status(403).json({ error: "Tu perfil profesional no tiene especialidades habilitadas" });
+  }
+
   if (msg === "NOT_FOUND") return res.status(404).json({ error: "Usuario no encontrado" });
   if (msg === "COACH_NOT_FOUND") return res.status(404).json({ error: "Coach no encontrado" });
   if (msg === "INVITATION_NOT_FOUND") return res.status(404).json({ error: "Invitación no encontrada" });
@@ -131,6 +149,7 @@ function mapUserPublic(user) {
     coachWelcome: user.coachWelcome || null,
     settings: user.settings || {},
     adminMeta: user.adminMeta || {},
+    clientPermissions: user.clientPermissions || {},
 
     metas: user.metas || {},
     onboarding: user.onboarding || {},
@@ -440,6 +459,16 @@ class ControladorUsuarios {
       }
       if (msg === "EMAIL_DUPLICADO") {
         return res.status(409).json({ error: "Ese email ya está registrado" });
+      }
+
+      if (msg === "INVITATION_NOT_FOUND") {
+        return res.status(404).json({ error: "La invitacion ya no esta disponible" });
+      }
+      if (msg === "COACH_NOT_ACTIVE" || msg === "COACH_NOT_AVAILABLE" || msg === "COACH_INVITES_DISABLED") {
+        return res.status(409).json({ error: "El coach ya no puede recibir este cliente" });
+      }
+      if (msg === "COACH_CLIENT_LIMIT_REACHED") {
+        return res.status(409).json({ error: "El coach alcanzo el limite de clientes" });
       }
 
       console.error("Error verifyEmail:", error);
@@ -1113,6 +1142,96 @@ class ControladorUsuarios {
         clients: (data.clients || []).map((u) => mapUserPublic(u)),
         total: data.total || 0,
       });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  listMyClientInvitations = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const {
+        search = "",
+        status = "todos",
+        limit = 100,
+        skip = 0,
+      } = req.query || {};
+
+      const data = await this.servicio.coachListClientInvitations({
+        coachId,
+        search: String(search || "").trim(),
+        status: String(status || "").trim(),
+        limit: Number(limit || 100),
+        skip: Number(skip || 0),
+      });
+
+      return res.json(data);
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  createMyClientInvitation = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const body = req.body || {};
+
+      const data = await this.servicio.coachCreateClientInvitation({
+        coachId,
+        email: body.email,
+        profile: body.profile || {
+          nombre: body.nombre,
+          apellido: body.apellido,
+        },
+        clientPermissions: body.clientPermissions || {},
+      });
+
+      return res.status(201).json({ ok: true, ...data });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  getMyClientInvitation = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const { invitationId } = req.params;
+      const invitation = await this.servicio.coachGetClientInvitation({
+        coachId,
+        invitationId,
+      });
+
+      return res.json({ invitation });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  cancelMyClientInvitation = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const { invitationId } = req.params;
+      const invitation = await this.servicio.coachCancelClientInvitation({
+        coachId,
+        invitationId,
+      });
+
+      return res.json({ ok: true, invitation });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  deleteMyClientInvitation = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const { invitationId } = req.params;
+      const result = await this.servicio.coachDeleteClientInvitation({
+        coachId,
+        invitationId,
+      });
+
+      return res.json({ ok: true, ...result });
     } catch (error) {
       return adminError(res, error);
     }

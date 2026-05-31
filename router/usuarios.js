@@ -109,6 +109,39 @@ class RouterUsuarios {
     users.get("/me", authMiddleware, this.controladorUsuarios.obtenerPerfil);
     users.get("/me/coach-clients", authMiddleware, this.controladorUsuarios.getMyCoachClients);
     users.get(
+      "/me/client-invitations",
+      authMiddleware,
+      requireRole("coach"),
+      this.controladorUsuarios.listMyClientInvitations
+    );
+    users.post(
+      "/me/client-invitations",
+      authMiddleware,
+      requireRole("coach"),
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.createMyClientInvitation
+    );
+    users.get(
+      "/me/client-invitations/:invitationId",
+      authMiddleware,
+      requireRole("coach"),
+      this.controladorUsuarios.getMyClientInvitation
+    );
+    users.patch(
+      "/me/client-invitations/:invitationId/cancel",
+      authMiddleware,
+      requireRole("coach"),
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.cancelMyClientInvitation
+    );
+    users.delete(
+      "/me/client-invitations/:invitationId",
+      authMiddleware,
+      requireRole("coach"),
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.deleteMyClientInvitation
+    );
+    users.get(
       "/me/coach-clients/:clientId",
       authMiddleware,
       requireRole("coach"),
