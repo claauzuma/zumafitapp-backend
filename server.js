@@ -14,6 +14,8 @@ import RouterComidas from "./router/comidas.js";
 import RouterEjercicios from "./router/ejercicios.js";
 import RouterRutinas from "./router/rutinas.js";
 import RouterClienteRutinas from "./router/clienteRutinas.js";
+import RouterMenus from "./router/menus.js";
+import RouterClienteMenus from "./router/clienteMenus.js";
 
 import passport from "./auth/google.js";
 import { setupGoogleAuth } from "./auth/google.js";
@@ -24,6 +26,7 @@ import ModelMongoDBPendingUsers from "./model/DAO/pendingUsersMongoDB.js";
 import ModelMongoDBPasswordResets from "./model/DAO/passwordResetMongoDB.js";
 import ModelMongoDBEjercicios from "./model/DAO/ejerciciosMongoDB.js";
 import ModelMongoDBRutinas from "./model/DAO/rutinasMongoDB.js";
+import ModelMongoDBMenus from "./model/DAO/menusMongoDB.js";
 
 function getLanIPv4s() {
   const nets = os.networkInterfaces();
@@ -73,7 +76,8 @@ class Server {
         await new ModelMongoDBPasswordResets().ensureIndexes();
         await new ModelMongoDBEjercicios().ensureIndexes();
         await new ModelMongoDBRutinas().ensureIndexes();
-        console.log("Indices asegurados (usuarios + pending + resets + rutinas)");
+        await new ModelMongoDBMenus().ensureIndexes();
+        console.log("Indices asegurados (usuarios + pending + resets + rutinas + menus)");
       } catch (e) {
         console.log("⚠️ No se pudieron asegurar índices:", e?.message || e);
       }
@@ -131,6 +135,8 @@ class Server {
     this.app.use("/api/ejercicios", new RouterEjercicios(this.persistencia).start());
     this.app.use("/api/rutinas", new RouterRutinas(this.persistencia).start());
     this.app.use("/api/clientes", new RouterClienteRutinas(this.persistencia).start());
+    this.app.use("/api/menus", new RouterMenus(this.persistencia).start());
+    this.app.use("/api/clientes", new RouterClienteMenus(this.persistencia).start());
 
     this.app.use((req, res) => res.status(404).json({ status: false, errors: "not found" }));
 
