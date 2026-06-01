@@ -1,71 +1,25 @@
 import Servicio from "../servicio/comidas.js";
 
-function isValidPositiveNumber(n) {
-  const x = Number(n);
-  return Number.isFinite(x) && x > 0;
-}
+function sendError(res, error) {
+  const msg = String(error?.message || "");
 
-function toStr(v) {
-  return String(v ?? "").trim();
-}
+  if (msg === "NO_AUTENTICADO") return res.status(401).json({ error: "No autenticado" });
+  if (msg === "NOT_FOUND") return res.status(404).json({ error: "Comida no encontrada" });
+  if (msg === "FORBIDDEN") return res.status(403).json({ error: "No tenes permisos para esta comida" });
+  if (msg === "COACH_NUTRITION_NOT_ALLOWED") {
+    return res.status(403).json({ error: "Tu perfil profesional no tiene acceso a comidas nutricionales" });
+  }
+  if (msg === "COACH_FEATURE_NOT_ALLOWED") return res.status(403).json({ error: "Tu plan no permite esta accion" });
+  if (msg === "ITEMS_INVALIDOS") return res.status(400).json({ error: "La comida debe tener al menos un alimento" });
+  if (msg === "ID_INVALIDO") return res.status(400).json({ error: "ID invalido" });
 
-/**
- * Devuelve un objeto "limpio" para el response:
- * - id aparece UNA sola vez
- * - NO incluye _id, createdAt, updatedAt
- */
-function toComidaDTO(comida) {
-  if (!comida) return null;
-
-  const id = comida.id || comida._id; // por si el service devuelve uno u otro
-
-  return {
-    id: id?.toString?.() || String(id),
-    userId: comida.userId,
-    nombre: comida.nombre,
-    items: comida.items,
-  };
-}
-
-/**
- * Espera body tipo:
- * {
- *   nombre?: "Almuerzo",
- *   alimento1: "ARROZ",
- *   cantidad1: 100,
- *   ...
- *   alimento8/cantidad8
- * }
- *
- * Devuelve items: [{alimento, cantidad}, ...]
- */
-function parseItemsFromBody(body) {
-  const items = [];
-
-  for (let i = 1; i <= 8; i++) {
-    const alimento = toStr(body?.[`alimento${i}`]);
-    const cantidad = body?.[`cantidad${i}`];
-
-    if (!alimento) continue; // permite que falten slots
-
-    if (!isValidPositiveNumber(cantidad)) {
-      throw new Error(`CANTIDAD_INVALIDA_${i}`);
-    }
-
-    items.push({ alimento, cantidad: Number(cantidad) });
+  if (msg.startsWith("CANTIDAD_INVALIDA_")) {
+    const index = msg.split("_").pop();
+    return res.status(400).json({ error: `cantidad${index} invalida` });
   }
 
-  return items;
-}
-
-function hasDuplicates(items) {
-  const set = new Set();
-  for (const it of items) {
-    const key = (it.alimento || "").toLowerCase();
-    if (set.has(key)) return true;
-    set.add(key);
-  }
-  return false;
+  console.error("Error comidas:", error);
+  return res.status(500).json({ error: "Error en el servidor" });
 }
 
 class ControladorComidas {
@@ -73,162 +27,68 @@ class ControladorComidas {
     this.servicio = new Servicio(persistencia);
   }
 
-  // POST /api/comidas
   crearComida = async (req, res) => {
     try {
-      const userId = req.user?.id;
-      if (!userId) return res.status(401).json({ error: "No autenticado" });
-
-      const { nombre } = req.body || {};
-      const items = parseItemsFromBody(req.body);
-
-      if (items.length < 2 || items.length > 8) {
-        return res.status(400).json({ error: "La comida debe tener entre 2 y 8 alimentos" });
-      }
-
-      if (hasDuplicates(items)) {
-        return res.status(400).json({ error: "No repitas el mismo alimento en la misma comida" });
-      }
-
-      const comida = await this.servicio.crearComida({
-        userId,
-        nombre: toStr(nombre) || null,
-        items,
-      });
-
-      return res.status(201).json({ comida: toComidaDTO(comida) });
+      const comida = await this.servicio.crearComida(req.user, req.body || {});
+      return res.status(201).json({ ok: true, comida });
     } catch (error) {
-      console.error("Error crearComida:", error);
-
-      const msg = String(error?.message || "");
-      if (msg.startsWith("CANTIDAD_INVALIDA_")) {
-        const idx = msg.split("_").pop();
-        return res.status(400).json({ error: `cantidad${idx} inválida (debe ser número > 0)` });
-      }
-
-      return res.status(500).json({ error: "Error en el servidor" });
+      return sendError(res, error);
     }
   };
 
-  // GET /api/comidas
   listarComidas = async (req, res) => {
     try {
-      const userId = req.user?.id;
-      const role = req.user?.role;
-
-      const comidas = await this.servicio.listarComidas({ userId, role });
-
-      return res.json({ comidas: (comidas || []).map(toComidaDTO) });
+      const comidas = await this.servicio.listarComidas(req.user, req.query || {});
+      return res.json({ comidas });
     } catch (error) {
-      console.error("Error listarComidas:", error);
-      return res.status(500).json({ error: "Error en el servidor" });
+      return sendError(res, error);
     }
   };
 
-  // GET /api/comidas/:id
-  obtenerComidaPorId = async (req, res) => {
-    try {
-      const userId = req.user?.id;
-      const role = req.user?.role;
-      const { id } = req.params;
-
-      const comida = await this.servicio.obtenerPorId({ id, userId, role });
-      if (!comida) return res.status(404).json({ error: "Comida no encontrada" });
-
-      return res.json({ comida: toComidaDTO(comida) });
-    } catch (error) {
-      console.error("Error obtenerComidaPorId:", error);
-
-      if (String(error?.message) === "FORBIDDEN") {
-        return res.status(403).json({ error: "No tenés permisos para ver esta comida" });
-      }
-
-      return res.status(500).json({ error: "Error en el servidor" });
-    }
-  };
-
-  // PATCH /api/comidas/:id
-  actualizarComida = async (req, res) => {
-    try {
-      const userId = req.user?.id;
-      const role = req.user?.role;
-      const { id } = req.params;
-
-      const { nombre } = req.body || {};
-      const items = parseItemsFromBody(req.body);
-
-      // En PATCH: permitimos actualizar nombre solo, o items (si manda items)
-      const updates = {};
-      if (nombre !== undefined) updates.nombre = toStr(nombre) || null;
-
-      if (items.length > 0) {
-        if (items.length < 2 || items.length > 8) {
-          return res.status(400).json({ error: "La comida debe tener entre 2 y 8 alimentos" });
-        }
-        if (hasDuplicates(items)) {
-          return res.status(400).json({ error: "No repitas el mismo alimento en la misma comida" });
-        }
-        updates.items = items;
-      }
-
-      if (Object.keys(updates).length === 0) {
-        return res.status(400).json({ error: "No hay campos para actualizar" });
-      }
-
-      const comida = await this.servicio.actualizarComida({
-        id,
-        userId,
-        role,
-        updates,
-      });
-
-      return res.json({ comida: toComidaDTO(comida) });
-    } catch (error) {
-      console.error("Error actualizarComida:", error);
-
-      const msg = String(error?.message || "");
-      if (msg === "NOT_FOUND") return res.status(404).json({ error: "Comida no encontrada" });
-      if (msg === "FORBIDDEN") return res.status(403).json({ error: "No tenés permisos" });
-
-      if (msg.startsWith("CANTIDAD_INVALIDA_")) {
-        const idx = msg.split("_").pop();
-        return res.status(400).json({ error: `cantidad${idx} inválida (debe ser número > 0)` });
-      }
-
-      return res.status(500).json({ error: "Error en el servidor" });
-    }
-  };
-
-  // DELETE /api/comidas/:id
-  eliminarComida = async (req, res) => {
-    try {
-      const userId = req.user?.id;
-      const role = req.user?.role;
-      const { id } = req.params;
-
-      const r = await this.servicio.eliminarComida({ id, userId, role });
-      if (r?.deletedCount === 0) return res.status(404).json({ error: "Comida no encontrada" });
-
-      return res.status(200).json({ message: "Comida eliminada" });
-    } catch (error) {
-      console.error("Error eliminarComida:", error);
-
-      if (String(error?.message) === "FORBIDDEN") {
-        return res.status(403).json({ error: "No tenés permisos" });
-      }
-
-      return res.status(500).json({ error: "Error en el servidor" });
-    }
-  };
-
-  // GET /api/comidas/admin/todas
   listarTodasAdmin = async (req, res) => {
     try {
-      const comidas = await this.servicio.listarTodasAdmin();
-      return res.json({ comidas: (comidas || []).map(toComidaDTO) });
+      const comidas = await this.servicio.listarTodasAdmin(req.user);
+      return res.json({ comidas });
     } catch (error) {
-      console.error("Error listarTodasAdmin:", error);
-      return res.status(500).json({ error: "Error en el servidor" });
+      return sendError(res, error);
+    }
+  };
+
+  obtenerComidaPorId = async (req, res) => {
+    try {
+      const comida = await this.servicio.obtenerPorId(req.user, req.params.id);
+      if (!comida) return res.status(404).json({ error: "Comida no encontrada" });
+      return res.json({ comida });
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
+  actualizarComida = async (req, res) => {
+    try {
+      const comida = await this.servicio.actualizarComida(req.user, req.params.id, req.body || {});
+      return res.json({ ok: true, comida });
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
+  eliminarComida = async (req, res) => {
+    try {
+      const result = await this.servicio.eliminarComida(req.user, req.params.id);
+      if (result?.deletedCount === 0) return res.status(404).json({ error: "Comida no encontrada" });
+      return res.json({ ok: true, deleted: true });
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
+  duplicarComida = async (req, res) => {
+    try {
+      const comida = await this.servicio.duplicarComida(req.user, req.params.id, req.body || {});
+      return res.status(201).json({ ok: true, comida });
+    } catch (error) {
+      return sendError(res, error);
     }
   };
 }
