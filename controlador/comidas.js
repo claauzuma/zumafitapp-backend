@@ -12,6 +12,7 @@ function sendError(res, error) {
   if (msg === "COACH_FEATURE_NOT_ALLOWED") return res.status(403).json({ error: "Tu plan no permite esta accion" });
   if (msg === "ITEMS_INVALIDOS") return res.status(400).json({ error: "La comida debe tener al menos un alimento" });
   if (msg === "ID_INVALIDO") return res.status(400).json({ error: "ID invalido" });
+  if (msg === "DUPLICATE_IDENTICAL") return res.status(409).json({ error: "La copia es identica a una comida existente. Cambia nombre, alimentos o cantidades antes de guardar." });
 
   if (msg.startsWith("CANTIDAD_INVALIDA_")) {
     const index = msg.split("_").pop();

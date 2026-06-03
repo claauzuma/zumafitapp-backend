@@ -160,6 +160,13 @@ function roundMacro(value) {
   return Math.round(Number(value || 0) * 10) / 10;
 }
 
+function rangeFromKcal(kcal) {
+  const value = numberOrDefault(kcal, 0, { min: 0, max: 20000, decimals: 1 });
+  if (!value) return "";
+  const min = Math.floor(value / 100) * 100;
+  return `${min}-${min + 100} kcal`;
+}
+
 function addTotals(a = emptyTotals(), b = emptyTotals()) {
   return {
     kcal: roundMacro((a.kcal || 0) + (b.kcal || 0)),
@@ -185,6 +192,18 @@ function normalizeMenuItem(raw = {}, index = 0, { assigned = false, editedBy = n
     categoriaSnapshot: cleanString(raw.categoriaSnapshot || raw.categoria || raw.category || raw.fuente, 120),
     notas: cleanString(raw.notas || raw.notes, 1000),
   };
+  const requestedQuantitySource = normalizeToken(raw.quantitySource || raw.quantityStatus || raw.quantityMode);
+  const quantitySource = ["pending", "automatic", "manual"].includes(requestedQuantitySource)
+    ? requestedQuantitySource
+    : raw.quantityPending === true || item.cantidad <= 0
+      ? "pending"
+      : raw.fixedQuantity === false
+        ? "automatic"
+        : "manual";
+
+  item.quantitySource = quantitySource;
+  item.quantityPending = quantitySource === "pending";
+  item.fixedQuantity = quantitySource === "manual";
 
   if (!assigned) return item;
 
@@ -244,16 +263,18 @@ function normalizeBasePayload(payload = {}, context = {}) {
   const comidas = normalizeMeals(payload.comidas || payload.meals || []);
   const totals = menuTotals(comidas);
   const macrosObjetivo = normalizeMacros(payload.macrosObjetivo || payload.macros || {}, totals);
+  const kcalObjetivo = numberOrDefault(payload.kcalObjetivo ?? payload.kcal ?? payload.calories, totals.kcal, {
+    min: 0,
+    max: 20000,
+    decimals: 1,
+  });
+  const rangoKcal = cleanString(payload.rangoKcal || payload.calorieRange, 80) || rangeFromKcal(kcalObjetivo);
 
   return {
     nombre: cleanText(payload.nombre || payload.name, "Menu sin nombre", 180),
     descripcion: cleanString(payload.descripcion || payload.description, 2500),
-    kcalObjetivo: numberOrDefault(payload.kcalObjetivo ?? payload.kcal ?? payload.calories, totals.kcal, {
-      min: 0,
-      max: 20000,
-      decimals: 1,
-    }),
-    rangoKcal: cleanString(payload.rangoKcal || payload.calorieRange, 80),
+    kcalObjetivo,
+    rangoKcal,
     macrosObjetivo,
     objetivo: enumValue(payload.objetivo || payload.goal, MENU_OBJECTIVES, "mantenimiento"),
     cantidadComidas: intOrDefault(payload.cantidadComidas ?? payload.mealsCount, comidas.length || 0, { min: 0, max: 12 }),
@@ -332,6 +353,38 @@ function normalizeDoc(doc) {
   }
 
   return normalized;
+}
+
+function menuBaseIdentity(doc = {}) {
+  const normalized = normalizeDoc(doc) || {};
+  return JSON.stringify({
+    nombre: normalizeToken(normalized.nombre),
+    descripcion: normalizeToken(normalized.descripcion),
+    kcalObjetivo: numberOrDefault(normalized.kcalObjetivo, 0, { decimals: 1 }),
+    rangoKcal: normalizeToken(normalized.rangoKcal),
+    macrosObjetivo: {
+      proteina: macroNumber(normalized.macrosObjetivo?.proteina),
+      carbs: macroNumber(normalized.macrosObjetivo?.carbs),
+      grasas: macroNumber(normalized.macrosObjetivo?.grasas),
+    },
+    tags: (normalized.tags || []).map(normalizeToken).sort(),
+    comidas: (normalized.comidas || []).map((meal, index) => ({
+      orden: numberOrDefault(meal.orden, index + 1, { decimals: 0 }),
+      nombre: normalizeToken(meal.nombre),
+      tipoComida: normalizeToken(meal.tipoComida),
+      items: (meal.items || []).map((item) => ({
+        alimentoId: idToString(item.alimentoId),
+        nombre: normalizeToken(item.nombreSnapshot),
+        cantidad: numberOrDefault(item.cantidad, 0, { decimals: 2 }),
+        unidad: normalizeToken(item.unidad),
+        kcal: macroNumber(item.kcal),
+        proteina: macroNumber(item.proteina),
+        carbs: macroNumber(item.carbs),
+        grasas: macroNumber(item.grasas),
+        categoria: normalizeToken(item.categoriaSnapshot),
+      })).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))),
+    })),
+  });
 }
 
 function normalizeFoodDoc(raw = {}) {
@@ -653,6 +706,10 @@ class ServicioMenus {
     delete clone.id;
     delete clone.createdAt;
     delete clone.updatedAt;
+
+    if (menuBaseIdentity(current) === menuBaseIdentity(clone)) {
+      throw new Error("DUPLICATE_IDENTICAL");
+    }
 
     return normalizeDoc(await this.menusModel.createBase(clone));
   }

@@ -17,6 +17,7 @@ console.log("RouterAlimentos iniciado");
 ///Endpoint de prueba //
 this.router.get('/comidas-equivalentes', (req, res) => this.controladorAlimentos.obtenerComidasEquivalentes(req, res));
 this.router.get('/prueba', (req, res) => this.controladorAlimentos.obtenerComidaPrueba(req, res));
+this.router.post('/generar-cantidades', (req, res) => this.controladorAlimentos.generarCantidades(req, res));
 
 
 this.router.get('/', (req, res) => this.controladorAlimentos.obtenerAlimentos(req, res));

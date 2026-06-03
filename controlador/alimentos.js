@@ -60,6 +60,17 @@ class ControladorAlimentos {
         }
     };
 
+    generarCantidades = async (req, res) => {
+        try {
+            const resultado = await this.servicio.generarCantidades(req.body || {});
+            const statusCode = resultado.status === "error" ? 400 : 200;
+            res.status(statusCode).json(resultado);
+        } catch (error) {
+            console.error("Error al generar cantidades:", error);
+            res.status(500).json({ status: "error", message: "No se pudieron generar cantidades" });
+        }
+    };
+
         obtenerComidasEquivalentes = async (req, res) => {
         try {
             const comida = await this.servicio.obtenerComidasEquivalentes(3);

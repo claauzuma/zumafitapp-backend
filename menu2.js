@@ -1,33 +1,23 @@
-// menu.js — versión robusta “siempre devuelve menús”
-// - Sin estados globales mutables (todo se calcula dentro de cada corrida).
-// - Reintentos internos con snapshot/rollback.
-// - Tolerancias numéricas para no fallar por flotantes.
-// - Soporta “alimentos a cuadrar” (opcional): proteicos, carbos, grasas.
-// - Devuelve sólo ítems con cantidad > 0.
+// Motor de generacion de cantidades para comidas.
+// Trabaja con alimentos por gramo y soporta:
+// - Cantidades fijas.
+// - Cantidades pendientes.
+// - Modo full: ajustar kcal + proteina + carbos + grasas.
+// - Modo kcalProteina: ajustar kcal + proteina y dejar carbos/grasas flexibles.
+// La salida conserva proteicos/carbohidratos/grasas para compatibilidad.
 
-///////////////////////////////
-// Utils
-///////////////////////////////
-const EPS = 1e-6;
-const TOL = 0.5; // tolerancia en gramos para P/CH/G (y en kcal para calorías al final)
-const clamp0 = (x) => (x < 0 ? 0 : x);
-const rnd = (x, d = 2) => Math.round(x * 10 ** d) / 10 ** d;
+const EPS = 1e-9;
+const MAX_FOODS_PER_GROUP = 5;
+const MAX_TOTAL_FOODS = 15;
 
-const deepFreeze = (o) => {
-  Object.freeze(o);
-  Object.getOwnPropertyNames(o).forEach((k) => {
-    const v = o[k];
-    if (v && (typeof v === "object" || typeof v === "function") && !Object.isFrozen(v)) {
-      deepFreeze(v);
-    }
-  });
-  return o;
+const DEFAULT_OBJECTIVE = {
+  calorias: null,
+  proteina: 40,
+  carbohidratos: 70,
+  grasas: 20,
 };
 
-///////////////////////////////
-// Datos base
-///////////////////////////////
-const alimentos = deepFreeze([
+const INTERNAL_FOODS = Object.freeze([
   { nombre: "Almendras", proteina: 0.212, carbohidratos: 0.216, grasas: 0.499, calorias: 6.20 },
   { nombre: "Nueces", proteina: 0.152, carbohidratos: 0.137, grasas: 0.652, calorias: 7.02 },
   { nombre: "Aceite de Oliva", proteina: 0, carbohidratos: 0, grasas: 1, calorias: 9 },
@@ -50,487 +40,1114 @@ const alimentos = deepFreeze([
   { nombre: "Leche Entera", proteina: 0.032, carbohidratos: 0.048, grasas: 0.032, calorias: 0.61 },
   { nombre: "Pasas de Uva", proteina: 0.031, carbohidratos: 0.79, grasas: 0.005, calorias: 3.33 },
   { nombre: "Fideos", proteina: 0.12, carbohidratos: 0.72, grasas: 0.015, calorias: 3.50 },
-  { nombre: "Sandía", proteina: 0.006, carbohidratos: 0.08, grasas: 0.002, calorias: 0.36 },
+  { nombre: "Sandia", proteina: 0.006, carbohidratos: 0.08, grasas: 0.002, calorias: 0.36 },
   { nombre: "Higo", proteina: 0.008, carbohidratos: 0.19, grasas: 0.003, calorias: 0.82 },
   { nombre: "Dulce de Leche", proteina: 0.05, carbohidratos: 0.55, grasas: 0.08, calorias: 3.12 },
   { nombre: "Galletitas", proteina: 0.07, carbohidratos: 0.65, grasas: 0.2, calorias: 4.68 },
-  { nombre: "Mermelada", proteina: 0.004, carbohidratos: 0.6, grasas: 0.001, calorias: 2.43 }
+  { nombre: "Mermelada", proteina: 0.004, carbohidratos: 0.6, grasas: 0.001, calorias: 2.43 },
 ]);
 
-const combinacionesValidasDeComidas = deepFreeze([
-  {
-    nombre: "Churrasco Magro",
-    fuentesProtes: ["Pechuga de Pollo", "Pechuga de Pavo", "Higado", "Jamon Cocido"],
-    fuentesCh: [
-      ["Arroz", "Tomate", "Fideos", "Pan Blanco", "Papas"],
-      ["Banana", "Pera", "Higo", "Sandía", "Papas", "Manzana", "Tomate"]
-    ],
-    fuentesGrasas: ["Aceite de Oliva", "Palta", "Almendras", "Nueces", "Queso Cremoso"]
-  },
-  {
-    nombre: "Higado",
-    fuentesProtes: ["Pechuga de Pollo", "Pechuga de Pavo", "Jamon Cocido"],
-    fuentesCh: [
-      ["Arroz", "Tomate", "Fideos", "Pan Blanco", "Papas"],
-      ["Banana", "Pera", "Higo", "Sandía", "Papas", "Manzana", "Tomate"]
-    ],
-    fuentesGrasas: ["Aceite de Oliva", "Palta", "Almendras", "Nueces", "Queso Cremoso"]
-  },
-  {
-    nombre: "Jamon Cocido",
-    fuentesProtes: ["Pechuga de Pollo", "Pechuga de Pavo", "Higado"],
-    fuentesCh: [
-      ["Arroz", "Tomate", "Fideos", "Pan Blanco", "Papas"],
-      ["Banana", "Pera", "Higo", "Sandía", "Papas", "Manzana", "Tomate"]
-    ],
-    fuentesGrasas: ["Aceite de Oliva", "Palta", "Almendras", "Nueces", "Queso Cremoso"]
-  },
-  {
-    nombre: "Pechuga de Pavo",
-    fuentesProtes: ["Pechuga de Pollo", "Higado", "Jamon Cocido"],
-    fuentesCh: [
-      ["Arroz", "Tomate", "Fideos", "Pan Blanco", "Papas"],
-      ["Banana", "Pera", "Higo", "Sandía", "Papas", "Manzana", "Tomate"]
-    ],
-    fuentesGrasas: ["Aceite de Oliva", "Palta", "Almendras", "Nueces", "Queso Cremoso"]
-  },
-  {
-    nombre: "Whey Protein",
-    fuentesProtes: ["Pechuga de Pollo", "Pechuga de Pavo", "Higado", "Jamon Cocido"],
-    fuentesCh: [
-      ["Arroz", "Tomate", "Fideos", "Pan Blanco", "Papas"],
-      ["Banana", "Pera", "Higo", "Sandía", "Papas", "Manzana", "Tomate"]
-    ],
-    fuentesGrasas: ["Aceite de Oliva", "Palta", "Almendras", "Nueces", "Queso Cremoso"]
-  },
-  {
-    nombre: "Pechuga de pollo",
-    fuentesProtes: ["Pechuga de Pavo", "Higado", "Jamon Cocido", "Whey Protein"],
-    fuentesCh: [
-      ["Arroz", "Tomate", "Fideos", "Pan Blanco", "Papas"],
-      ["Banana", "Pera", "Higo", "Sandía", "Papas", "Manzana", "Tomate"]
-    ],
-    fuentesGrasas: ["Palta", "Aceite de Oliva", "Almendras", "Nueces"]
-  },
-  {
-    nombre: "Banana",
-    fuentesProtes: ["Whey Protein", "Leche Descremada", "Queso Cremoso"],
-    fuentesCh: [
-      ["Arroz", "Tomate", "Fideos", "Pan Blanco", "Papas"],
-      ["Banana", "Pera", "Higo", "Sandía", "Papas", "Manzana", "Tomate"]
-    ],
-    fuentesGrasas: ["Almendras", "Palta", "Nueces"]
-  },
-  {
-    nombre: "Pan Blanco",
-    fuentesProtes: ["Pechuga de Pollo", "Pechuga de Pavo", "Jamon Cocido"],
-    fuentesCh: [
-      ["Banana", "Manzana", "Mermelada"],
-      ["Tomate", "Papas", "Arroz"]
-    ],
-    fuentesGrasas: ["Palta", "Queso Cremoso", "Aceite de Oliva"]
-  },
-  {
-    nombre: "Queso Cremoso",
-    fuentesProtes: ["Pechuga de Pollo", "Higado", "Whey Protein"],
-    fuentesCh: [
-      ["Tomate", "Papas", "Pan Blanco"],
-      ["Banana", "Manzana", "Arroz"]
-    ],
-    fuentesGrasas: ["Nueces", "Almendras", "Palta"]
-  },
-  {
-    nombre: "Fideos",
-    fuentesProtes: ["Pechuga de Pollo", "Pechuga de Pavo", "Higado"],
-    fuentesCh: [
-      ["Banana", "Tomate", "Pan Blanco"],
-      ["Papas", "Manzana", "Arroz"]
-    ],
-    fuentesGrasas: ["Queso Cremoso", "Aceite de Oliva", "Palta"]
-  }
-]);
+const DEFAULT_SELECTIONS = Object.freeze({
+  proteicos: [{ nombre: "Pechuga de pollo" }],
+  carbohidratos: [{ nombre: "Arroz" }],
+  grasas: [{ nombre: "Aceite de Oliva" }],
+});
 
-///////////////////////////////
-// Helpers de búsqueda
-///////////////////////////////
-const byName = (arr, nombre) =>
-  arr.find(a => String(a.nombre || "").toLowerCase() === String(nombre || "").toLowerCase()) || null;
-
-const allFoodsBy = {
-  prote: alimentos.filter(a => a.proteina > a.carbohidratos && a.proteina > a.grasas),
-  carb: alimentos.filter(a => a.carbohidratos > a.proteina && a.carbohidratos > a.grasas),
-  fat:  alimentos.filter(a => a.grasas > a.proteina && a.grasas > a.carbohidratos),
+const round = (value, digits = 2) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  const factor = 10 ** digits;
+  return Math.round(n * factor) / factor;
 };
 
-const fromCombinacion = (proteicoPrincipalNombre) => {
-  const combo = combinacionesValidasDeComidas.find(c =>
-    String(c.nombre).toLowerCase() === String(proteicoPrincipalNombre).toLowerCase()
-  );
-  return combo || null;
+const toNumber = (value, fallback = 0) => {
+  if (value === null || value === undefined || value === "") return fallback;
+  if (typeof value === "number") return Number.isFinite(value) ? value : fallback;
+  const raw = String(value).trim();
+  const hasComma = raw.includes(",");
+  const hasDot = raw.includes(".");
+  const normalized = hasComma && hasDot
+    ? raw.replace(/\./g, "").replace(",", ".")
+    : raw.replace(",", ".");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const pickOne = (arr, excludeNames = []) => {
-  const excl = new Set(excludeNames.map(n => String(n).toLowerCase()));
-  const pool = arr.filter(x => !excl.has(String(x.nombre).toLowerCase()));
-  if (pool.length === 0) return null;
-  return pool[Math.floor(Math.random() * pool.length)];
-};
+const normalizeName = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 
-///////////////////////////////
-// Núcleo: generar una comida
-///////////////////////////////
-function generarMenu({
-  objetivo = { proteina: 40, carbohidratos: 70, grasas: 20, calorias: null },
-  alimentosProteACuadrar = [],      // [{nombre, cantidad?, modificable?}, ...] (opcional)
-  alimentosChACuadrar = [],         // [{nombre, cantidad?, modificable?}, ...] (opcional)
-  alimentosGrACuadrar = [],         // [{nombre, cantidad?, modificable?}, ...] (opcional)
-  maxIntentos = 12
-} = {}) {
-  // calorías objetivo calculadas si no vienen:
-  if (objetivo.calorias == null) {
-    objetivo = {
-      ...objetivo,
-      calorias: objetivo.proteina * 4 + objetivo.carbohidratos * 4 + objetivo.grasas * 9
-    };
-  }
-
-  let intento = 0;
-  while (intento++ < maxIntentos) {
-    // Estado local
-    let P = 0, C = 0, G = 0, K = 0;
-    const proteSel = [];
-    const carbSel = [];
-    const fatSel  = [];
-
-    // ===== 1) PROTEÍNAS =====
-    try {
-      // 1 o 2 proteicos (si el objetivo de P es alto, probamos con 2)
-      const cantProt = alimentosProteACuadrar.length > 0
-        ? Math.min(2, alimentosProteACuadrar.length)
-        : (objetivo.proteina > 35 ? (Math.random() < 0.6 ? 2 : 1) : (Math.random() < 0.3 ? 2 : 1));
-
-      let p1, p2;
-      if (cantProt === 1) {
-        p1 = alimentosProteACuadrar.length
-          ? byName(allFoodsBy.prote, alimentosProteACuadrar[0].nombre)
-          : pickOne(allFoodsBy.prote);
-        if (!p1) throw new Error("No hay proteico válido.");
-        const cant1 = objetivo.proteina / p1.proteina; // cerramos P exacto con 1
-        push(proteSel, p1, cant1);
-      } else {
-        // 2 proteicos
-        if (alimentosProteACuadrar.length >= 2) {
-          p1 = byName(allFoodsBy.prote, alimentosProteACuadrar[0].nombre);
-          p2 = byName(allFoodsBy.prote, alimentosProteACuadrar[1].nombre);
-        } else if (alimentosProteACuadrar.length === 1) {
-          p1 = byName(allFoodsBy.prote, alimentosProteACuadrar[0].nombre);
-          // intentar uno compatible por combo o al azar
-          const combo = fromCombinacion(p1?.nombre) || {};
-          const pool = (combo.fuentesProtes || [])
-            .map(n => byName(allFoodsBy.prote, n))
-            .filter(Boolean);
-          p2 = pickOne(pool.length ? pool : allFoodsBy.prote, [p1?.nombre]);
-        } else {
-          p1 = pickOne(allFoodsBy.prote);
-          // intentar compañero por combo
-          const combo = fromCombinacion(p1?.nombre) || {};
-          const pool = (combo.fuentesProtes || [])
-            .map(n => byName(allFoodsBy.prote, n))
-            .filter(Boolean);
-          p2 = pickOne(pool.length ? pool : allFoodsBy.prote, [p1?.nombre]);
-        }
-        if (!p1 || !p2 || p1.nombre === p2.nombre) throw new Error("Proteicos inválidos.");
-
-        // proporción aleatoria (pero cerrando proteína exacta)
-        let prop1 = 0.4 + Math.random() * 0.4; // 0.4..0.8
-        let prop2 = 1 - prop1;
-        // Si el usuario fijó cantidad de alguno, respetar su proteína resultante:
-        const f1 = alimentosProteACuadrar.find(a => eqName(a.nombre, p1.nombre) && a.cantidad > 0);
-        const f2 = alimentosProteACuadrar.find(a => eqName(a.nombre, p2.nombre) && a.cantidad > 0);
-        if (f1 && !f2) {
-          const P1 = f1.cantidad * p1.proteina;
-          if (P1 >= objetivo.proteina) throw new Error("Exceso de P por alimento 1.");
-          prop1 = P1 / objetivo.proteina; prop2 = 1 - prop1;
-        } else if (!f1 && f2) {
-          const P2 = f2.cantidad * p2.proteina;
-          if (P2 >= objetivo.proteina) throw new Error("Exceso de P por alimento 2.");
-          prop2 = P2 / objetivo.proteina; prop1 = 1 - prop2;
-        } else if (f1 && f2) {
-          const P1 = f1.cantidad * p1.proteina;
-          const P2 = f2.cantidad * p2.proteina;
-          const PSum = P1 + P2;
-          if (PSum > objetivo.proteina + TOL) throw new Error("Exceso de P por cantidades fijas.");
-          if (PSum < objetivo.proteina - 5) {
-            // Si quedan P por cubrir, forzamos 3er proteico luego (simple: reintento)
-            throw new Error("Faltan P con cantidades fijas.");
-          }
-          prop1 = P1 / objetivo.proteina; prop2 = P2 / objetivo.proteina;
-        }
-
-        const P1 = objetivo.proteina * prop1;
-        const P2 = objetivo.proteina * prop2;
-
-        const c1 = P1 / p1.proteina;
-        const c2 = P2 / p2.proteina;
-
-        push(proteSel, p1, c1);
-        push(proteSel, p2, c2);
-      }
-    } catch { continue; }
-
-    // actualizar totales
-    let { P: P1, C: C1, G: G1, K: K1 } = sum(proteSel);
-    P += P1; C += C1; G += G1; K += K1;
-
-    // límites previos a CH
-    if (C > objetivo.carbohidratos + TOL || G > objetivo.grasas + TOL) continue;
-
-    // ===== 2) CARBOHIDRATOS =====
-    try {
-      const Cleft = clamp0(objetivo.carbohidratos - C);
-      // 1 o 2 carbos (más estable)
-      const cantCarb = alimentosChACuadrar.length > 0
-        ? Math.min(2, alimentosChACuadrar.length)
-        : (Cleft > 45 ? 2 : 1);
-
-      // proteico “principal” para anclar combos
-      const proteicoPrincipal = proteSel[0]?.nombre;
-      const combo = fromCombinacion(proteicoPrincipal);
-      const poolPrincipal = combo?.fuentesCh?.[0]?.map(n => byName(alimentos, n)).filter(Boolean) || allFoodsBy.carb;
-      const poolSec = combo?.fuentesCh?.[1]?.map(n => byName(alimentos, n)).filter(Boolean) || allFoodsBy.carb;
-
-      if (cantCarb === 1) {
-        let c1 = alimentosChACuadrar.length
-          ? byName(alimentos, alimentosChACuadrar[0].nombre)
-          : pickOne(poolPrincipal);
-        if (!c1 || c1.carbohidratos <= EPS) throw new Error("Carbo 1 inválido.");
-        const q1 = Cleft / c1.carbohidratos;
-        push(carbSel, c1, q1);
-      } else {
-        // 2 carbos
-        let c1, c2;
-        if (alimentosChACuadrar.length >= 2) {
-          c1 = byName(alimentos, alimentosChACuadrar[0].nombre);
-          c2 = byName(alimentos, alimentosChACuadrar[1].nombre);
-        } else if (alimentosChACuadrar.length === 1) {
-          c1 = byName(alimentos, alimentosChACuadrar[0].nombre);
-          c2 = pickOne(poolSec, [c1?.nombre]);
-        } else {
-          c1 = pickOne(poolPrincipal);
-          c2 = pickOne(poolSec, [c1?.nombre]);
-        }
-        if (!c1 || !c2 || c1.nombre === c2.nombre) throw new Error("Carbos inválidos.");
-        if (c1.carbohidratos <= EPS || c2.carbohidratos <= EPS) throw new Error("Carbos con CH <= 0.");
-
-        let prop1 = 0.45 + Math.random() * 0.4; // 0.45..0.85
-        let prop2 = 1 - prop1;
-
-        const f1 = alimentosChACuadrar.find(a => eqName(a.nombre, c1.nombre) && a.cantidad > 0);
-        const f2 = alimentosChACuadrar.find(a => eqName(a.nombre, c2.nombre) && a.cantidad > 0);
-        if (f1 && !f2) {
-          const C1f = f1.cantidad * c1.carbohidratos;
-          if (C1f >= Cleft) throw new Error("Exceso de CH por c1 fijo.");
-          prop1 = C1f / Cleft; prop2 = 1 - prop1;
-        } else if (!f1 && f2) {
-          const C2f = f2.cantidad * c2.carbohidratos;
-          if (C2f >= Cleft) throw new Error("Exceso de CH por c2 fijo.");
-          prop2 = C2f / Cleft; prop1 = 1 - prop2;
-        } else if (f1 && f2) {
-          const C1f = f1.cantidad * c1.carbohidratos;
-          const C2f = f2.cantidad * c2.carbohidratos;
-          const sumf = C1f + C2f;
-          if (sumf > Cleft + TOL) throw new Error("Exceso de CH por cantidades fijas.");
-          if (sumf < Cleft - 5) throw new Error("Faltan CH con cantidades fijas.");
-          prop1 = C1f / Cleft; prop2 = C2f / Cleft;
-        }
-
-        const CH1 = Cleft * prop1;
-        const CH2 = Cleft * prop2;
-        const q1 = CH1 / c1.carbohidratos;
-        const q2 = CH2 / c2.carbohidratos;
-
-        // snapshot para validar grasas
-        const before = { P, C, G, K };
-        push(carbSel, c1, q1);
-        push(carbSel, c2, q2);
-        const t = sum(carbSel);
-        if (before.G + t.G > objetivo.grasas + TOL) {
-          // revertimos y reintento global
-          throw new Error("CH suman demasiada grasa.");
-        }
-      }
-    } catch { continue; }
-
-    // actualizar totales
-    let sCarb = sum(carbSel);
-    P += sCarb.P; C += sCarb.C; G += sCarb.G; K += sCarb.K;
-
-    if (P > objetivo.proteina + 3 || C > objetivo.carbohidratos + TOL || G > objetivo.grasas + TOL) continue;
-
-    // ===== 3) GRASAS =====
-    try {
-      const Gleft = clamp0(objetivo.grasas - G);
-      if (Gleft > TOL) {
-        const cantFat = alimentosGrACuadrar.length > 0
-          ? Math.min(2, alimentosGrACuadrar.length)
-          : (Gleft > 25 ? 2 : 1);
-
-        if (cantFat === 1) {
-          let f1 = alimentosGrACuadrar.length
-            ? byName(allFoodsBy.fat, alimentosGrACuadrar[0].nombre)
-            : pickOne(allFoodsBy.fat);
-          if (!f1 || f1.grasas <= EPS) throw new Error("Grasa 1 inválida.");
-          const q1 = Gleft / f1.grasas;
-          push(fatSel, f1, q1);
-        } else {
-          let f1, f2;
-          if (alimentosGrACuadrar.length >= 2) {
-            f1 = byName(allFoodsBy.fat, alimentosGrACuadrar[0].nombre);
-            f2 = byName(allFoodsBy.fat, alimentosGrACuadrar[1].nombre);
-          } else if (alimentosGrACuadrar.length === 1) {
-            f1 = byName(allFoodsBy.fat, alimentosGrACuadrar[0].nombre);
-            f2 = pickOne(allFoodsBy.fat, [f1?.nombre]);
-          } else {
-            f1 = pickOne(allFoodsBy.fat);
-            f2 = pickOne(allFoodsBy.fat, [f1?.nombre]);
-          }
-          if (!f1 || !f2 || f1.nombre === f2.nombre) throw new Error("Grasas inválidas.");
-          if (f1.grasas <= EPS || f2.grasas <= EPS) throw new Error("Grasas con valor <= 0.");
-
-          const prop1 = 0.35 + Math.random() * 0.5; // 0.35..0.85
-          const prop2 = 1 - prop1;
-          const G1 = Gleft * prop1;
-          const G2 = Gleft * prop2;
-          const q1 = G1 / f1.grasas;
-          const q2 = G2 / f2.grasas;
-
-          push(fatSel, f1, q1);
-          push(fatSel, f2, q2);
-        }
-      }
-    } catch { continue; }
-
-    // Totales finales
-    let sFat = sum(fatSel);
-    P += sFat.P; C += sFat.C; G += sFat.G; K += sFat.K;
-
-    // Validaciones finales con tolerancias
-    if (Math.abs(P - objetivo.proteina) > 3) continue;
-    if (Math.abs(C - objetivo.carbohidratos) > 1.5) continue;
-    if (Math.abs(G - objetivo.grasas) > 1.5) continue;
-
-    const Ktarget = objetivo.proteina * 4 + objetivo.carbohidratos * 4 + objetivo.grasas * 9;
-    if (Math.abs(K - Ktarget) > 6) {
-      // pequeño ajuste: mover 1–2 g CH desde/ hacia prote principal si existe margen (opcional).
-      // Mantengo simple: si calorías están muy lejos, reintento.
-      continue;
+function firstValue(source, keys) {
+  for (const key of keys) {
+    if (source?.[key] !== undefined && source?.[key] !== null && source?.[key] !== "") {
+      return source[key];
     }
+  }
+  return undefined;
+}
 
-    // Armar respuesta limpia (sólo cantidades > 0)
-    const out = {
-      proteicos:     proteSel.filter(x => x.cantidad > EPS).map(slim),
-      carbohidratos: carbSel.filter(x => x.cantidad > EPS).map(slim),
-      grasas:        fatSel.filter(x => x.cantidad > EPS).map(slim)
-    };
+function hasObjectiveValue(source, keys) {
+  return keys.some((key) => source?.[key] !== undefined && source?.[key] !== null && source?.[key] !== "");
+}
 
-    // Asegurar no vacíos
-    if (!out.proteicos.length || !out.carbohidratos.length || !out.grasas.length) continue;
+function toBoolean(value, fallback = false) {
+  if (value === undefined || value === null || value === "") return fallback;
+  if (typeof value === "boolean") return value;
+  return ["true", "1", "si", "yes"].includes(normalizeName(value));
+}
 
-    return out;
+function normalizeFood(raw, fallbackGroup = null) {
+  if (!raw) return null;
+  const nombre = firstValue(raw, [
+    "nombre",
+    "name",
+    "Alimentos",
+    "alimento",
+    "Nombre",
+    "descripcion",
+  ]);
+  if (!nombre) return null;
+
+  let calorias = toNumber(firstValue(raw, ["calorias", "kcal", "Calorias", "Kcal", "calories"]));
+  let proteina = toNumber(firstValue(raw, ["proteina", "proteinas", "Proteinas", "Proteina", "protein"]));
+  let carbohidratos = toNumber(firstValue(raw, [
+    "carbohidratos",
+    "carbs",
+    "Carbohidratos",
+    "Hidratos",
+    "carbohydrates",
+  ]));
+  let grasas = toNumber(firstValue(raw, ["grasas", "grasa", "Grasas", "fat", "fats"]));
+
+  // Si vienen valores por 100 g, los bajamos a valor por gramo.
+  // Si ya vienen por gramo, los dejamos como estan.
+  const looksPer100g = calorias > 20 || proteina > 5 || carbohidratos > 5 || grasas > 5;
+  if (looksPer100g) {
+    calorias /= 100;
+    proteina /= 100;
+    carbohidratos /= 100;
+    grasas /= 100;
   }
 
-  // Si no pudo en maxIntentos, devolvemos un fallback simple (nunca vacío)
-  return fallbackMenu();
-}
-
-///////////////////////////////
-// Multi-menú + variantes
-///////////////////////////////
-function generarMenus(cantidad = 3, opts = {}) {
-  const arr = [];
-  for (let i = 0; i < cantidad; i++) {
-    arr.push(generarMenu(opts));
+  if (calorias <= 0) {
+    calorias = proteina * 4 + carbohidratos * 4 + grasas * 9;
   }
-  return arr;
-}
 
-// Garantiza que ninguna posición sea vacía reintentando el menú individual hasta `intentosPorMenu` veces.
-function generarMenusNoVacios(cantidad = 3, intentosPorMenu = 8, opts = {}) {
-  const arr = [];
-  for (let i = 0; i < cantidad; i++) {
-    let ok = null;
-    for (let j = 0; j < intentosPorMenu; j++) {
-      const m = generarMenu({ ...opts, maxIntentos: 10 });
-      if (m.proteicos.length && m.carbohidratos.length && m.grasas.length) {
-        ok = m; break;
-      }
-    }
-    arr.push(ok ?? fallbackMenu());
-  }
-  return arr;
-}
-
-///////////////////////////////
-// Internos auxiliares
-///////////////////////////////
-function eqName(a, b) {
-  return String(a || "").toLowerCase() === String(b || "").toLowerCase();
-}
-
-function push(dest, food, qty) {
-  const q = Math.max(0, qty);
-  dest.push({
-    nombre: food.nombre,
-    cantidad: q,
-    proteina: food.proteina * q,
-    carbohidratos: food.carbohidratos * q,
-    grasas: food.grasas * q,
-    calorias: food.calorias * q,
-    unidadProteica: food.proteina,
-    unidadCarbo: food.carbohidratos,
-    unidadGrasas: food.grasas,
-    unidadCalorica: food.calorias
-  });
-}
-
-function sum(list) {
-  let P = 0, C = 0, G = 0, K = 0;
-  for (const it of list) {
-    P += it.proteina;
-    C += it.carbohidratos;
-    G += it.grasas;
-    K += it.calorias;
-  }
-  return { P, C, G, K };
-}
-
-function slim(x) {
-  return { nombre: x.nombre, cantidad: rnd(x.cantidad) };
-}
-
-function fallbackMenu() {
-  // Menú de seguridad (si todo falla): Pechuga + Arroz + Aceite
-  const pechuga = byName(alimentos, "Pechuga de pollo");
-  const arroz = byName(alimentos, "Arroz");
-  const aceite = byName(alimentos, "Aceite de Oliva");
-
-  // 30g P, 40g CH, 10g G
-  const qP = 30 / pechuga.proteina;
-  const qC = 40 / arroz.carbohidratos;
-  const qG = 10 / aceite.grasas;
+  const categoria =
+    firstValue(raw, ["categoria", "Categoria", "fuente", "Fuente", "tipo", "Tipo"]) ||
+    fallbackGroup ||
+    inferGroup({ proteina, carbohidratos, grasas });
 
   return {
-    proteicos:     [{ nombre: pechuga.nombre, cantidad: rnd(qP) }],
-    carbohidratos: [{ nombre: arroz.nombre, cantidad: rnd(qC) }],
-    grasas:        [{ nombre: aceite.nombre, cantidad: rnd(qG) }]
+    id: raw._id || raw.id || raw.alimentoId || null,
+    nombre: String(nombre).trim(),
+    calorias,
+    proteina,
+    carbohidratos,
+    grasas,
+    categoria,
+    raw,
   };
 }
 
-///////////////////////////////
-// Export
-///////////////////////////////
+function inferGroup(food) {
+  if ((food?.proteina || 0) >= (food?.carbohidratos || 0) && (food?.proteina || 0) >= (food?.grasas || 0)) {
+    return "proteicos";
+  }
+  if ((food?.carbohidratos || 0) >= (food?.proteina || 0) && (food?.carbohidratos || 0) >= (food?.grasas || 0)) {
+    return "carbohidratos";
+  }
+  return "grasas";
+}
+
+function buildFoodIndex(extraFoods = []) {
+  const map = new Map();
+  for (const raw of [...INTERNAL_FOODS, ...(Array.isArray(extraFoods) ? extraFoods : [])]) {
+    const food = normalizeFood(raw);
+    if (!food) continue;
+    map.set(normalizeName(food.nombre), food);
+  }
+  return map;
+}
+
+function getFood(index, item, fallbackGroup) {
+  const direct = normalizeFood(item, fallbackGroup);
+  const fromIndex = index.get(normalizeName(item?.nombre || item?.name || item?.Alimentos));
+  if (fromIndex) return { ...fromIndex, categoria: fallbackGroup || fromIndex.categoria };
+  if (direct && direct.calorias > 0) return { ...direct, categoria: fallbackGroup || direct.categoria };
+  return null;
+}
+
+function normalizeObjective(input = {}) {
+  const source = input || {};
+  const hasCompletenessFlag =
+    source.macrosCompletos !== undefined ||
+    source.macrosComplete !== undefined ||
+    source.fullMacros !== undefined;
+  const hasProtein = hasObjectiveValue(source, ["proteina", "proteinas", "protein"]);
+  const hasCarbs = hasObjectiveValue(source, ["carbohidratos", "carbs", "hidratos", "carbohydrates"]);
+  const hasFat = hasObjectiveValue(source, ["grasas", "grasa", "fat", "fats"]);
+  const macrosCompletos = hasCompletenessFlag
+    ? toBoolean(source.macrosCompletos ?? source.macrosComplete ?? source.fullMacros)
+    : hasProtein && hasCarbs && hasFat;
+  const proteina = toNumber(source.proteina ?? source.proteinas ?? source.protein, DEFAULT_OBJECTIVE.proteina);
+  const carbohidratos = toNumber(
+    source.carbohidratos ?? source.carbs ?? source.hidratos ?? source.carbohydrates,
+    hasCompletenessFlag && !macrosCompletos && !hasCarbs ? 0 : DEFAULT_OBJECTIVE.carbohidratos
+  );
+  const grasas = toNumber(
+    source.grasas ?? source.grasa ?? source.fat ?? source.fats,
+    hasCompletenessFlag && !macrosCompletos && !hasFat ? 0 : DEFAULT_OBJECTIVE.grasas
+  );
+  let calorias = toNumber(source.calorias ?? source.kcal ?? source.calories, 0);
+
+  const macroCalories = proteina * 4 + carbohidratos * 4 + grasas * 9;
+  if (calorias <= 0) calorias = macroCalories;
+
+  return {
+    calorias,
+    proteina,
+    carbohidratos,
+    grasas,
+    macroCalories,
+    macrosCompletos,
+    caloriasInconsistentes: macrosCompletos && Math.abs(calorias - macroCalories) > 8,
+  };
+}
+
+function normalizeMode(mode) {
+  const clean = String(mode || "full").toLowerCase();
+  if (["kcal", "calorias", "calories", "solo_calorias", "solocalorias"].includes(clean)) {
+    return "kcal";
+  }
+  if (["kcalproteina", "caloriasproteina", "caloriesprotein", "proteinCalories"].map(String).includes(clean)) {
+    return "kcalProteina";
+  }
+  if (["protein", "proteina"].includes(clean)) return "kcalProteina";
+  return "full";
+}
+
+function normalizeArgs(args) {
+  if (args.length === 0) return {};
+  if (args.length === 1 && typeof args[0] === "object" && !Array.isArray(args[0])) {
+    const opts = { ...args[0] };
+    if (
+      opts.calorias !== undefined ||
+      opts.proteina !== undefined ||
+      opts.proteinas !== undefined ||
+      opts.carbohidratos !== undefined ||
+      opts.grasas !== undefined
+    ) {
+      opts.objetivo = opts.objetivo || opts;
+    }
+    return opts;
+  }
+
+  const [calorias, proteinas, carbohidratos, grasas, alimentosPasados, alimentosBase] = args;
+  return {
+    objetivo: {
+      calorias,
+      proteina: proteinas,
+      carbohidratos,
+      grasas,
+    },
+    alimentosSeleccionados: Array.isArray(alimentosPasados) ? alimentosPasados : [],
+    alimentosBase: Array.isArray(alimentosBase) ? alimentosBase : [],
+  };
+}
+
+function limitGroup(items = [], warnings, groupName) {
+  const clean = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (clean.length > MAX_FOODS_PER_GROUP) {
+    warnings.push(`Se recibieron mas de ${MAX_FOODS_PER_GROUP} alimentos en ${groupName}. Se usan los primeros ${MAX_FOODS_PER_GROUP}.`);
+  }
+  return clean.slice(0, MAX_FOODS_PER_GROUP);
+}
+
+function buildSelection(opts, foodIndex, warnings) {
+  const allowDefaults = opts.permitirDefaults !== false && opts.allowDefaults !== false;
+  const preclassified = classifySelectedFoods(opts.alimentosSeleccionados, foodIndex, warnings, allowDefaults);
+  const rawGroups = {
+    proteicos: limitGroup(opts.alimentosProteACuadrar?.length ? opts.alimentosProteACuadrar : preclassified.proteicos, warnings, "proteicos"),
+    carbohidratos: limitGroup(opts.alimentosChACuadrar?.length ? opts.alimentosChACuadrar : preclassified.carbohidratos, warnings, "carbohidratos"),
+    grasas: limitGroup(opts.alimentosGrACuadrar?.length ? opts.alimentosGrACuadrar : preclassified.grasas, warnings, "grasas"),
+  };
+
+  const all = [];
+  for (const [group, items] of Object.entries(rawGroups)) {
+    for (const item of items) {
+      if (all.length >= MAX_TOTAL_FOODS) {
+        warnings.push(`Se recibieron mas de ${MAX_TOTAL_FOODS} alimentos. Se ignoran los excedentes.`);
+        break;
+      }
+
+      const food = getFood(foodIndex, item, group);
+      if (!food) {
+        warnings.push(`No se encontro el alimento "${item?.nombre || item?.name || item?.Alimentos || "sin nombre"}".`);
+        continue;
+      }
+
+      const cantidad = toNumber(item.cantidad ?? item.quantity ?? item.grams, 0);
+      const pending =
+        item.quantityPending === true ||
+        item.cantidadPendiente === true ||
+        item.sinCantidad === true ||
+        cantidad <= 0;
+
+      const flexibleWithInitial = cantidad > 0 && (item.modificable === true || item.fixedQuantity === false);
+      const fixed = cantidad > 0 && !pending && !flexibleWithInitial;
+      const addedCandidate =
+        item.addedCandidateFood === true ||
+        item.optionalCandidate === true ||
+        item.sourceKind === "addedCandidate";
+      const selectedPending =
+        !fixed &&
+        !addedCandidate &&
+        item.selectedPendingFood !== false;
+
+      all.push({
+        group,
+        food,
+        nombre: food.nombre,
+        cantidadInicial: cantidad > 0 ? cantidad : 0,
+        cantidad: fixed ? cantidad : 0,
+        fixed,
+        pending: !fixed,
+        selectedPending,
+        addedCandidate,
+        preferUse: selectedPending,
+        minGramos: toNumber(item.minGramos ?? item.min ?? item.minQuantity, 0),
+        maxGramos: toNumber(item.maxGramos ?? item.max ?? item.maxQuantity, 0),
+        stepGramos: toNumber(item.stepGramos ?? item.step ?? item.stepQuantity, 0),
+      });
+    }
+  }
+
+  return all;
+}
+
+function quantityStepFor(item) {
+  return item.stepGramos > 0 ? item.stepGramos : 1;
+}
+
+function snapshotQuantities(selection = []) {
+  return selection.map((item) => toNumber(item.cantidad, 0));
+}
+
+function applyQuantities(selection = [], quantities = []) {
+  for (let index = 0; index < selection.length; index++) {
+    selection[index].cantidad = Math.max(0, toNumber(quantities[index], 0));
+  }
+}
+
+function variantReferenceQuantities(selection = [], fallback = []) {
+  const hasInitial = selection.some((item) => !item.fixed && toNumber(item.cantidadInicial, 0) > 0);
+  return selection.map((item, index) =>
+    hasInitial && !item.fixed && toNumber(item.cantidadInicial, 0) > 0
+      ? toNumber(item.cantidadInicial, 0)
+      : toNumber(fallback[index], 0)
+  );
+}
+
+function variantDistance(selection = [], quantities = [], reference = []) {
+  let total = 0;
+  let max = 0;
+  let changed = 0;
+
+  for (let index = 0; index < selection.length; index++) {
+    if (selection[index].fixed || selection[index].addedCandidate) continue;
+    const difference = Math.abs(toNumber(quantities[index], 0) - toNumber(reference[index], 0));
+    total += difference;
+    max = Math.max(max, difference);
+    if (difference >= Math.max(3, quantityStepFor(selection[index]) * 2)) changed++;
+  }
+
+  return { total, max, changed };
+}
+
+function isAcceptableVariant(selection, objective, mode) {
+  const diff = diffTotals(calculateTotals(selection), objective);
+  if (Math.abs(diff.calorias) > 10) return false;
+  if (mode === "kcalProteina") return diff.proteina >= -3;
+  if (mode === "full") {
+    return (
+      diff.proteina >= -3 &&
+      Math.abs(diff.proteina) <= 5 &&
+      Math.abs(diff.carbohidratos) <= 8 &&
+      Math.abs(diff.grasas) <= 5
+    );
+  }
+  return true;
+}
+
+function generateQuantityVariant(selection, objective, mode, opts = {}) {
+  const requested =
+    toBoolean(opts.generarVariante ?? opts.generateVariant ?? opts.variant, false);
+  if (!requested) return { requested: false, applied: false };
+
+  const solvedBaseline = snapshotQuantities(selection);
+  const reference = variantReferenceQuantities(selection, solvedBaseline);
+  applyQuantities(selection, reference);
+  const baseline = snapshotQuantities(selection);
+  const baselineScore = scoreSelection(selection, objective, mode);
+  const flexibleGroups = new Map();
+
+  selection.forEach((item, index) => {
+    if (item.fixed || item.addedCandidate || toNumber(item.cantidadInicial, 0) <= 0) return;
+    if (!flexibleGroups.has(item.group)) flexibleGroups.set(item.group, []);
+    flexibleGroups.get(item.group).push(index);
+  });
+
+  const groupsWithAlternatives = [...flexibleGroups.values()].filter((indexes) => indexes.length >= 2);
+  if (!groupsWithAlternatives.length) {
+    return {
+      requested: true,
+      applied: false,
+      reason: "no_shared_macro_role",
+      message: "No hay dos alimentos automaticos de una misma fuente de macronutriente para generar una variante.",
+    };
+  }
+
+  const variants = [];
+  const pairSets = groupsWithAlternatives.map((indexes) => ({ indexes, sameMacroRole: true }));
+  const fractions = [0.2, 0.35, 0.5, 0.65];
+  const maxScoreIncrease = mode === "full" ? 0.3 : 0.24;
+
+  for (const { indexes, sameMacroRole } of pairSets) {
+    for (const sourceIndex of indexes) {
+      for (const targetIndex of indexes) {
+        if (sourceIndex === targetIndex) continue;
+
+        const source = selection[sourceIndex];
+        const target = selection[targetIndex];
+        const sourceKcal = Math.max(toNumber(source.food?.calorias, 0), EPS);
+        const targetKcal = Math.max(toNumber(target.food?.calorias, 0), EPS);
+        const sourceMinimum = minimumAllowedQuantity(source);
+        const sourceReducible = Math.max(0, baseline[sourceIndex] - sourceMinimum);
+        const targetCapacity = Math.max(0, maxQuantityFor(target) - baseline[targetIndex]);
+        if (sourceReducible < quantityStepFor(source) || targetCapacity < quantityStepFor(target)) continue;
+
+        for (const fraction of fractions) {
+          let sourceReduction = Math.max(quantityStepFor(source), sourceReducible * fraction);
+          let targetIncrease = (sourceReduction * sourceKcal) / targetKcal;
+
+          if (targetIncrease > targetCapacity) {
+            targetIncrease = targetCapacity;
+            sourceReduction = (targetIncrease * targetKcal) / sourceKcal;
+          }
+
+          const sourceStep = quantityStepFor(source);
+          const targetStep = quantityStepFor(target);
+          const next = [...baseline];
+          next[sourceIndex] = Math.max(
+            sourceMinimum,
+            Math.round((baseline[sourceIndex] - sourceReduction) / sourceStep) * sourceStep
+          );
+          next[targetIndex] = Math.min(
+            maxQuantityFor(target),
+            Math.round((baseline[targetIndex] + targetIncrease) / targetStep) * targetStep
+          );
+
+          applyQuantities(selection, next);
+          const distance = variantDistance(selection, next, reference);
+          const score = scoreSelection(selection, objective, mode);
+          const meaningfulDifference = distance.max >= 5 && distance.total >= 10 && distance.changed >= 2;
+
+          if (
+            meaningfulDifference &&
+            isAcceptableVariant(selection, objective, mode) &&
+            score <= baselineScore + maxScoreIncrease
+          ) {
+            variants.push({
+              quantities: next,
+              score,
+              distance,
+              group: source.group,
+              sameMacroRole,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  applyQuantities(selection, baseline);
+  if (!variants.length) {
+    return {
+      requested: true,
+      applied: false,
+      reason: "no_acceptable_variant",
+      message: "No se encontro una variante suficientemente distinta que mantenga el objetivo dentro de tolerancia.",
+    };
+  }
+
+  variants.sort((a, b) =>
+    Number(b.sameMacroRole) - Number(a.sameMacroRole) ||
+    b.distance.total - a.distance.total ||
+    a.score - b.score
+  );
+  const seed = Math.max(1, Math.floor(toNumber(opts.variantSeed ?? opts.semillaVariante, 1)));
+  const poolSize = Math.min(variants.length, 12);
+  const chosen = variants[(seed - 1) % poolSize];
+  applyQuantities(selection, chosen.quantities);
+
+  return {
+    requested: true,
+    applied: true,
+    seed,
+    group: chosen.group,
+    changedFoods: chosen.distance.changed,
+    message: "Variante generada redistribuyendo alimentos automaticos del mismo grupo sin modificar las fuentes unicas.",
+  };
+}
+
+function classifySelectedFoods(items, foodIndex, warnings, allowDefaults = true) {
+  const groups = {
+    proteicos: [],
+    carbohidratos: [],
+    grasas: [],
+  };
+
+  if (!Array.isArray(items) || !items.length) {
+    return {
+      proteicos: allowDefaults ? [...DEFAULT_SELECTIONS.proteicos] : [],
+      carbohidratos: allowDefaults ? [...DEFAULT_SELECTIONS.carbohidratos] : [],
+      grasas: allowDefaults ? [...DEFAULT_SELECTIONS.grasas] : [],
+    };
+  }
+
+  for (const raw of items) {
+    const item = typeof raw === "string" ? { nombre: raw } : raw;
+    const food = getFood(foodIndex, item);
+    if (!food) {
+      warnings.push(`No se pudo clasificar el alimento "${item?.nombre || item?.name || raw}".`);
+      continue;
+    }
+    const group = inferGroup(food);
+    groups[group].push(item);
+  }
+
+  return {
+    proteicos: groups.proteicos.length ? groups.proteicos : allowDefaults ? [...DEFAULT_SELECTIONS.proteicos] : [],
+    carbohidratos: groups.carbohidratos.length ? groups.carbohidratos : allowDefaults ? [...DEFAULT_SELECTIONS.carbohidratos] : [],
+    grasas: groups.grasas.length ? groups.grasas : allowDefaults ? [...DEFAULT_SELECTIONS.grasas] : [],
+  };
+}
+
+function foodVector(food) {
+  return {
+    calorias: food.calorias,
+    proteina: food.proteina,
+    carbohidratos: food.carbohidratos,
+    grasas: food.grasas,
+  };
+}
+
+function addTotals(total, vector, quantity) {
+  total.calorias += vector.calorias * quantity;
+  total.proteina += vector.proteina * quantity;
+  total.carbohidratos += vector.carbohidratos * quantity;
+  total.grasas += vector.grasas * quantity;
+}
+
+function calculateTotals(selection) {
+  const total = { calorias: 0, proteina: 0, carbohidratos: 0, grasas: 0 };
+  for (const item of selection) {
+    addTotals(total, foodVector(item.food), item.cantidad);
+  }
+  return total;
+}
+
+function diffTotals(totals, objective) {
+  return {
+    calorias: round(totals.calorias - objective.calorias, 2),
+    proteina: round(totals.proteina - objective.proteina, 2),
+    carbohidratos: round(totals.carbohidratos - objective.carbohidratos, 2),
+    grasas: round(totals.grasas - objective.grasas, 2),
+  };
+}
+
+function validateFixedExcess(fixedTotals, objective, mode) {
+  const required = mode === "kcal"
+    ? ["calorias"]
+    : mode === "kcalProteina"
+    ? ["calorias"]
+    : ["calorias", "proteina", "carbohidratos", "grasas"];
+
+  const errors = [];
+  for (const key of required) {
+    const tolerance = key === "calorias" ? 10 : 3;
+    if (fixedTotals[key] - objective[key] > tolerance) {
+      errors.push(`Las cantidades fijas superan la meta de ${key}: ${round(fixedTotals[key])} > ${round(objective[key])}.`);
+    }
+  }
+  return errors;
+}
+
+function dimensionsForMode(mode) {
+  if (mode === "kcal") {
+    return [
+      { key: "calorias", weight: 10 },
+      { key: "proteina", weight: 0.08 },
+      { key: "carbohidratos", weight: 0.025 },
+      { key: "grasas", weight: 0.025 },
+    ];
+  }
+  if (mode === "kcalProteina") {
+    return [
+      { key: "calorias", weight: 8 },
+      { key: "proteina", weight: 1.1 },
+      { key: "carbohidratos", weight: 0.04 },
+      { key: "grasas", weight: 0.04 },
+    ];
+  }
+  return [
+    { key: "calorias", weight: 8 },
+    { key: "proteina", weight: 2 },
+    { key: "carbohidratos", weight: 1.5 },
+    { key: "grasas", weight: 0.7 },
+  ];
+}
+
+function maxQuantityFor(item) {
+  if (Number.isFinite(item.maxQuantityOverride)) return Math.max(0, item.maxQuantityOverride);
+  if (item.maxGramos > 0) return item.maxGramos;
+  const name = normalizeName(item.nombre || item.food?.nombre);
+  const category = normalizeName(item.food?.categoria);
+
+  if (/aceite|oil/.test(name)) return 25;
+  if (/whey|proteina en polvo|protein powder/.test(name)) return 60;
+  if (/almendra|nuez|mani|man[ií]|fruto seco|frutos secos/.test(name) || category.includes("grasa")) return 40;
+  if (/palta|avocado/.test(name)) return 250;
+  if (/banana|manzana|pera|fruta|higo|sandia/.test(name) || category.includes("fruta")) return 250;
+  if (/arroz|fideo|pasta|papa|batata|pan|avena|cereal/.test(name) || category.includes("carbo")) return 300;
+  if (category.includes("prote")) return 400;
+  if (/bife|chorizo|pollo|pavo|carne|churrasco|atun|pescado|higado|jamon|huevo/.test(name)) return 400;
+  if (/pollo|pavo|carne|churrasco|atun|atún|pescado|higado|jamon|jamón|huevo/.test(name) || category.includes("prote")) return 250;
+  if (/verdura|tomate|lechuga|brocoli|brócoli|zanahoria|zapallo/.test(name)) return 300;
+
+  const group = item.group;
+  if (group === "grasas") return 60;
+  if (group === "proteicos") return 400;
+  if (group === "carbohidratos") return 300;
+  return 300;
+}
+
+function solveQuantities(selection, objective, mode, opts = {}) {
+  const fixed = selection.filter((item) => item.fixed);
+  const pending = selection.filter((item) => !item.fixed);
+  const fixedTotals = calculateTotals(fixed);
+  const errors = validateFixedExcess(fixedTotals, objective, mode);
+
+  if (errors.length) {
+    return {
+      ok: false,
+      reason: "fixed_exceeds_target",
+      errors,
+      fixedTotals,
+    };
+  }
+
+  if (!pending.length) {
+    return {
+      ok: true,
+      fixedTotals,
+      iterations: 0,
+      score: 0,
+    };
+  }
+
+  const lowerBounds = pending.map((item) => minimumAllowedQuantity(item));
+  const baselineTotals = { ...fixedTotals };
+  for (let i = 0; i < pending.length; i++) {
+    addTotals(baselineTotals, foodVector(pending[i].food), lowerBounds[i]);
+  }
+
+  const residualItems = pending.map((item, index) => ({
+    ...item,
+    minGramos: 0,
+    maxQuantityOverride: Math.max(0, maxQuantityFor(item) - lowerBounds[index]),
+    preferUse: false,
+  }));
+  const residualQuantities = solveNonNegativeLeastSquares(residualItems, objective, baselineTotals, mode, opts);
+
+  for (let i = 0; i < pending.length; i++) {
+    pending[i].cantidad = round(
+      Math.min(lowerBounds[i] + Math.max(residualQuantities[i] || 0, 0), maxQuantityFor(pending[i])),
+      2
+    );
+  }
+
+  if (opts.redondear !== false && opts.roundQuantities !== false) {
+    roundAndPolishQuantities(selection, pending, objective, mode);
+  }
+
+  const totals = calculateTotals(selection);
+  const minimumKcalExcess = baselineTotals.calorias - objective.calorias;
+  return {
+    ok: true,
+    fixedTotals,
+    totals,
+    minimumsWarning: minimumKcalExcess > 10
+      ? `No se puede respetar el margen de 10 kcal usando todos los alimentos elegidos: sus cantidades minimas superan el objetivo por ${round(minimumKcalExcess, 1)} kcal.`
+      : "",
+    iterations: 0,
+    score: scoreSelection(selection, objective, mode),
+  };
+}
+
+function buildScaledSystem(items, objective, fixedTotals, mode, activeIndexes = null, opts = {}) {
+  const dims = dimensionsForMode(mode);
+  const active = activeIndexes || items.map((_, index) => index);
+  const rows = [];
+  const b = [];
+
+  for (const dim of dims) {
+    const scale = scoreScaleFor(dim.key, objective, mode);
+    const weight = Math.sqrt(dim.weight);
+    const target = Math.max(0, objective[dim.key] - fixedTotals[dim.key]);
+    rows.push(active.map((index) => (foodVector(items[index].food)[dim.key] / scale) * weight));
+    b.push((target / scale) * weight);
+  }
+
+  const quantityPenalty = toNumber(opts.quantityPenalty, 0.00002);
+  if (quantityPenalty > 0) {
+    for (let i = 0; i < active.length; i++) {
+      const row = new Array(active.length).fill(0);
+      row[i] = quantityPenalty;
+      rows.push(row);
+      b.push(0);
+    }
+  }
+
+  return { rows, b, active };
+}
+
+function solveNonNegativeLeastSquares(items, objective, fixedTotals, mode, opts = {}) {
+  if (!items.length) return [];
+  let removed = new Set();
+  let current = solveActiveSetNNLS(items, objective, fixedTotals, mode, opts, removed);
+  let currentScore = scorePendingQuantities(items, current, fixedTotals, objective, mode);
+
+  for (let guard = 0; guard < items.length; guard++) {
+    const tinyCandidates = current
+      .map((quantity, index) => ({ quantity, index }))
+      .filter(({ quantity, index }) =>
+        quantity > EPS &&
+        quantity < minPracticalQuantity(items[index]) &&
+        !items[index].preferUse &&
+        !removed.has(index)
+      )
+      .sort((a, b) => a.quantity - b.quantity);
+
+    if (!tinyCandidates.length) break;
+
+    let accepted = false;
+    for (const candidate of tinyCandidates) {
+      const nextRemoved = new Set([...removed, candidate.index]);
+      const next = solveActiveSetNNLS(items, objective, fixedTotals, mode, opts, nextRemoved);
+      const nextScore = scorePendingQuantities(items, next, fixedTotals, objective, mode);
+
+      if (nextScore <= currentScore + 0.012) {
+        removed = nextRemoved;
+        current = next;
+        currentScore = nextScore;
+        accepted = true;
+        break;
+      }
+    }
+
+    if (!accepted) break;
+  }
+
+  return current;
+}
+
+function solveActiveSetNNLS(items, objective, fixedTotals, mode, opts = {}, removed = new Set()) {
+  let active = items.map((_, index) => index);
+  active = active.filter((index) => !removed.has(index));
+  const quantities = new Array(items.length).fill(0);
+
+  for (let guard = 0; guard < items.length + 2 && active.length; guard++) {
+    const { rows, b } = buildScaledSystem(items, objective, fixedTotals, mode, active, opts);
+    const solution = solveLeastSquares(rows, b, toNumber(opts.regularizacion, 1e-8));
+
+    let mostNegative = -1;
+    let mostNegativeValue = 0;
+    for (let i = 0; i < solution.length; i++) {
+      if (solution[i] < mostNegativeValue) {
+        mostNegativeValue = solution[i];
+        mostNegative = i;
+      }
+    }
+
+    if (mostNegative === -1) {
+      for (let i = 0; i < active.length; i++) {
+        quantities[active[i]] = Math.min(solution[i], maxQuantityFor(items[active[i]]));
+      }
+      return quantities.map((q) => Math.max(0, q));
+    }
+
+    active.splice(mostNegative, 1);
+  }
+
+  return quantities;
+}
+
+function scorePendingQuantities(items, quantities, fixedTotals, objective, mode) {
+  const totals = { ...fixedTotals };
+  for (let i = 0; i < items.length; i++) {
+    addTotals(totals, foodVector(items[i].food), quantities[i] || 0);
+  }
+  return scoreResult(totals, objective, mode) + selectedPendingUsagePenalty(items, quantities, mode);
+}
+
+function minPracticalQuantity(item) {
+  if (item.minGramos > 0) return item.minGramos;
+  if (item.group === "grasas") {
+    if (item.food.grasas > 0.75) return 2;
+    return 20;
+  }
+  if (item.group === "proteicos") {
+    if (item.food.proteina > 0.55) return 5;
+    return 25;
+  }
+  if (item.group === "carbohidratos") return 20;
+  return 10;
+}
+
+function minimumAllowedQuantity(item) {
+  if (!item?.preferUse) return 0;
+  return Math.min(minPracticalQuantity(item), maxQuantityFor(item));
+}
+
+function solveLeastSquares(rows, b, ridge = 1e-8) {
+  const cols = rows[0]?.length || 0;
+  if (!cols) return [];
+
+  const normal = Array.from({ length: cols }, () => new Array(cols).fill(0));
+  const rhs = new Array(cols).fill(0);
+
+  for (let r = 0; r < rows.length; r++) {
+    for (let i = 0; i < cols; i++) {
+      rhs[i] += rows[r][i] * b[r];
+      for (let j = 0; j < cols; j++) {
+        normal[i][j] += rows[r][i] * rows[r][j];
+      }
+    }
+  }
+
+  for (let i = 0; i < cols; i++) normal[i][i] += ridge;
+  return solveLinearSystem(normal, rhs);
+}
+
+function solveLinearSystem(matrix, vector) {
+  const n = vector.length;
+  const a = matrix.map((row, i) => [...row, vector[i]]);
+
+  for (let col = 0; col < n; col++) {
+    let pivot = col;
+    for (let row = col + 1; row < n; row++) {
+      if (Math.abs(a[row][col]) > Math.abs(a[pivot][col])) pivot = row;
+    }
+
+    if (Math.abs(a[pivot][col]) < EPS) continue;
+    if (pivot !== col) [a[pivot], a[col]] = [a[col], a[pivot]];
+
+    const div = a[col][col];
+    for (let j = col; j <= n; j++) a[col][j] /= div;
+
+    for (let row = 0; row < n; row++) {
+      if (row === col) continue;
+      const factor = a[row][col];
+      for (let j = col; j <= n; j++) a[row][j] -= factor * a[col][j];
+    }
+  }
+
+  return a.map((row) => (Number.isFinite(row[n]) ? row[n] : 0));
+}
+
+function roundAndPolishQuantities(selection, pending, objective, mode) {
+  for (const item of pending) {
+    const step = item.stepGramos > 0 ? item.stepGramos : 1;
+    const minimum = minimumAllowedQuantity(item);
+    item.cantidad = Math.max(minimum, Math.round(item.cantidad / step) * step);
+    if (!item.preferUse && item.cantidad > EPS && item.cantidad < minPracticalQuantity(item)) {
+      item.cantidad = 0;
+    }
+  }
+
+  // Ajuste final de 1 gramo para mejorar el score despues del redondeo.
+  let currentScore = scoreSelection(selection, objective, mode);
+  for (let guard = 0; guard < 600; guard++) {
+    let best = null;
+
+    for (const item of pending) {
+      const step = item.stepGramos > 0 ? item.stepGramos : 1;
+      for (const delta of [-step, step]) {
+        const currentQuantity = item.cantidad;
+        const minQuantity = minPracticalQuantity(item);
+        const minimumAllowed = minimumAllowedQuantity(item);
+        let nextQuantity = currentQuantity + delta;
+        if (delta > 0 && currentQuantity <= EPS && nextQuantity > EPS && nextQuantity < minQuantity) {
+          nextQuantity = minQuantity;
+        }
+        if (!item.preferUse && delta < 0 && nextQuantity > EPS && nextQuantity < minQuantity) {
+          nextQuantity = 0;
+        }
+        if (nextQuantity < minimumAllowed || nextQuantity > maxQuantityFor(item)) continue;
+        if (!item.preferUse && nextQuantity > EPS && nextQuantity < minQuantity) continue;
+        item.cantidad = nextQuantity;
+        const nextScore = scoreSelection(selection, objective, mode);
+        item.cantidad = currentQuantity;
+
+        if (nextScore + 1e-9 < currentScore && (!best || nextScore < best.score)) {
+          best = { item, nextQuantity, score: nextScore };
+        }
+      }
+    }
+
+    if (!best) break;
+    best.item.cantidad = best.nextQuantity;
+    currentScore = best.score;
+  }
+}
+
+function scoreScaleFor(key, objective, mode) {
+  const target = Math.abs(objective[key]);
+  if (target > 0) return Math.max(target, 1);
+
+  if (mode === "kcal" || mode === "kcalProteina") {
+    if (key === "proteina") return 80;
+    if (key === "carbohidratos") return 120;
+    if (key === "grasas") return 60;
+  }
+
+  return 1;
+}
+
+function scoreResult(totals, objective, mode) {
+  const kcalScale = Math.max(Math.abs(objective.calorias), 1);
+
+  if (mode === "kcal") {
+    const kcalPenalty = Math.abs(totals.calorias - objective.calorias) / kcalScale;
+    const proteinPenalty = objective.proteina > 0
+      ? Math.abs(totals.proteina - objective.proteina) / Math.max(objective.proteina, 1)
+      : 0;
+    const carbsPenalty = objective.carbohidratos > 0
+      ? Math.abs(totals.carbohidratos - objective.carbohidratos) / Math.max(objective.carbohidratos, 1)
+      : 0;
+    const fatPenalty = objective.grasas > 0
+      ? Math.abs(totals.grasas - objective.grasas) / Math.max(objective.grasas, 1)
+      : 0;
+    return 8 * kcalPenalty + 0.08 * proteinPenalty + 0.025 * carbsPenalty + 0.025 * fatPenalty;
+  }
+
+  if (mode === "kcalProteina") {
+    const proteinTarget = Math.max(Math.abs(objective.proteina), 1);
+    const proteinDeficit = Math.max(0, objective.proteina - totals.proteina);
+    const proteinExcess = Math.max(0, totals.proteina - objective.proteina);
+    const kcalPenalty = Math.abs(totals.calorias - objective.calorias) / kcalScale;
+    const deficitPenalty = proteinDeficit / proteinTarget;
+    const excessPenalty = proteinExcess / Math.max(proteinTarget * 4, 80);
+    const carbsPenalty = objective.carbohidratos > 0
+      ? Math.abs(totals.carbohidratos - objective.carbohidratos) / Math.max(objective.carbohidratos, 1)
+      : 0;
+    const fatPenalty = objective.grasas > 0
+      ? Math.abs(totals.grasas - objective.grasas) / Math.max(objective.grasas, 1)
+      : 0;
+    return 7 * kcalPenalty + 5 * deficitPenalty + 0.08 * excessPenalty + 0.035 * carbsPenalty + 0.035 * fatPenalty;
+  }
+
+  const dims = dimensionsForMode(mode);
+  let score = 0;
+  for (const dim of dims) {
+    const scale = scoreScaleFor(dim.key, objective, mode);
+    score += dim.weight * Math.abs((totals[dim.key] - objective[dim.key]) / scale);
+  }
+  return score;
+}
+
+function selectedPendingUsagePenalty(items = [], quantities = null, mode = "full") {
+  const basePenalty = mode === "full" ? 0.07 : 0.085;
+  let penalty = 0;
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (!item?.preferUse) continue;
+    const quantity = quantities ? toNumber(quantities[i], 0) : toNumber(item.cantidad, 0);
+    const minQuantity = minPracticalQuantity(item);
+
+    if (quantity <= EPS) {
+      penalty += basePenalty;
+    } else if (minQuantity > EPS && quantity < minQuantity) {
+      penalty += basePenalty * (1 - quantity / minQuantity);
+    }
+  }
+
+  return penalty;
+}
+
+function scoreSelection(selection, objective, mode) {
+  return scoreResult(calculateTotals(selection), objective, mode) +
+    selectedPendingUsagePenalty(selection, null, mode);
+}
+
+function hasGroupSource(selection = [], group) {
+  return selection.some((item) => item.group === group);
+}
+
+function classifyStatus(diff, mode, objective, selection = []) {
+  const kcalAbs = Math.abs(diff.calorias);
+  const proteinAbs = Math.abs(diff.proteina);
+  const proteinDeficit = Math.max(0, -diff.proteina);
+  const carbsAbs = Math.abs(diff.carbohidratos);
+  const fatAbs = Math.abs(diff.grasas);
+
+  if (mode === "kcal") {
+    if (kcalAbs <= 3) return "exacto";
+    if (kcalAbs <= 10) return "muy_cercano";
+    return "revisar";
+  }
+
+  if (mode === "kcalProteina") {
+    if (kcalAbs <= 3 && proteinDeficit <= 0.5) return "exacto";
+    if (kcalAbs <= 10 && proteinDeficit <= 1) return "muy_cercano";
+    if (kcalAbs <= 10 && proteinDeficit <= 3) return "cercano";
+    return "revisar";
+  }
+
+  if (
+    (objective.proteina > 0 && !hasGroupSource(selection, "proteicos") && proteinDeficit > 3) ||
+    (objective.carbohidratos > 0 && !hasGroupSource(selection, "carbohidratos") && -diff.carbohidratos > 8) ||
+    (objective.grasas > 0 && !hasGroupSource(selection, "grasas") && -diff.grasas > 4)
+  ) {
+    return "sin_solucion";
+  }
+
+  if (kcalAbs <= 3 && proteinAbs <= 1 && carbsAbs <= 2 && fatAbs <= 1) return "exacto";
+  if (kcalAbs <= 10 && proteinAbs <= 3 && carbsAbs <= 4 && fatAbs <= 3) return "muy_cercano";
+  if (kcalAbs <= 10 && proteinAbs <= 5 && carbsAbs <= 8 && fatAbs <= 5) return "cercano";
+  return "revisar";
+}
+
+function itemSnapshot(item) {
+  const q = round(item.cantidad, 2);
+  return {
+    nombre: item.nombre,
+    cantidad: q,
+    fixedQuantity: item.fixed,
+    quantityPending: false,
+    calorias: round(item.food.calorias * q, 2),
+    proteina: round(item.food.proteina * q, 2),
+    carbohidratos: round(item.food.carbohidratos * q, 2),
+    grasas: round(item.food.grasas * q, 2),
+    maxGramos: maxQuantityFor(item),
+    unidadCalorica: round(item.food.calorias, 4),
+    unidadProteica: round(item.food.proteina, 4),
+    unidadCarbo: round(item.food.carbohidratos, 4),
+    unidadGrasas: round(item.food.grasas, 4),
+  };
+}
+
+function groupOutput(selection, group) {
+  return selection
+    .filter((item) => item.group === group && item.cantidad > EPS)
+    .map(itemSnapshot);
+}
+
+function buildResult(selection, objective, mode, warnings = [], errors = []) {
+  const totals = calculateTotals(selection);
+  const diferencia = diffTotals(totals, objective);
+  const status = errors.length ? "error" : classifyStatus(diferencia, mode, objective, selection);
+
+  return {
+    status,
+    modo: mode,
+    objetivo: {
+      calorias: round(objective.calorias, 2),
+      proteina: round(objective.proteina, 2),
+      carbohidratos: round(objective.carbohidratos, 2),
+      grasas: round(objective.grasas, 2),
+      caloriasPorMacros: round(objective.macroCalories, 2),
+    },
+    totales: {
+      calorias: round(totals.calorias, 2),
+      proteina: round(totals.proteina, 2),
+      carbohidratos: round(totals.carbohidratos, 2),
+      grasas: round(totals.grasas, 2),
+    },
+    diferencia,
+    warnings,
+    errors,
+    proteicos: groupOutput(selection, "proteicos"),
+    carbohidratos: groupOutput(selection, "carbohidratos"),
+    grasas: groupOutput(selection, "grasas"),
+  };
+}
+
+function generarMenu(...args) {
+  const opts = normalizeArgs(args);
+  const warnings = [];
+  const mode = normalizeMode(opts.modo || opts.mode || opts.tipoAjuste);
+  const objective = normalizeObjective(opts.objetivo);
+
+  if (objective.caloriasInconsistentes) {
+    warnings.push(
+      `El objetivo de kcal (${round(objective.calorias)}) no coincide con los macros cargados, que suman ${round(objective.macroCalories)} kcal. ZumaFit prioriza kcal y busca el mejor balance posible.`
+    );
+  }
+
+  const foodIndex = buildFoodIndex(opts.alimentosBase || opts.alimentosTotales || opts.foods);
+  const selection = buildSelection(opts, foodIndex, warnings);
+  const solve = solveQuantities(selection, objective, mode, opts);
+
+  if (!solve.ok) {
+    return buildResult(selection, objective, mode, warnings, solve.errors);
+  }
+
+  if (solve.minimumsWarning) warnings.push(solve.minimumsWarning);
+
+  const variant = generateQuantityVariant(selection, objective, mode, opts);
+  if (variant.requested && !variant.applied && variant.message) {
+    warnings.push(variant.message);
+  }
+
+  const unusedSelected = selection.filter((item) => item.preferUse && item.cantidad <= EPS);
+  for (const item of unusedSelected) {
+    warnings.push(`${item.nombre} no se incluyo porque empeoraba demasiado el objetivo con cantidades razonables.`);
+  }
+
+  return {
+    ...buildResult(selection, objective, mode, warnings),
+    variante: variant,
+  };
+}
+
+function generarMenus(cantidad = 3, opts = {}) {
+  const total = Math.max(1, toNumber(cantidad, 3));
+  return Array.from({ length: total }, () => generarMenu(opts));
+}
+
+function generarMenusNoVacios(cantidad = 3, _intentosPorMenu = 8, opts = {}) {
+  return generarMenus(cantidad, opts).filter((menu) =>
+    menu.proteicos.length || menu.carbohidratos.length || menu.grasas.length
+  );
+}
+
+export {
+  generarMenu,
+  generarMenus,
+  generarMenusNoVacios,
+  normalizeFood,
+};
+
 export default {
   generarMenu,
   generarMenus,
-  generarMenusNoVacios
+  generarMenusNoVacios,
+  normalizeFood,
 };

@@ -19,6 +19,7 @@ function sendError(res, error) {
   }
   if (msg === "MENU_BASE_REQUIRED") return res.status(400).json({ error: "Falta menuBaseId" });
   if (msg === "ID_INVALIDO") return res.status(400).json({ error: "ID invalido" });
+  if (msg === "DUPLICATE_IDENTICAL") return res.status(409).json({ error: "La copia es identica a un menu existente. Cambia nombre, comidas o cantidades antes de guardar." });
 
   console.error("Error menus:", error);
   return res.status(500).json({ error: "Error en el servidor" });

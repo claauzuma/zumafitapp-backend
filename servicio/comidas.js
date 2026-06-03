@@ -256,6 +256,28 @@ function normalizeDoc(doc = null) {
   };
 }
 
+function mealIdentity(doc = {}) {
+  const normalized = normalizeDoc(doc) || {};
+  return JSON.stringify({
+    nombre: normalizeToken(normalized.nombre),
+    descripcion: normalizeToken(normalized.descripcion),
+    tipoComida: normalizeToken(normalized.tipoComida),
+    grupoComida: normalizeToken(normalized.grupoComida),
+    tags: (normalized.tags || []).map(normalizeToken).sort(),
+    items: (normalized.items || []).map((item) => ({
+      alimentoId: idToString(item.alimentoId),
+      nombre: normalizeToken(item.nombreSnapshot),
+      cantidad: numberOrDefault(item.cantidad, 0, { decimals: 2 }),
+      unidad: normalizeToken(item.unidad),
+      kcal: macroNumber(item.kcal),
+      proteina: macroNumber(item.proteina),
+      carbs: macroNumber(item.carbs),
+      grasas: macroNumber(item.grasas),
+      categoria: normalizeToken(item.categoriaSnapshot),
+    })).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))),
+  });
+}
+
 function anyTruthyFeature(features = {}) {
   return Object.values(features || {}).some((value) => {
     if (typeof value === "number") return value > 0;
@@ -459,6 +481,10 @@ class ServicioComidas {
         actorId: this._actorId(actor),
       }
     );
+
+    if (mealIdentity(current) === mealIdentity(clone)) {
+      throw new Error("DUPLICATE_IDENTICAL");
+    }
 
     return normalizeDoc(await this.model.crearComida(clone));
   }
