@@ -566,6 +566,16 @@ class ServicioMenus {
     return await this._assertNutritionAccess(actor, { feature: "ownTemplates" });
   }
 
+  async _assertTemplateCreationAccess(actor) {
+    if (this._isAdmin(actor)) return { admin: true, effectiveCapabilities: null };
+    try {
+      return await this._assertNutritionAccess(actor, { feature: "ownTemplates" });
+    } catch (error) {
+      if (String(error?.message || "") !== "COACH_FEATURE_NOT_ALLOWED") throw error;
+      return await this._assertNutritionAccess(actor, { feature: "manualBuilder" });
+    }
+  }
+
   async _getClientForActor(actor, clienteId) {
     const client = await this.usuariosModel.obtenerPorId(clienteId);
     if (!client) throw new Error("CLIENT_NOT_FOUND");
@@ -630,7 +640,7 @@ class ServicioMenus {
 
   async createMenu(user, payload = {}) {
     const actor = await this._actor(user);
-    if (!this._isAdmin(actor)) await this._assertOwnTemplatesAccess(actor);
+    if (!this._isAdmin(actor)) await this._assertTemplateCreationAccess(actor);
 
     const doc = normalizeBasePayload(payload, {
       actorId: this._actorId(actor),

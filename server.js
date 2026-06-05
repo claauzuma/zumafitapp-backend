@@ -17,6 +17,7 @@ import RouterClienteRutinas from "./router/clienteRutinas.js";
 import RouterMenus from "./router/menus.js";
 import RouterClienteMenus from "./router/clienteMenus.js";
 import RouterFoodLogs from "./router/foodLogs.js";
+import RouterAdmin from "./router/admin.js";
 
 import passport from "./auth/google.js";
 import { setupGoogleAuth } from "./auth/google.js";
@@ -143,6 +144,7 @@ class Server {
     this.app.use("/api/menus", new RouterMenus(this.persistencia).start());
     this.app.use("/api/clientes", new RouterClienteMenus(this.persistencia).start());
     this.app.use("/api/tracking", new RouterFoodLogs(this.persistencia).start());
+    this.app.use("/api/admin", new RouterAdmin().start());
 
     this.app.use((req, res) => res.status(404).json({ status: false, errors: "not found" }));
 

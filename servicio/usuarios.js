@@ -186,6 +186,7 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
         caloriesByDay: {},
         macrosByDay: {},
         mealsByDay: {},
+        assignedMenusByDay: {},
       },
       history: {
         lastWeek: {
@@ -330,6 +331,94 @@ function cleanStringArray(value, maxItems = 24, maxLen = 120) {
     .map((item) => cleanString(item, maxLen).trim())
     .filter(Boolean)
     .slice(0, maxItems);
+}
+
+const WEEKLY_MENU_DAYS = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+
+function normalizeWeeklyMenuItem(item = {}) {
+  return {
+    id: cleanString(item.id || item._id, 80) || null,
+    alimentoId: item.alimentoId ? toMongoIdOrString(item.alimentoId) : null,
+    nombreSnapshot: cleanString(item.nombreSnapshot || item.nombre || item.name, 160) || "Alimento",
+    cantidad: numberOrNull(item.cantidad, { min: 0, max: 10000 }),
+    unidad: cleanString(item.unidad || "g", 24) || "g",
+    kcal: numberOrNull(item.kcal, { min: 0, max: 20000 }),
+    proteina: numberOrNull(item.proteina ?? item.protein, { min: 0, max: 1000 }),
+    carbs: numberOrNull(item.carbs, { min: 0, max: 2000 }),
+    grasas: numberOrNull(item.grasas ?? item.fat, { min: 0, max: 1000 }),
+    categoriaSnapshot: cleanString(item.categoriaSnapshot || item.categoria || item.category, 120),
+  };
+}
+
+function normalizeWeeklyMenuMeal(meal = {}, index = 0) {
+  const items = Array.isArray(meal.items) ? meal.items : [];
+  const totals = isPlainObject(meal.totales || meal.totals) ? meal.totales || meal.totals : {};
+  return {
+    id: cleanString(meal.id || meal._id, 80) || `meal-${index + 1}`,
+    nombre: cleanString(meal.nombre || meal.name, 140) || `Comida ${index + 1}`,
+    orden: numberOrNull(meal.orden ?? meal.order, { min: 1, max: 20 }) || index + 1,
+    tipoComida: cleanString(meal.tipoComida || meal.type, 60) || "otro",
+    totales: {
+      kcal: numberOrNull(totals.kcal, { min: 0, max: 20000 }),
+      proteina: numberOrNull(totals.proteina ?? totals.protein, { min: 0, max: 1000 }),
+      carbs: numberOrNull(totals.carbs, { min: 0, max: 2000 }),
+      grasas: numberOrNull(totals.grasas ?? totals.fat, { min: 0, max: 1000 }),
+    },
+    items: items.slice(0, 80).map(normalizeWeeklyMenuItem),
+  };
+}
+
+function normalizeWeeklyMenuSnapshot(snapshot = {}) {
+  const meals = Array.isArray(snapshot.comidas)
+    ? snapshot.comidas
+    : Array.isArray(snapshot.meals)
+      ? snapshot.meals
+      : [];
+  const macros = isPlainObject(snapshot.macrosObjetivo || snapshot.macros)
+    ? snapshot.macrosObjetivo || snapshot.macros
+    : {};
+  return {
+    id: cleanString(snapshot.id || snapshot._id || snapshot.baseId || snapshot.menuBaseId, 80) || null,
+    baseId: cleanString(snapshot.baseId || snapshot.menuBaseId || snapshot.id || snapshot._id, 80) || null,
+    name: cleanString(snapshot.name || snapshot.nombre, 180) || "Menu sin nombre",
+    description: cleanString(snapshot.description || snapshot.descripcion, 1200),
+    kcal: numberOrNull(snapshot.kcal ?? snapshot.kcalObjetivo ?? snapshot.calories, { min: 0, max: 20000 }),
+    protein: numberOrNull(snapshot.protein ?? macros.proteina ?? macros.protein, { min: 0, max: 1000 }),
+    carbs: numberOrNull(snapshot.carbs ?? macros.carbs ?? macros.carbohidratos, { min: 0, max: 2000 }),
+    fat: numberOrNull(snapshot.fat ?? snapshot.grasas ?? macros.grasas ?? macros.fat, { min: 0, max: 1000 }),
+    mealsCount: numberOrNull(snapshot.mealsCount ?? snapshot.cantidadComidas, { min: 0, max: 12 }) || meals.length,
+    meals: meals.slice(0, 12).map(normalizeWeeklyMenuMeal),
+  };
+}
+
+function normalizeAssignedMenusByDay(value = {}) {
+  if (!isPlainObject(value)) return {};
+  return WEEKLY_MENU_DAYS.reduce((acc, day) => {
+    const entry = isPlainObject(value[day]) ? value[day] : null;
+    if (!entry) return acc;
+    const snapshotSource = isPlainObject(entry.menuSnapshot)
+      ? entry.menuSnapshot
+      : isPlainObject(entry.snapshot)
+        ? entry.snapshot
+        : entry;
+    const snapshot = normalizeWeeklyMenuSnapshot(snapshotSource);
+    if (!snapshot.baseId && !snapshot.id && !snapshot.name) return acc;
+    acc[day] = {
+      menuId: cleanString(entry.menuId || entry.menuBaseId || snapshot.baseId || snapshot.id, 80) || null,
+      menuSnapshot: snapshot,
+      source: cleanString(entry.source || "base", 40) || "base",
+      assignedAt: entry.assignedAt ? new Date(entry.assignedAt) : new Date(),
+    };
+    return acc;
+  }, {});
 }
 
 function boolFrom(value, fallback = false) {
@@ -2751,6 +2840,9 @@ class ServicioUsuarios {
         ...(isPlainObject(weeklyPlan?.caloriesByDay) ? { caloriesByDay: weeklyPlan.caloriesByDay } : {}),
         ...(isPlainObject(weeklyPlan?.macrosByDay) ? { macrosByDay: weeklyPlan.macrosByDay } : {}),
         ...(isPlainObject(weeklyPlan?.mealsByDay) ? { mealsByDay: weeklyPlan.mealsByDay } : {}),
+        ...(isPlainObject(weeklyPlan?.assignedMenusByDay)
+          ? { assignedMenusByDay: normalizeAssignedMenusByDay(weeklyPlan.assignedMenusByDay) }
+          : {}),
         generatedBy: "coach",
         generatorMode: modeType,
         updatedAt: now,
@@ -3156,6 +3248,7 @@ class ServicioUsuarios {
             caloriesByDay: {},
             macrosByDay: {},
             mealsByDay: {},
+            assignedMenusByDay: {},
           },
           history: current?.menu?.history || {
             lastWeek: {
