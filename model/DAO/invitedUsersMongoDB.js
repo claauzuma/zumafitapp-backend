@@ -27,6 +27,17 @@ function cleanClientPermissions(value) {
   };
 }
 
+function cleanInviteOnboarding(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+
+  const mode = String(value.mode || "full").toLowerCase();
+  const enabled = value.enabled !== false && mode !== "none";
+  return {
+    enabled,
+    mode: enabled ? "full" : "none",
+  };
+}
+
 function cleanCoachSnapshot(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
 
@@ -73,6 +84,7 @@ class ModelMongoDBInvitedUsers {
 
     const training = !!doc?.coachProfile?.specialties?.training;
     const nutrition = !!doc?.coachProfile?.specialties?.nutrition;
+    const onboarding = cleanInviteOnboarding(doc.onboarding);
 
     const clean = {
       email: String(doc.email || "").toLowerCase().trim(),
@@ -98,6 +110,7 @@ class ModelMongoDBInvitedUsers {
       assignedCoachId: storedId(doc.assignedCoachId),
       targetRole: doc.targetRole || doc.role || null,
       clientPermissions: cleanClientPermissions(doc.clientPermissions),
+      ...(onboarding ? { onboarding } : {}),
       acceptedUserId: doc.acceptedUserId || null,
       coachSnapshot: cleanCoachSnapshot(doc.coachSnapshot),
       invitedAt: doc.invitedAt || new Date(),

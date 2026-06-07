@@ -90,6 +90,18 @@ function adminError(res, error) {
   if (msg === "CLIENT_NOT_ASSIGNED_TO_COACH") {
     return res.status(403).json({ error: "Este cliente no esta asignado a tu cuenta profesional" });
   }
+  if (msg === "CLIENT_ALREADY_HAS_COACH") {
+    return res.status(409).json({ error: "Ya tenes un coach activo asignado" });
+  }
+  if (msg === "CLIENT_HAS_NO_COACH") {
+    return res.status(400).json({ error: "No tenes un coach activo asignado" });
+  }
+  if (msg === "COACH_UNLINK_REQUIRES_ADMIN") {
+    return res.status(409).json({ error: "Esta asignacion la hizo un admin. Podes solicitar cambio o desvinculacion." });
+  }
+  if (msg === "COACH_CHANGE_REQUEST_NOT_REQUIRED") {
+    return res.status(400).json({ error: "Este vinculo puede desvincularse sin solicitud administrativa." });
+  }
   if (msg === "COACH_NUTRITION_NOT_ALLOWED") {
     return res.status(403).json({ error: "Tu perfil profesional no tiene acceso a nutricion" });
   }
@@ -121,6 +133,13 @@ function adminError(res, error) {
   if (msg === "INVITATION_ALREADY_FINALIZED") {
     return res.status(409).json({ error: "La invitación ya no está pendiente" });
   }
+  if (msg === "INVITATION_EXPIRED") {
+    return res.status(410).json({ error: "La invitacion expiro" });
+  }
+
+  if (msg === "INVALID_DATE") return res.status(400).json({ error: "Fecha invalida" });
+  if (msg === "USER_NOT_CLIENT") return res.status(400).json({ error: "El usuario no es cliente" });
+  if (msg === "NO_AUTENTICADO") return res.status(401).json({ error: "No autenticado" });
 
   console.error("Admin error:", error);
   return res.status(500).json({ error: "Error en el servidor" });
@@ -154,12 +173,15 @@ function mapUserPublic(user) {
     metas: user.metas || {},
     onboarding: user.onboarding || {},
     coach: user.coach || {},
+    clientCoachNotice: user.clientCoachNotice || null,
+    coachChangeRequest: user.coachChangeRequest || null,
     billing: user.billing || {},
     subscription: user.subscription || {},
 
     antropometriaActual: user.antropometriaActual || {},
     metasActuales: user.metasActuales || {},
     stats: user.stats || {},
+    progress: user.progress || {},
 
     lastLoginAt: user.lastLoginAt || null,
     lastActivityAt: user.lastActivityAt || null,
@@ -384,6 +406,91 @@ class ControladorUsuarios {
     } catch (error) {
       console.error("Error me:", error);
       return res.status(500).json({ error: "Error en el servidor" });
+    }
+  };
+
+  listMyPendingCoachInvitations = async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?._id || null;
+      const data = await this.servicio.clientListPendingCoachInvitations({ userId });
+      return res.json(data);
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  acceptMyCoachInvitation = async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?._id || null;
+      const { invitationId } = req.params;
+      const data = await this.servicio.clientAcceptCoachInvitation({ userId, invitationId });
+      return res.json({
+        ok: true,
+        invitation: data.invitation,
+        user: mapUserPublic(data.user),
+        nextPath: data.nextPath,
+        requiresOnboarding: !!data.requiresOnboarding,
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  declineMyCoachInvitation = async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?._id || null;
+      const { invitationId } = req.params;
+      const data = await this.servicio.clientDeclineCoachInvitation({ userId, invitationId });
+      return res.json({
+        ok: true,
+        invitation: data.invitation,
+        user: mapUserPublic(data.user),
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  dismissMyCoachNotice = async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?._id || null;
+      const data = await this.servicio.clientDismissCoachNotice({ userId });
+      return res.json({
+        ok: true,
+        user: mapUserPublic(data.user),
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  leaveMyCoach = async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?._id || null;
+      const data = await this.servicio.clientLeaveCoach({ userId });
+      return res.json({
+        ok: true,
+        status: data.status,
+        user: mapUserPublic(data.user),
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  requestMyCoachChange = async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?._id || null;
+      const { reason = "" } = req.body || {};
+      const data = await this.servicio.clientRequestCoachChange({ userId, reason });
+      return res.json({
+        ok: true,
+        status: data.status,
+        request: data.request,
+        user: mapUserPublic(data.user),
+      });
+    } catch (error) {
+      return adminError(res, error);
     }
   };
 
@@ -623,6 +730,45 @@ class ControladorUsuarios {
     } catch (error) {
       console.error("Error obtenerPerfil:", error);
       return res.status(500).json({ error: "Error al obtener perfil" });
+    }
+  };
+
+  getMyMenuTrackingWeek = async (req, res) => {
+    try {
+      const data = await this.servicio.getMyMenuTrackingWeek(req.user, req.query || {});
+      return res.json(data);
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  listMyMenuTracking = async (req, res) => {
+    try {
+      const data = await this.servicio.listMyMenuTracking(req.user, req.query || {});
+      return res.json(data);
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  upsertMyMenuTrackingDay = async (req, res) => {
+    try {
+      const data = await this.servicio.upsertMyMenuTrackingDay(req.user, req.body || {});
+      return res.json(data);
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  patchMyMenuTrackingDay = async (req, res) => {
+    try {
+      const data = await this.servicio.upsertMyMenuTrackingDay(req.user, {
+        ...(req.body || {}),
+        date: req.params.date,
+      });
+      return res.json(data);
+    } catch (error) {
+      return adminError(res, error);
     }
   };
 
@@ -1183,6 +1329,7 @@ class ControladorUsuarios {
           nombre: body.nombre,
           apellido: body.apellido,
         },
+        onboarding: body.onboarding || {},
         clientPermissions: body.clientPermissions || {},
       });
 
@@ -1297,6 +1444,26 @@ class ControladorUsuarios {
       const coachId = req.user?.id || req.user?._id || null;
       const { clientId } = req.params;
       const data = await this.servicio.coachUpdateClientRoutine({
+        coachId,
+        clientId,
+        payload: req.body || {},
+      });
+
+      return res.json({
+        ok: true,
+        coach: mapUserPublic(data.coach),
+        client: mapUserPublic(data.client),
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  coachUpdateClientProgress = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const { clientId } = req.params;
+      const data = await this.servicio.coachUpdateClientProgress({
         coachId,
         clientId,
         payload: req.body || {},

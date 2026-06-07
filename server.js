@@ -30,6 +30,7 @@ import ModelMongoDBEjercicios from "./model/DAO/ejerciciosMongoDB.js";
 import ModelMongoDBRutinas from "./model/DAO/rutinasMongoDB.js";
 import ModelMongoDBMenus from "./model/DAO/menusMongoDB.js";
 import ModelMongoDBFoodLogs from "./model/DAO/foodLogsMongoDB.js";
+import ModelMongoDBClientMenuTracking from "./model/DAO/clientMenuTrackingMongoDB.js";
 import ModelMongoDBComidas from "./model/DAO/comidasMongoDB.js";
 
 function getLanIPv4s() {
@@ -82,6 +83,7 @@ class Server {
         await new ModelMongoDBRutinas().ensureIndexes();
         await new ModelMongoDBMenus().ensureIndexes();
         await new ModelMongoDBFoodLogs().ensureIndexes();
+        await new ModelMongoDBClientMenuTracking().ensureIndexes();
         await new ModelMongoDBComidas().ensureIndexes();
         console.log("Indices asegurados (usuarios + pending + resets + rutinas + menus + tracking + comidas)");
       } catch (e) {

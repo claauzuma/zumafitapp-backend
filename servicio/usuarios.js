@@ -11,6 +11,7 @@ import ModelMongoDBPasswordResets from "../model/DAO/passwordResetMongoDB.js";
 import ModelMongoDBInvitedUsers from "../model/DAO/invitedUsersMongoDB.js";
 import ModelMongoDBCoachPlanConfigs from "../model/DAO/coachPlanConfigsMongoDB.js";
 import ModelMongoDBImpersonationAudit from "../model/DAO/impersonationAuditMongoDB.js";
+import ModelMongoDBClientMenuTracking from "../model/DAO/clientMenuTrackingMongoDB.js";
 import {
   createEmptyCoachOverrides,
   createTrialSubscription,
@@ -343,6 +344,18 @@ const WEEKLY_MENU_DAYS = [
   "sunday",
 ];
 
+const WEEKLY_MENU_DAY_META = [
+  { key: "monday", label: "Lunes", storageKey: "Lunes", aliases: ["lunes", "monday"] },
+  { key: "tuesday", label: "Martes", storageKey: "Martes", aliases: ["martes", "tuesday"] },
+  { key: "wednesday", label: "Miercoles", storageKey: "Miercoles", aliases: ["miercoles", "miércoles", "wednesday"] },
+  { key: "thursday", label: "Jueves", storageKey: "Jueves", aliases: ["jueves", "thursday"] },
+  { key: "friday", label: "Viernes", storageKey: "Viernes", aliases: ["viernes", "friday"] },
+  { key: "saturday", label: "Sabado", storageKey: "Sabado", aliases: ["sabado", "sábado", "saturday"] },
+  { key: "sunday", label: "Domingo", storageKey: "Domingo", aliases: ["domingo", "sunday"] },
+];
+
+const MENU_TRACKING_STATUS = new Set(["pending", "empty", "in_progress", "completed", "partial", "missed", "exceeded"]);
+
 function normalizeWeeklyMenuItem(item = {}) {
   return {
     id: cleanString(item.id || item._id, 80) || null,
@@ -404,21 +417,570 @@ function normalizeAssignedMenusByDay(value = {}) {
   return WEEKLY_MENU_DAYS.reduce((acc, day) => {
     const entry = isPlainObject(value[day]) ? value[day] : null;
     if (!entry) return acc;
-    const snapshotSource = isPlainObject(entry.menuSnapshot)
-      ? entry.menuSnapshot
-      : isPlainObject(entry.snapshot)
-        ? entry.snapshot
-        : entry;
-    const snapshot = normalizeWeeklyMenuSnapshot(snapshotSource);
-    if (!snapshot.baseId && !snapshot.id && !snapshot.name) return acc;
+    const primarySource = isPlainObject(entry.primaryMenu) ? entry.primaryMenu : entry;
+    const primaryMenu = normalizeAssignedMenuEntry(primarySource, "base");
+    if (!primaryMenu) return acc;
+    const alternatives = Array.isArray(entry.alternatives)
+      ? entry.alternatives
+          .map((alternative) => normalizeAssignedMenuAlternative(alternative))
+          .filter(Boolean)
+          .filter((alternative) => !sameAssignedMenu(alternative, primaryMenu))
+          .slice(0, 10)
+      : [];
     acc[day] = {
-      menuId: cleanString(entry.menuId || entry.menuBaseId || snapshot.baseId || snapshot.id, 80) || null,
-      menuSnapshot: snapshot,
-      source: cleanString(entry.source || "base", 40) || "base",
-      assignedAt: entry.assignedAt ? new Date(entry.assignedAt) : new Date(),
+      ...primaryMenu,
+      primaryMenu,
+      alternatives,
     };
     return acc;
   }, {});
+}
+
+function normalizeProgressCheckin(raw = {}, fallback = {}) {
+  const input = isPlainObject(raw) ? raw : {};
+  const fallbackDate = fallback.date || new Date().toISOString().slice(0, 10);
+  const date = cleanString(input.date || input.fecha || fallbackDate, 20) || fallbackDate;
+  return {
+    id: cleanString(input.id || input._id || fallback.id || crypto.randomUUID(), 80),
+    date,
+    weightKg: numberOrNull(input.weightKg ?? input.pesoKg, { min: 20, max: 350 }),
+    dietAdherencePct: numberOrNull(input.dietAdherencePct ?? input.adherenciaDietaPct, { min: 0, max: 100 }),
+    workoutAdherencePct: numberOrNull(input.workoutAdherencePct ?? input.adherenciaRutinaPct, { min: 0, max: 100 }),
+    plannedSessions: numberOrNull(input.plannedSessions ?? input.sesionesPlanificadas, { min: 0, max: 30 }),
+    completedSessions: numberOrNull(input.completedSessions ?? input.sesionesRealizadas, { min: 0, max: 30 }),
+    note: cleanString(input.note || input.nota, 1000),
+    status: cleanString(input.status || input.estado || "ok", 40) || "ok",
+    source: cleanString(input.source || "coach", 40) || "coach",
+    createdAt: input.createdAt ? new Date(input.createdAt) : (fallback.createdAt || new Date()),
+    updatedAt: new Date(),
+  };
+}
+
+function sortProgressCheckins(checkins = []) {
+  return [...checkins].sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+}
+
+function summarizeProgress(checkins = []) {
+  const sorted = sortProgressCheckins(checkins);
+  const withWeight = sorted.filter((item) => Number.isFinite(Number(item.weightKg)));
+  const initial = withWeight[0] || null;
+  const latest = withWeight[withWeight.length - 1] || null;
+  const lastCheckin = sorted[sorted.length - 1] || null;
+  const recent = sorted.slice(-4);
+  const avg = (getter) => {
+    const values = recent.map(getter).map(Number).filter(Number.isFinite);
+    if (!values.length) return null;
+    return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+  };
+  const workoutPct = (item) => {
+    const direct = Number(item.workoutAdherencePct);
+    if (Number.isFinite(direct)) return direct;
+    const planned = Number(item.plannedSessions);
+    const completed = Number(item.completedSessions);
+    if (!Number.isFinite(planned) || planned <= 0 || !Number.isFinite(completed)) return null;
+    return Math.max(0, Math.min(100, Math.round((completed / planned) * 100)));
+  };
+  const weightDelta = initial && latest ? Math.round((Number(latest.weightKg) - Number(initial.weightKg)) * 10) / 10 : null;
+  return {
+    lastCheckinAt: lastCheckin?.date || null,
+    pesoInicialKg: initial?.weightKg ?? null,
+    pesoActualKg: latest?.weightKg ?? null,
+    changeKg30d: weightDelta,
+    adherencia7dPct: avg((item) => item.dietAdherencePct),
+    adherenciaRutina7dPct: avg(workoutPct),
+    comidasRegistradas7d: null,
+  };
+}
+
+function normalizeAssignedMenuEntry(entry = {}, fallbackSource = "base") {
+  if (!isPlainObject(entry)) return null;
+  const snapshotSource = isPlainObject(entry.menuSnapshot)
+    ? entry.menuSnapshot
+    : isPlainObject(entry.snapshot)
+      ? entry.snapshot
+      : entry;
+  const hasSnapshotData = Boolean(
+    entry.menuId ||
+    entry.menuBaseId ||
+    snapshotSource.id ||
+    snapshotSource._id ||
+    snapshotSource.baseId ||
+    snapshotSource.menuBaseId ||
+    snapshotSource.name ||
+    snapshotSource.nombre ||
+    Array.isArray(snapshotSource.meals) ||
+    Array.isArray(snapshotSource.comidas)
+  );
+  if (!hasSnapshotData) return null;
+  const snapshot = normalizeWeeklyMenuSnapshot(snapshotSource);
+  if (!snapshot.baseId && !snapshot.id && !snapshot.name) return null;
+  return {
+    menuId: cleanString(entry.menuId || entry.menuBaseId || snapshot.baseId || snapshot.id, 80) || null,
+    menuSnapshot: snapshot,
+    source: cleanString(entry.source || fallbackSource, 40) || fallbackSource,
+    assignedAt: entry.assignedAt ? new Date(entry.assignedAt) : new Date(),
+  };
+}
+
+function normalizeAssignedMenuAlternative(entry = {}) {
+  const alternative = normalizeAssignedMenuEntry(entry, "alternative");
+  if (!alternative) return null;
+  const compatibility = isPlainObject(entry.compatibility)
+    ? {
+        key: cleanString(entry.compatibility.key, 40),
+        label: cleanString(entry.compatibility.label, 80),
+        tone: cleanString(entry.compatibility.tone, 40),
+        kcalDiff: numberOrNull(entry.compatibility.kcalDiff, { min: -20000, max: 20000 }),
+        proteinDiff: numberOrNull(entry.compatibility.proteinDiff, { min: -1000, max: 1000 }),
+      }
+    : null;
+  return {
+    ...alternative,
+    reason: cleanString(entry.reason, 240),
+    compatibility,
+  };
+}
+
+function normalizeDayName(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function getWeekDayMeta(dayLike) {
+  const normalized = normalizeDayName(dayLike);
+  return WEEKLY_MENU_DAY_META.find((day) => (
+    day.key === normalized ||
+    normalizeDayName(day.label) === normalized ||
+    normalizeDayName(day.storageKey) === normalized ||
+    day.aliases.some((alias) => normalizeDayName(alias) === normalized)
+  )) || null;
+}
+
+function findDayValue(source, day) {
+  if (!isPlainObject(source)) return { found: false, value: undefined };
+  const matchingKey = Object.keys(source).find((key) => getWeekDayMeta(key)?.key === day.key);
+  return matchingKey === undefined
+    ? { found: false, value: undefined }
+    : { found: true, value: source[matchingKey] };
+}
+
+function roundTrackingNumber(value, fallback = 0) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.round(number * 10) / 10;
+}
+
+function hasNumber(value) {
+  return value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+}
+
+function macroKcal(protein, carbs, fat) {
+  if (!hasNumber(protein) || !hasNumber(carbs) || !hasNumber(fat)) return null;
+  return Math.round((Number(protein) * 4) + (Number(carbs) * 4) + (Number(fat) * 9));
+}
+
+function deriveCarbsForKcal(kcal, protein, fat) {
+  const targetKcal = Math.max(0, Number(kcal) || 0);
+  const p = hasNumber(protein) ? Number(protein) : 0;
+  let g = hasNumber(fat) ? Number(fat) : 0;
+  let c = (targetKcal - (p * 4) - (g * 9)) / 4;
+  let warning = "";
+
+  if (c < 0) {
+    c = 0;
+    g = Math.max(0, (targetKcal - (p * 4)) / 9);
+    warning = "Meta calorica baja: se ajustaron grasas para sostener la proteina.";
+  }
+
+  return {
+    p: roundTrackingNumber(p),
+    c: roundTrackingNumber(c),
+    g: roundTrackingNumber(g),
+    warning,
+  };
+}
+
+function buildBaseNutritionTarget(user = {}) {
+  const macros = user?.metasActuales?.macros || {};
+  const p = hasNumber(macros.p) ? Number(macros.p) : null;
+  const c = hasNumber(macros.c) ? Number(macros.c) : null;
+  const g = hasNumber(macros.g) ? Number(macros.g) : null;
+  const kcal = macroKcal(p, c, g) ?? (hasNumber(user?.metasActuales?.kcal) ? Number(user.metasActuales.kcal) : null);
+
+  return {
+    key: "base",
+    label: "Base",
+    kcal: kcal === null ? null : Math.round(kcal),
+    p: p === null ? null : roundTrackingNumber(p),
+    c: c === null ? null : roundTrackingNumber(c),
+    g: g === null ? null : roundTrackingNumber(g),
+    statusLabel: "General",
+    valid: hasNumber(kcal) && hasNumber(p),
+  };
+}
+
+function buildCustomizedNutritionTarget(day, base, override = {}, caloriesValue = null) {
+  const wantedKcal = hasNumber(override.kcal) ? Number(override.kcal) : (hasNumber(caloriesValue) ? Number(caloriesValue) : null);
+  const p = hasNumber(override.p ?? override.proteina ?? override.protein) ? Number(override.p ?? override.proteina ?? override.protein) : base.p;
+  const g = hasNumber(override.g ?? override.grasas ?? override.fat) ? Number(override.g ?? override.grasas ?? override.fat) : base.g;
+  let c = hasNumber(override.c ?? override.carbs ?? override.carbohidratos) ? Number(override.c ?? override.carbs ?? override.carbohidratos) : null;
+
+  if (!hasNumber(c) && hasNumber(wantedKcal)) {
+    c = deriveCarbsForKcal(wantedKcal, p, g).c;
+  }
+  if (!hasNumber(c)) c = base.c;
+
+  const kcal = macroKcal(p, c, g) ?? wantedKcal ?? base.kcal;
+  return {
+    key: day.key,
+    label: day.label,
+    kcal: hasNumber(kcal) ? Math.round(Number(kcal)) : null,
+    p: hasNumber(p) ? roundTrackingNumber(p) : null,
+    c: hasNumber(c) ? roundTrackingNumber(c) : null,
+    g: hasNumber(g) ? roundTrackingNumber(g) : null,
+    note: cleanString(override.note || override.nota, 500),
+    customized: true,
+    adjusted: false,
+    statusLabel: "Personalizado",
+    valid: hasNumber(kcal) && hasNumber(p),
+  };
+}
+
+function buildGeneralNutritionTarget(day, base, targetKcal, shouldAdjust) {
+  const kcal = hasNumber(targetKcal) ? Math.round(Number(targetKcal)) : base.kcal;
+  const derived = hasNumber(kcal)
+    ? deriveCarbsForKcal(kcal, base.p, base.g)
+    : { p: base.p, c: base.c, g: base.g, warning: "" };
+  const adjusted = shouldAdjust && hasNumber(base.kcal) && hasNumber(kcal) && Math.abs(Number(kcal) - Number(base.kcal)) > 1;
+
+  return {
+    key: day.key,
+    label: day.label,
+    kcal,
+    p: hasNumber(derived.p) ? roundTrackingNumber(derived.p) : null,
+    c: hasNumber(derived.c) ? roundTrackingNumber(derived.c) : null,
+    g: hasNumber(derived.g) ? roundTrackingNumber(derived.g) : null,
+    note: "",
+    customized: false,
+    adjusted,
+    warning: derived.warning,
+    statusLabel: adjusted ? "General ajustado" : "General",
+    valid: hasNumber(kcal) && hasNumber(derived.p),
+  };
+}
+
+function resolveClientNutritionWeek(user = {}) {
+  const base = buildBaseNutritionTarget(user);
+  const weeklyPlan = user?.menu?.weeklyPlan || {};
+  const caloriesByDay = weeklyPlan?.caloriesByDay || {};
+  const macrosByDay = weeklyPlan?.macrosByDay || {};
+  const weeklyKcalTarget = hasNumber(base.kcal) ? Number(base.kcal) * WEEKLY_MENU_DAY_META.length : null;
+
+  const customized = new Map();
+  WEEKLY_MENU_DAY_META.forEach((day) => {
+    const calorieEntry = findDayValue(caloriesByDay, day);
+    const macroEntry = findDayValue(macrosByDay, day);
+    if (!calorieEntry.found && !macroEntry.found) return;
+    const macros = isPlainObject(macroEntry.value) ? macroEntry.value : {};
+    customized.set(day.key, buildCustomizedNutritionTarget(day, base, macros, calorieEntry.value));
+  });
+
+  const generalDays = WEEKLY_MENU_DAY_META.filter((day) => !customized.has(day.key));
+  const customizedKcal = [...customized.values()].reduce((sum, target) => sum + (hasNumber(target.kcal) ? Number(target.kcal) : 0), 0);
+  const adjustedKcal = weeklyKcalTarget !== null && generalDays.length
+    ? Math.max(0, (weeklyKcalTarget - customizedKcal) / generalDays.length)
+    : base.kcal;
+
+  const targets = {};
+  WEEKLY_MENU_DAY_META.forEach((day) => {
+    targets[day.key] = customized.get(day.key) || buildGeneralNutritionTarget(day, base, adjustedKcal, customized.size > 0);
+  });
+
+  const currentWeeklyKcal = Object.values(targets).reduce((sum, target) => sum + (hasNumber(target.kcal) ? Number(target.kcal) : 0), 0);
+  return {
+    base,
+    targets,
+    days: WEEKLY_MENU_DAY_META.map((day) => targets[day.key]),
+    summary: {
+      weeklyKcalTarget,
+      currentWeeklyKcal: Math.round(currentWeeklyKcal),
+      difference: weeklyKcalTarget === null ? null : Math.round(currentWeeklyKcal - weeklyKcalTarget),
+      customizedDays: customized.size,
+      adjustedGeneralDays: Object.values(targets).filter((target) => target.adjusted).length,
+    },
+  };
+}
+
+function normalizeMenuTrackingDate(value = "") {
+  const raw = cleanString(value || new Date().toISOString().slice(0, 10), 20).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) throw new Error("INVALID_DATE");
+  const date = new Date(`${raw}T00:00:00.000Z`);
+  if (!Number.isFinite(date.getTime())) throw new Error("INVALID_DATE");
+  return raw;
+}
+
+function mondayOfWeek(value = "") {
+  const normalized = normalizeMenuTrackingDate(value);
+  const date = new Date(`${normalized}T00:00:00.000Z`);
+  const day = date.getUTCDay();
+  const diff = (day + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - diff);
+  return date.toISOString().slice(0, 10);
+}
+
+function addDaysIso(start, days) {
+  const date = new Date(`${normalizeMenuTrackingDate(start)}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + Number(days || 0));
+  return date.toISOString().slice(0, 10);
+}
+
+function dayKeyFromDate(dateValue) {
+  const date = new Date(`${normalizeMenuTrackingDate(dateValue)}T00:00:00.000Z`);
+  const keys = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  return keys[date.getUTCDay()] || "monday";
+}
+
+function menuSnapshotTotals(snapshot = {}) {
+  return {
+    kcal: roundTrackingNumber(snapshot?.kcal, 0),
+    proteina: roundTrackingNumber(snapshot?.protein ?? snapshot?.proteina, 0),
+    carbs: roundTrackingNumber(snapshot?.carbs, 0),
+    grasas: roundTrackingNumber(snapshot?.fat ?? snapshot?.grasas, 0),
+  };
+}
+
+function emptyTrackingTotals() {
+  return { kcal: 0, proteina: 0, carbs: 0, grasas: 0 };
+}
+
+function roundTrackingTotals(totals = {}) {
+  return {
+    kcal: roundTrackingNumber(totals.kcal, 0),
+    proteina: roundTrackingNumber(totals.proteina ?? totals.protein, 0),
+    carbs: roundTrackingNumber(totals.carbs, 0),
+    grasas: roundTrackingNumber(totals.grasas ?? totals.fat, 0),
+  };
+}
+
+function addTrackingTotals(left = {}, right = {}) {
+  const a = roundTrackingTotals(left);
+  const b = roundTrackingTotals(right);
+  return roundTrackingTotals({
+    kcal: a.kcal + b.kcal,
+    proteina: a.proteina + b.proteina,
+    carbs: a.carbs + b.carbs,
+    grasas: a.grasas + b.grasas,
+  });
+}
+
+function subtractTrackingTotals(target = {}, consumed = {}) {
+  const t = roundTrackingTotals(target);
+  const c = roundTrackingTotals(consumed);
+  return roundTrackingTotals({
+    kcal: t.kcal - c.kcal,
+    proteina: t.proteina - c.proteina,
+    carbs: t.carbs - c.carbs,
+    grasas: t.grasas - c.grasas,
+  });
+}
+
+function targetToTrackingTotals(target = {}) {
+  return roundTrackingTotals({
+    kcal: target?.kcal,
+    proteina: target?.p ?? target?.proteina ?? target?.protein,
+    carbs: target?.c ?? target?.carbs,
+    grasas: target?.g ?? target?.grasas ?? target?.fat,
+  });
+}
+
+function snapshotMealId(meal = {}, index = 0) {
+  return cleanString(meal.id || meal._id || meal.nombre || meal.name || `meal-${index + 1}`, 100) || `meal-${index + 1}`;
+}
+
+function snapshotMealTotals(meal = {}) {
+  const totals = isPlainObject(meal.totales || meal.totals) ? meal.totales || meal.totals : meal;
+  return roundTrackingTotals({
+    kcal: totals.kcal,
+    proteina: totals.proteina ?? totals.protein,
+    carbs: totals.carbs,
+    grasas: totals.grasas ?? totals.fat,
+  });
+}
+
+function buildCompletedMenuMealsFromPayload(payload = {}, snapshot = {}, status = "pending") {
+  const meals = Array.isArray(snapshot?.meals) ? snapshot.meals : [];
+  const explicitIds = Array.isArray(payload.completedMenuMealIds)
+    ? payload.completedMenuMealIds
+    : Array.isArray(payload.completedMealIds)
+      ? payload.completedMealIds
+      : Array.isArray(payload.completedMenuMeals)
+        ? payload.completedMenuMeals.map((meal) => meal?.mealId || meal?.id)
+        : null;
+  const selected = explicitIds === null && status === "completed"
+    ? new Set(meals.map((meal, index) => snapshotMealId(meal, index)))
+    : new Set((explicitIds || []).map((id) => cleanString(id, 100)).filter(Boolean));
+
+  return meals
+    .map((meal, index) => {
+      const mealId = snapshotMealId(meal, index);
+      if (!selected.has(mealId)) return null;
+      return {
+        mealId,
+        mealType: cleanString(meal.tipoComida || meal.type, 60) || "otro",
+        name: cleanString(meal.nombre || meal.name, 140) || `Comida ${index + 1}`,
+        source: "assigned_menu_meal",
+        totals: snapshotMealTotals(meal),
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 20);
+}
+
+function sanitizeTrackingEntry(entry = {}, fallbackSource = "manual_food", index = 0) {
+  if (!isPlainObject(entry)) return null;
+  const source = cleanString(entry.source || fallbackSource, 60) || fallbackSource;
+  const foods = Array.isArray(entry.foods)
+    ? entry.foods.slice(0, 40).map((food, foodIndex) => ({
+        id: cleanString(food.id || food.alimentoId || `food-${foodIndex + 1}`, 100) || `food-${foodIndex + 1}`,
+        name: cleanString(food.name || food.nombre || food.nombreSnapshot, 160) || "Alimento",
+        quantity: numberOrNull(food.quantity ?? food.cantidad, { min: 0, max: 10000 }),
+        unit: cleanString(food.unit || food.unidad || "g", 24) || "g",
+        kcal: numberOrNull(food.kcal, { min: 0, max: 20000 }),
+        proteina: numberOrNull(food.proteina ?? food.protein, { min: 0, max: 1000 }),
+        carbs: numberOrNull(food.carbs, { min: 0, max: 2000 }),
+        grasas: numberOrNull(food.grasas ?? food.fat, { min: 0, max: 1000 }),
+      }))
+    : [];
+  const totals = roundTrackingTotals(entry.totals || entry);
+  return {
+    id: cleanString(entry.id || `${source}-${index + 1}`, 100) || `${source}-${index + 1}`,
+    name: cleanString(entry.name || entry.nombre, 160) || `Comida ${index + 1}`,
+    source,
+    target: entry.target ? roundTrackingTotals(entry.target) : null,
+    foods,
+    totals,
+  };
+}
+
+function sanitizeTrackingEntries(value = [], fallbackSource = "manual_food") {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry, index) => sanitizeTrackingEntry(entry, fallbackSource, index))
+    .filter(Boolean)
+    .slice(0, 20);
+}
+
+function sumTrackingEntryTotals(entries = []) {
+  return entries.reduce((acc, entry) => addTrackingTotals(acc, entry?.totals || entry), emptyTrackingTotals());
+}
+
+function calculateDietAdherence(consumedTotals = {}, targetTotals = {}) {
+  const consumed = roundTrackingTotals(consumedTotals);
+  const target = roundTrackingTotals(targetTotals);
+  if (target.kcal <= 0 && target.proteina <= 0) return null;
+
+  const kcalScore = target.kcal > 0
+    ? Math.max(0, 100 - Math.abs(consumed.kcal - target.kcal) / target.kcal * 100)
+    : null;
+  const proteinScore = target.proteina > 0
+    ? Math.max(0, 100 - Math.abs(consumed.proteina - target.proteina) / target.proteina * 100)
+    : null;
+
+  if (kcalScore === null) return roundTrackingNumber(proteinScore, 0);
+  if (proteinScore === null) return roundTrackingNumber(kcalScore, 0);
+  return roundTrackingNumber((kcalScore * 0.6) + (proteinScore * 0.4), 0);
+}
+
+function deriveDailyTrackingStatus(consumedTotals = {}, targetTotals = {}, status = "pending") {
+  if (status === "missed") return "missed";
+  const consumed = roundTrackingTotals(consumedTotals);
+  const target = roundTrackingTotals(targetTotals);
+  if (consumed.kcal <= 0 && consumed.proteina <= 0 && consumed.carbs <= 0 && consumed.grasas <= 0) {
+    return "pending";
+  }
+  if (target.kcal > 0 && consumed.kcal > target.kcal * 1.08) return "exceeded";
+  const kcalClose = target.kcal > 0 && Math.abs(consumed.kcal - target.kcal) <= Math.max(60, target.kcal * 0.08);
+  const proteinOk = target.proteina <= 0 || consumed.proteina >= target.proteina - 8;
+  if (kcalClose && proteinOk) return "completed";
+  return "in_progress";
+}
+
+function assignedMenuPublic(entry = null) {
+  if (!entry) return null;
+  const snapshot = entry.menuSnapshot || {};
+  return {
+    menuId: idToString(entry.menuId),
+    source: entry.source || "base",
+    assignedAt: entry.assignedAt || null,
+    menuSnapshot: {
+      ...snapshot,
+      totals: menuSnapshotTotals(snapshot),
+    },
+  };
+}
+
+function trackingPublic(doc = null) {
+  if (!doc) {
+    return {
+      status: "pending",
+      adherencePercent: null,
+      reason: "",
+      note: "",
+      completedMenuMealIds: [],
+      completedMenuMeals: [],
+      manualEntries: [],
+      generatedRemainingMeals: [],
+      consumedTotals: emptyTrackingTotals(),
+      remainingTotals: null,
+      updatedAt: null,
+    };
+  }
+  const nutrition = doc.nutrition || {};
+  const completedMenuMeals = Array.isArray(doc.completedMenuMeals) ? doc.completedMenuMeals : [];
+  return {
+    id: idToString(doc._id || doc.id),
+    date: doc.date || null,
+    dayKey: doc.dayKey || null,
+    status: MENU_TRACKING_STATUS.has(nutrition.status) ? nutrition.status : "pending",
+    adherencePercent: hasNumber(nutrition.adherencePercent) ? roundTrackingNumber(nutrition.adherencePercent) : null,
+    completedMealsCount: hasNumber(nutrition.completedMealsCount) ? Number(nutrition.completedMealsCount) : null,
+    totalMealsCount: hasNumber(nutrition.totalMealsCount) ? Number(nutrition.totalMealsCount) : null,
+    reason: cleanString(nutrition.reason || "", 120),
+    note: cleanString(nutrition.note || "", 1000),
+    selectedAlternative: nutrition.selectedAlternative || null,
+    completedMenuMealIds: completedMenuMeals.map((meal) => cleanString(meal.mealId, 100)).filter(Boolean),
+    completedMenuMeals,
+    manualEntries: Array.isArray(doc.manualEntries) ? doc.manualEntries : [],
+    generatedRemainingMeals: Array.isArray(doc.generatedRemainingMeals) ? doc.generatedRemainingMeals : [],
+    consumedTotals: roundTrackingTotals(doc.consumedTotals || {}),
+    remainingTotals: doc.remainingTotals ? roundTrackingTotals(doc.remainingTotals) : null,
+    updatedAt: doc.updatedAt || null,
+  };
+}
+
+function clientMenuTrackingPermissions(user = {}) {
+  const permissions = user?.clientPermissions || {};
+  const menu = isPlainObject(permissions.menu) ? permissions.menu : {};
+  const tracking = isPlainObject(permissions.tracking) ? permissions.tracking : {};
+  const hasCoach = !!user?.coach?.entrenadorId;
+  const canViewAssignedMenus = hasCoach ? boolFrom(menu.canViewMenu, true) : true;
+
+  return {
+    canViewAssignedMenus,
+    canMarkMenuMealsCompleted: canViewAssignedMenus && boolFrom(tracking.canMarkMenuMealsCompleted, true),
+    canTrackFoods: canViewAssignedMenus && boolFrom(tracking.canTrackFoods, true),
+    canAutoCompleteRemainingMeals: canViewAssignedMenus && boolFrom(tracking.canAutoCompleteRemainingMeals, true),
+    canUseMenuAlternatives: canViewAssignedMenus && boolFrom(tracking.canUseMenuAlternatives, true),
+  };
+}
+
+function sameAssignedMenu(a = {}, b = {}) {
+  const left = String(a.menuId || a.menuSnapshot?.baseId || a.menuSnapshot?.id || a.menuSnapshot?.name || "").toLowerCase();
+  const right = String(b.menuId || b.menuSnapshot?.baseId || b.menuSnapshot?.id || b.menuSnapshot?.name || "").toLowerCase();
+  return Boolean(left && right && left === right);
 }
 
 function boolFrom(value, fallback = false) {
@@ -490,6 +1052,11 @@ class ServicioUsuarios {
     if (typeof this.impersonationAuditModel.ensureIndexes === "function") {
       this.impersonationAuditModel.ensureIndexes().catch(() => {});
     }
+
+    this.menuTrackingModel = new ModelMongoDBClientMenuTracking();
+    if (typeof this.menuTrackingModel.ensureIndexes === "function") {
+      this.menuTrackingModel.ensureIndexes().catch(() => {});
+    }
   }
 
   // -------------------------
@@ -557,6 +1124,81 @@ class ServicioUsuarios {
     }
 
     return await this._findInviteByEmail(email);
+  }
+
+  _isInviteExpired(invite) {
+    if (!invite?.expiresAt) return false;
+    const expiresAt = new Date(invite.expiresAt).getTime();
+    return Number.isFinite(expiresAt) && expiresAt <= Date.now();
+  }
+
+  _sameInvitationId(left, right) {
+    return idToString(left?._id || left?.id || left) === idToString(right?._id || right?.id || right);
+  }
+
+  _publicCoachClientInvitation(invite = {}, coach = null) {
+    const snapshot = invite?.coachSnapshot || {};
+    const coachProfile = coach?.profile || {};
+    const coachName = [
+      snapshot.nombre || coachProfile.nombre || coach?.nombre || "",
+      snapshot.apellido || coachProfile.apellido || coach?.apellido || "",
+    ].filter(Boolean).join(" ").trim() || snapshot.email || coach?.email || "Coach";
+
+    return {
+      id: idToString(invite._id || invite.id),
+      coachId: idToString(invite.assignedCoachId || snapshot.id || invite.invitedBy),
+      coachName,
+      coachEmail: snapshot.email || coach?.email || "",
+      message: cleanString(invite.message || "", 500),
+      createdAt: invite.createdAt || invite.invitedAt || null,
+      invitedAt: invite.invitedAt || invite.createdAt || null,
+      expiresAt: invite.expiresAt || null,
+      status: invite.status || "pending",
+      onboarding: invite.onboarding || null,
+    };
+  }
+
+  _coachDisplayName(coach = null) {
+    if (!coach) return "Tu coach";
+    const profile = coach.profile || {};
+    return [
+      profile.nombre || coach.nombre || "",
+      profile.apellido || coach.apellido || "",
+    ].filter(Boolean).join(" ").trim() || coach.email || "Tu coach";
+  }
+
+  _adminCoachAssignedNotice({ coach = null, adminId = null, now = new Date() } = {}) {
+    const coachId = idToString(coach?._id || coach?.id);
+    return {
+      type: "admin_coach_assigned",
+      status: "unread",
+      coachId,
+      coachName: this._coachDisplayName(coach),
+      assignedByAdminId: adminId ? idToString(adminId) : null,
+      createdAt: now,
+    };
+  }
+
+  async _getPendingCoachClientInvitationForUser(user, invitationId = null) {
+    const email = String(user?.email || "").toLowerCase().trim();
+    if (!email) throw new Error("EMAIL_REQUERIDO");
+
+    const candidates = invitationId
+      ? [await this.invitedModel.getById(invitationId)]
+      : (typeof this.invitedModel.findByEmail === "function"
+          ? await this.invitedModel.findByEmail(email)
+          : [await this._findInviteByEmail(email)]);
+
+    const invite = (candidates || []).find((item) => (
+      item &&
+      String(item.email || "").toLowerCase().trim() === email &&
+      String(item.status || "pending") === "pending" &&
+      this._isCoachClientInvite(item)
+    ));
+
+    if (!invite) throw new Error("INVITATION_NOT_FOUND");
+    if (this._isInviteExpired(invite)) throw new Error("INVITATION_EXPIRED");
+    return invite;
   }
 
   async _prepareCoachClientInviteAcceptance(invite) {
@@ -696,6 +1338,9 @@ class ServicioUsuarios {
       coachProfile: normalizedCoachProfile,
       coachOverrides: role === "coach" ? createEmptyCoachOverrides() : null,
       coachWelcome,
+      ...(coachInviteAcceptance
+        ? { onboarding: this._onboardingFromCoachInvite(invite?.onboarding || {}, now) }
+        : {}),
       ...(coachInviteAcceptance?.coachAssignment
         ? { coach: coachInviteAcceptance.coachAssignment }
         : {}),
@@ -961,6 +1606,8 @@ class ServicioUsuarios {
       onboarding: u.onboarding || {},
 
       coach: u.coach || {},
+      clientCoachNotice: u.clientCoachNotice || null,
+      coachChangeRequest: u.coachChangeRequest || null,
       billing: u.billing || {},
 
       antropometriaActual: u.antropometriaActual || {},
@@ -1120,12 +1767,13 @@ class ServicioUsuarios {
     }
 
     const invite = await this._findPendingInviteForEmail(email, pending.inviteId);
+    const shouldAcceptInviteOnVerify = invite && !this._isCoachClientInvite(invite);
 
     const role = pending.role || "cliente";
     const plan = pending.plan || "free";
     const tipo = pending.tipo || "entrenado";
 
-    const userToCreate = invite
+    const userToCreate = shouldAcceptInviteOnVerify
       ? await this._buildUserFromInvite({
           invite,
           email,
@@ -1141,7 +1789,11 @@ class ServicioUsuarios {
           ...getUserDefaults({ role, plan, tipo }),
 
           emailVerificado: true,
-          profile: pending.profile || {},
+          profile: {
+            ...(pending.profile || {}),
+            ...(this._isCoachClientInvite(invite) && invite?.profile?.nombre ? { nombre: invite.profile.nombre } : {}),
+            ...(this._isCoachClientInvite(invite) && invite?.profile?.apellido ? { apellido: invite.profile.apellido } : {}),
+          },
           settings: {},
 
           createdAt: new Date(),
@@ -1150,7 +1802,7 @@ class ServicioUsuarios {
 
     const created = await this._createUser(userToCreate);
 
-    if (invite?._id) {
+    if (shouldAcceptInviteOnVerify && invite?._id) {
       await this._acceptInviteById(invite._id, created?._id || created?.id);
     }
 
@@ -1311,8 +1963,9 @@ class ServicioUsuarios {
 
     if (!userRaw) {
       const invite = await this._findInviteByEmail(email);
+      const shouldAcceptInviteWithGoogle = invite && !this._isCoachClientInvite(invite);
 
-      if (invite) {
+      if (shouldAcceptInviteWithGoogle) {
         const randomPass = crypto.randomBytes(32).toString("hex");
         const passwordHash = await bcrypt.hash(randomPass, 10);
 
@@ -1349,7 +2002,11 @@ class ServicioUsuarios {
           ...getUserDefaults({ role, plan, tipo }),
 
           emailVerificado: true,
-          profile: { nombre, apellido, avatarUrl },
+          profile: {
+            nombre: invite?.profile?.nombre || nombre || "",
+            apellido: invite?.profile?.apellido || apellido || "",
+            avatarUrl,
+          },
           coachProfile: null,
           settings: {},
 
@@ -1392,7 +2049,8 @@ class ServicioUsuarios {
       throw new Error("El modelo no implementa obtenerPorId");
     }
     const user = await this.model.obtenerPorId(id);
-    return await this._withEffectiveCapabilities(user);
+    const repaired = await this._repairAcceptedCoachInviteOnboarding(user);
+    return await this._withEffectiveCapabilities(repaired);
   };
 
   updateById = async (id, updates) => {
@@ -1589,6 +2247,83 @@ class ServicioUsuarios {
     return 0;
   };
 
+  _sanitizeClientInviteOnboarding(raw = {}) {
+    const input = isPlainObject(raw) ? raw : {};
+    const mode = String(input.mode || "full").toLowerCase();
+    const enabled = input.enabled !== false && mode !== "none";
+    return {
+      enabled,
+      mode: enabled ? "full" : "none",
+    };
+  }
+
+  _onboardingFromCoachInvite(raw = {}, now = new Date()) {
+    const sanitized = this._sanitizeClientInviteOnboarding(raw);
+    return {
+      enabled: sanitized.enabled,
+      mode: sanitized.mode,
+      done: !sanitized.enabled,
+      step: 1,
+      startedAt: sanitized.enabled ? now : null,
+      completedAt: sanitized.enabled ? null : now,
+      lastSeenAt: null,
+      configuredByCoach: true,
+    };
+  }
+
+  _clientInvitationNextPath(user) {
+    const role = normalizeRole(user?.role || user?.rol);
+    const tipo = String(user?.tipo || "").trim().toLowerCase();
+    const onboarding = isPlainObject(user?.onboarding) ? user.onboarding : {};
+    const requiresOnboarding =
+      role === "cliente" &&
+      tipo === "entrenado" &&
+      onboarding.enabled === true &&
+      onboarding.done !== true;
+
+    return {
+      requiresOnboarding,
+      nextPath: requiresOnboarding ? "/app/onboarding" : "/app/inicio",
+    };
+  }
+
+  async _repairAcceptedCoachInviteOnboarding(user) {
+    if (!user || !this._isClientUser(user)) return user;
+    if (String(user?.coach?.source || "") !== "coach_invite") return user;
+    if (user?.onboarding?.enabled !== true || user?.onboarding?.done === true) return user;
+    if (typeof this.invitedModel.findByEmail !== "function") return user;
+
+    const email = String(user.email || "").toLowerCase().trim();
+    if (!email) return user;
+
+    const userId = idToString(user._id || user.id);
+    const coachId = idToString(user?.coach?.entrenadorId);
+    const invites = await this.invitedModel.findByEmail(email);
+    const acceptedInvite = (invites || []).find((invite) => {
+      if (!invite || String(invite.status || "") !== "accepted") return false;
+      if (!this._isCoachClientInvite(invite)) return false;
+      const acceptedUserId = idToString(invite.acceptedUserId);
+      const inviteCoachId = idToString(invite.assignedCoachId || invite.invitedBy);
+      return (
+        (acceptedUserId && acceptedUserId === userId) ||
+        (coachId && inviteCoachId && inviteCoachId === coachId)
+      );
+    });
+
+    const inviteSkipsOnboarding = !isPlainObject(acceptedInvite?.onboarding) || acceptedInvite.onboarding.enabled === false;
+    if (!acceptedInvite || !inviteSkipsOnboarding) return user;
+
+    const now = new Date();
+    const inviteOnboarding = isPlainObject(acceptedInvite.onboarding)
+      ? acceptedInvite.onboarding
+      : { enabled: false, mode: "none" };
+    const updated = await this._updateById(user._id || user.id, {
+      onboarding: this._onboardingFromCoachInvite(inviteOnboarding, now),
+      updatedAt: now,
+    });
+    return this._normalizeUser(updated || user);
+  }
+
   _sanitizeClientPermissionsForCoach(coach, effectiveCapabilities, raw = {}) {
     const permissions = isPlainObject(raw) ? raw : {};
     const menuInput = isPlainObject(permissions.menu) ? permissions.menu : {};
@@ -1761,6 +2496,7 @@ class ServicioUsuarios {
     email,
     profile = {},
     clientPermissions = {},
+    onboarding = {},
   }) => {
     email = String(email || "").trim().toLowerCase();
     const nombre = String(profile?.nombre || "").trim();
@@ -1795,6 +2531,7 @@ class ServicioUsuarios {
       effectiveCapabilities,
       clientPermissions
     );
+    const sanitizedOnboarding = this._sanitizeClientInviteOnboarding(onboarding);
 
     const coachIdToStore = toMongoIdOrString(coach._id || coach.id || coachId);
     const coachProfile = coach?.profile || {};
@@ -1812,6 +2549,7 @@ class ServicioUsuarios {
       assignedCoachId: coachIdToStore,
       targetRole: "cliente",
       clientPermissions: sanitizedPermissions,
+      onboarding: sanitizedOnboarding,
       acceptedUserId: null,
       coachSnapshot: {
         id: idToString(coach._id || coach.id || coachId),
@@ -1885,6 +2623,204 @@ class ServicioUsuarios {
 
     const result = await this.invitedModel.deleteById(invitationId);
     return { deleted: true, result };
+  };
+
+  clientListPendingCoachInvitations = async ({ userId }) => {
+    const user = await this.getById(userId);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(user)) return { invitations: [] };
+
+    const email = String(user.email || "").toLowerCase().trim();
+    if (!email) return { invitations: [] };
+
+    const all = typeof this.invitedModel.findByEmail === "function"
+      ? await this.invitedModel.findByEmail(email)
+      : [await this._findInviteByEmail(email)];
+
+    const invitations = (all || [])
+      .filter((invite) => (
+        invite &&
+        String(invite.email || "").toLowerCase().trim() === email &&
+        String(invite.status || "pending") === "pending" &&
+        this._isCoachClientInvite(invite) &&
+        !this._isInviteExpired(invite)
+      ))
+      .map((invite) => this._publicCoachClientInvitation(invite));
+
+    return { invitations };
+  };
+
+  clientAcceptCoachInvitation = async ({ userId, invitationId }) => {
+    const user = await this.getById(userId);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(user)) throw new Error("USER_NOT_CLIENT");
+
+    const invite = await this._getPendingCoachClientInvitationForUser(user, invitationId);
+    const acceptance = await this._prepareCoachClientInviteAcceptance(invite);
+    if (!acceptance?.coachAssignment) throw new Error("INVITATION_NOT_FOUND");
+
+    const currentCoachId = idToString(user?.coach?.entrenadorId);
+    const nextCoachId = idToString(acceptance.coachAssignment.entrenadorId);
+    if (currentCoachId && currentCoachId !== nextCoachId) {
+      throw new Error("CLIENT_ALREADY_HAS_COACH");
+    }
+
+    const now = new Date();
+    const patch = {
+      coach: {
+        ...(user?.coach || {}),
+        ...acceptance.coachAssignment,
+        assignedAt: user?.coach?.assignedAt && currentCoachId === nextCoachId
+          ? user.coach.assignedAt
+          : acceptance.coachAssignment.assignedAt,
+      },
+      clientPermissions: acceptance.clientPermissions,
+      updatedAt: now,
+    };
+
+    if (!user?.onboarding?.done) {
+      const inviteOnboarding = isPlainObject(invite?.onboarding)
+        ? invite.onboarding
+        : { enabled: false, mode: "none" };
+      patch.onboarding = this._onboardingFromCoachInvite(inviteOnboarding, now);
+    }
+
+    const updated = await this.updateById(user._id || user.id || userId, patch);
+    const acceptedInvite = await this._acceptInviteById(invite._id, updated?._id || updated?.id);
+    const redirect = this._clientInvitationNextPath(updated);
+
+    if (typeof this.invitedModel.findByEmail === "function") {
+      const sameEmail = await this.invitedModel.findByEmail(user.email);
+      await Promise.all((sameEmail || [])
+        .filter((other) => (
+          other &&
+          !this._sameInvitationId(other, invite) &&
+          String(other.status || "pending") === "pending" &&
+          this._isCoachClientInvite(other)
+        ))
+        .map((other) => this.invitedModel.updateById(other._id, {
+          status: "declined",
+          declinedAt: now,
+          declinedReason: "accepted_other_coach_invitation",
+          updatedAt: now,
+        })));
+    }
+
+    return {
+      user: updated,
+      invitation: this._publicCoachClientInvitation(acceptedInvite || invite, acceptance.coach),
+      coach: acceptance.coach,
+      ...redirect,
+    };
+  };
+
+  clientDeclineCoachInvitation = async ({ userId, invitationId }) => {
+    const user = await this.getById(userId);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(user)) throw new Error("USER_NOT_CLIENT");
+
+    const invite = await this._getPendingCoachClientInvitationForUser(user, invitationId);
+    const updatedInvite = await this.invitedModel.updateById(invite._id, {
+      status: "declined",
+      declinedAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    return {
+      user,
+      invitation: this._publicCoachClientInvitation(updatedInvite || invite),
+    };
+  };
+
+  clientDismissCoachNotice = async ({ userId }) => {
+    const user = await this.getById(userId);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(user)) throw new Error("USER_NOT_CLIENT");
+
+    const notice = user?.clientCoachNotice;
+    if (!notice) return { user };
+
+    const updated = await this.updateById(user._id || user.id || userId, {
+      clientCoachNotice: {
+        ...notice,
+        status: "read",
+        dismissedAt: new Date(),
+      },
+      updatedAt: new Date(),
+    });
+
+    return { user: updated };
+  };
+
+  clientLeaveCoach = async ({ userId }) => {
+    const user = await this.getById(userId);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(user)) throw new Error("USER_NOT_CLIENT");
+
+    const coachId = idToString(user?.coach?.entrenadorId);
+    if (!coachId) throw new Error("CLIENT_HAS_NO_COACH");
+
+    const source = String(user?.coach?.source || "").toLowerCase();
+    if (source !== "coach_invite") {
+      throw new Error("COACH_UNLINK_REQUIRES_ADMIN");
+    }
+
+    const updated = await this.updateById(user._id || user.id || userId, {
+      coach: {
+        ...(user?.coach || {}),
+        entrenadorId: null,
+        assignedAt: null,
+        assignedByAdminId: null,
+        assignedByCoachId: null,
+        source: null,
+        endedAt: new Date(),
+        endedBy: "client",
+      },
+      clientCoachNotice: null,
+      coachChangeRequest: null,
+      updatedAt: new Date(),
+    });
+
+    return {
+      user: updated,
+      status: "unassigned",
+    };
+  };
+
+  clientRequestCoachChange = async ({ userId, reason = "" }) => {
+    const user = await this.getById(userId);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(user)) throw new Error("USER_NOT_CLIENT");
+
+    const coachId = idToString(user?.coach?.entrenadorId);
+    if (!coachId) throw new Error("CLIENT_HAS_NO_COACH");
+
+    const source = String(user?.coach?.source || "").toLowerCase();
+    if (source !== "admin") {
+      throw new Error("COACH_CHANGE_REQUEST_NOT_REQUIRED");
+    }
+
+    const now = new Date();
+    const request = {
+      type: "coach_change_or_unlink",
+      status: "pending",
+      coachId,
+      source: "admin_assignment",
+      reason: cleanString(reason || "", 500),
+      requestedAt: user?.coachChangeRequest?.requestedAt || now,
+      updatedAt: now,
+    };
+
+    const updated = await this.updateById(user._id || user.id || userId, {
+      coachChangeRequest: request,
+      updatedAt: now,
+    });
+
+    return {
+      user: updated,
+      request,
+      status: "requested",
+    };
   };
 
   // =========================
@@ -2590,15 +3526,19 @@ class ServicioUsuarios {
       }
     }
 
+    const now = new Date();
+
     return await this.updateById(clientId, {
       coach: {
         ...(client?.coach || {}),
-        entrenadorId: toMongoIdOrString(coach._id),
-        assignedAt: new Date(),
+        entrenadorId: toMongoIdOrString(coach._id || coach.id || coachId),
+        assignedAt: now,
         assignedByAdminId: adminId,
         source: "admin",
       },
-      updatedAt: new Date(),
+      clientCoachNotice: this._adminCoachAssignedNotice({ coach, adminId, now }),
+      coachChangeRequest: null,
+      updatedAt: now,
     });
   };
 
@@ -2615,6 +3555,8 @@ class ServicioUsuarios {
         assignedByAdminId: adminId,
         source: null,
       },
+      clientCoachNotice: null,
+      coachChangeRequest: null,
       updatedAt: new Date(),
     });
   };
@@ -2693,7 +3635,9 @@ class ServicioUsuarios {
     const featureKey = featureKeyForMode(mode);
     const sectionFeatures = effective?.features?.[section] || {};
 
-    if (effective?.isTrialExpired || !sectionFeatures?.[featureKey]) {
+    const allowedByEquivalentMenuFeature = section === "menus" && featureKey === "manualBuilder" && sectionFeatures?.ownTemplates;
+
+    if (effective?.isTrialExpired || (!sectionFeatures?.[featureKey] && !allowedByEquivalentMenuFeature)) {
       throw new Error("COACH_FEATURE_NOT_ALLOWED");
     }
   }
@@ -2777,11 +3721,32 @@ class ServicioUsuarios {
       updatedByCoachId: toMongoIdOrString(coach._id || coach.id || coachId),
     };
 
-    const updated = await this.updateById(clientId, {
+    const patch = {
       metasActuales: nextMetas,
       goal: nextGoal,
       updatedAt: now,
-    });
+    };
+
+    const weeklyPlan = isPlainObject(incoming?.weeklyPlan) ? incoming.weeklyPlan : {};
+    const weeklyPlanPatch = {};
+    if (isPlainObject(weeklyPlan?.caloriesByDay)) weeklyPlanPatch.caloriesByDay = weeklyPlan.caloriesByDay;
+    if (isPlainObject(weeklyPlan?.macrosByDay)) weeklyPlanPatch.macrosByDay = weeklyPlan.macrosByDay;
+    if (Object.keys(weeklyPlanPatch).length) {
+      const currentMenu = client?.menu || {};
+      patch.menu = {
+        ...currentMenu,
+        weeklyPlan: {
+          ...(currentMenu?.weeklyPlan || {}),
+          ...weeklyPlanPatch,
+          generatedBy: "coach",
+          updatedAt: now,
+        },
+        updatedAt: now,
+        updatedByCoachId: toMongoIdOrString(coach._id || coach.id || coachId),
+      };
+    }
+
+    const updated = await this.updateById(clientId, patch);
 
     return { coach, client: updated };
   };
@@ -2925,6 +3890,299 @@ class ServicioUsuarios {
     });
 
     return { coach, client: updated };
+  };
+
+  coachUpdateClientProgress = async ({ coachId, clientId, payload = {} }) => {
+    const { coach, client } = await this._getCoachClientPair({ coachId, clientId });
+    const now = new Date();
+    const incoming = isPlainObject(payload?.progress) ? payload.progress : payload;
+    const currentProgress = isPlainObject(client?.progress) ? client.progress : {};
+    const currentCheckins = Array.isArray(currentProgress?.checkins) ? currentProgress.checkins : [];
+
+    let nextCheckins = currentCheckins.map((checkin) => normalizeProgressCheckin(checkin));
+
+    if (isPlainObject(incoming?.checkin)) {
+      const normalized = normalizeProgressCheckin(incoming.checkin);
+      const existingIndex = nextCheckins.findIndex((item) => item.id === normalized.id);
+      if (existingIndex >= 0) {
+        nextCheckins[existingIndex] = {
+          ...nextCheckins[existingIndex],
+          ...normalized,
+          createdAt: nextCheckins[existingIndex].createdAt,
+          updatedAt: now,
+        };
+      } else {
+        nextCheckins.push(normalized);
+      }
+    }
+
+    if (incoming?.deleteCheckinId !== undefined) {
+      const deleteId = cleanString(incoming.deleteCheckinId, 80);
+      nextCheckins = nextCheckins.filter((item) => item.id !== deleteId);
+    }
+
+    nextCheckins = sortProgressCheckins(nextCheckins).slice(-260);
+    const statsSummary = summarizeProgress(nextCheckins);
+    const latestWeight = statsSummary.pesoActualKg;
+
+    const patch = {
+      progress: {
+        ...currentProgress,
+        checkins: nextCheckins,
+        updatedAt: now,
+        updatedByCoachId: toMongoIdOrString(coach._id || coach.id || coachId),
+      },
+      stats: {
+        ...(client?.stats || {}),
+        ...statsSummary,
+      },
+      updatedAt: now,
+    };
+
+    if (latestWeight !== null && latestWeight !== undefined) {
+      patch.antropometriaActual = {
+        ...(client?.antropometriaActual || {}),
+        pesoKg: latestWeight,
+        updatedAt: now,
+      };
+    }
+
+    const updated = await this.updateById(clientId, patch);
+    return { coach, client: updated };
+  };
+
+  getMyMenuTrackingWeek = async (actor, query = {}) => {
+    const userId = actor?.id || actor?._id;
+    if (!userId) throw new Error("NO_AUTENTICADO");
+
+    const user = await this.getById(userId);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(user)) throw new Error("USER_NOT_CLIENT");
+
+    const start = mondayOfWeek(query.start || query.date || new Date().toISOString().slice(0, 10));
+    const end = addDaysIso(start, 6);
+    const docs = await this.menuTrackingModel.listByUserDateRange(userId, start, end);
+    const trackingByDate = new Map((docs || []).map((doc) => [String(doc.date), doc]));
+    const nutritionWeek = resolveClientNutritionWeek(user);
+    const assignments = normalizeAssignedMenusByDay(user?.menu?.weeklyPlan?.assignedMenusByDay || {});
+
+    const days = WEEKLY_MENU_DAY_META.map((day, index) => {
+      const date = addDaysIso(start, index);
+      const assignment = assignments[day.key] || null;
+      const primary = assignedMenuPublic(assignment?.primaryMenu || assignment || null);
+      const alternatives = Array.isArray(assignment?.alternatives)
+        ? assignment.alternatives.map(assignedMenuPublic).filter(Boolean).slice(0, 10)
+        : [];
+      const menuTotals = primary?.menuSnapshot?.totals || { kcal: 0, proteina: 0, carbs: 0, grasas: 0 };
+      const target = nutritionWeek.targets[day.key] || null;
+      const kcalTarget = hasNumber(target?.kcal) ? Number(target.kcal) : 0;
+      const proteinTarget = hasNumber(target?.p) ? Number(target.p) : 0;
+      const kcalDiff = roundTrackingNumber((menuTotals.kcal || 0) - kcalTarget);
+      const proteinDiff = roundTrackingNumber((menuTotals.proteina || 0) - proteinTarget);
+
+      return {
+        date,
+        dayKey: day.key,
+        dayLabel: day.label,
+        target,
+        assignment: {
+          primaryMenu: primary,
+          alternatives,
+        },
+        menuTotals,
+        compatibility: {
+          kcalDiff,
+          proteinDiff,
+          kcalPercent: kcalTarget > 0 ? Math.round(((menuTotals.kcal || 0) / kcalTarget) * 100) : 0,
+        },
+        tracking: trackingPublic(trackingByDate.get(date)),
+      };
+    });
+
+    const registered = days.filter((day) => day.tracking?.status && day.tracking.status !== "pending");
+    const adherenceValues = registered
+      .map((day) => Number(day.tracking?.adherencePercent))
+      .filter(Number.isFinite);
+    const countStatus = (status) => days.filter((day) => day.tracking?.status === status).length;
+
+    return {
+      start,
+      end,
+      coach: user?.coach?.entrenadorId
+        ? {
+            id: idToString(user.coach.entrenadorId),
+            source: user.coach.source || null,
+          }
+        : null,
+      nutrition: nutritionWeek,
+      permissions: clientMenuTrackingPermissions(user),
+      days,
+      summary: {
+        registeredDays: registered.length,
+        completedDays: countStatus("completed"),
+        inProgressDays: countStatus("in_progress"),
+        partialDays: countStatus("partial"),
+        missedDays: countStatus("missed"),
+        exceededDays: countStatus("exceeded"),
+        averageAdherence: adherenceValues.length
+          ? Math.round(adherenceValues.reduce((sum, value) => sum + value, 0) / adherenceValues.length)
+          : null,
+      },
+    };
+  };
+
+  listMyMenuTracking = async (actor, query = {}) => {
+    const userId = actor?.id || actor?._id;
+    if (!userId) throw new Error("NO_AUTENTICADO");
+    const from = normalizeMenuTrackingDate(query.from || addDaysIso(new Date().toISOString().slice(0, 10), -30));
+    const to = normalizeMenuTrackingDate(query.to || new Date().toISOString().slice(0, 10));
+    const docs = await this.menuTrackingModel.listByUserDateRange(userId, from, to);
+    return {
+      from,
+      to,
+      records: (docs || []).map((doc) => ({
+        id: idToString(doc._id || doc.id),
+        date: doc.date,
+        dayKey: doc.dayKey,
+        target: doc.target || null,
+        menuTotals: doc.menuTotals || null,
+        menuSnapshotSummary: doc.menuSnapshotSummary || null,
+        tracking: trackingPublic(doc),
+      })),
+    };
+  };
+
+  upsertMyMenuTrackingDay = async (actor, payload = {}) => {
+    const userId = actor?.id || actor?._id;
+    if (!userId) throw new Error("NO_AUTENTICADO");
+
+    const user = await this.getById(userId);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(user)) throw new Error("USER_NOT_CLIENT");
+
+    const date = normalizeMenuTrackingDate(payload.date);
+    const dayKey = getWeekDayMeta(payload.dayKey)?.key || dayKeyFromDate(date);
+    const requestedStatus = MENU_TRACKING_STATUS.has(String(payload.status || "")) ? String(payload.status) : "pending";
+
+    const nutritionWeek = resolveClientNutritionWeek(user);
+    const target = nutritionWeek.targets[dayKey] || null;
+    const assignments = normalizeAssignedMenusByDay(user?.menu?.weeklyPlan?.assignedMenusByDay || {});
+    const assignment = assignments[dayKey] || null;
+    const primary = assignment?.primaryMenu || assignment || null;
+    const alternatives = Array.isArray(assignment?.alternatives) ? assignment.alternatives : [];
+    const selectedIndex = hasNumber(payload?.selectedAlternative?.index) ? Number(payload.selectedAlternative.index) : null;
+    const selectedAlternative = selectedIndex !== null && alternatives[selectedIndex]
+      ? alternatives[selectedIndex]
+      : null;
+    const selectedMenu = selectedAlternative || primary;
+    const selectedSnapshot = selectedMenu?.menuSnapshot || {};
+    const totals = menuSnapshotTotals(selectedSnapshot);
+    const totalMealsCount = Number(selectedSnapshot?.mealsCount || selectedSnapshot?.meals?.length || 0) || 0;
+
+    const completedMenuMeals = requestedStatus === "missed"
+      ? []
+      : buildCompletedMenuMealsFromPayload(payload, selectedSnapshot, requestedStatus);
+    const completedMealsCount = completedMenuMeals.length;
+    const manualEntries = sanitizeTrackingEntries(payload.manualEntries, "manual_food");
+    const generatedRemainingMeals = sanitizeTrackingEntries(payload.generatedRemainingMeals, "auto_generated_remaining");
+    const targetTotals = targetToTrackingTotals(target || {});
+    const consumedTotals = addTrackingTotals(
+      sumTrackingEntryTotals(completedMenuMeals),
+      addTrackingTotals(sumTrackingEntryTotals(manualEntries), sumTrackingEntryTotals(generatedRemainingMeals))
+    );
+    const remainingTotals = subtractTrackingTotals(targetTotals, consumedTotals);
+    const percentFromStatus =
+      requestedStatus === "completed" ? 100 :
+      requestedStatus === "missed" ? 0 :
+      requestedStatus === "pending" ? null :
+      null;
+    const incomingPercent = hasNumber(payload.adherencePercent)
+      ? Math.max(0, Math.min(100, Number(payload.adherencePercent)))
+      : percentFromStatus;
+    const adherencePercent = incomingPercent === null
+      ? calculateDietAdherence(consumedTotals, targetTotals)
+      : roundTrackingNumber(incomingPercent);
+    const status = ["completed", "missed", "partial", "exceeded"].includes(requestedStatus) && payload.status
+      ? requestedStatus
+      : deriveDailyTrackingStatus(consumedTotals, targetTotals, requestedStatus);
+
+    const doc = await this.menuTrackingModel.upsertDay({
+      clientId: userId,
+      coachId: user?.coach?.entrenadorId || null,
+      date,
+      dayKey,
+      weekStart: mondayOfWeek(date),
+      weekEnd: addDaysIso(mondayOfWeek(date), 6),
+      menuId: selectedMenu?.menuId || selectedSnapshot?.baseId || selectedSnapshot?.id || null,
+      menuSnapshotId: selectedSnapshot?.baseId || selectedSnapshot?.id || null,
+      menuSnapshotSummary: selectedMenu
+        ? {
+            name: selectedSnapshot?.name || "Menu asignado",
+            mealsCount: totalMealsCount,
+            source: selectedMenu.source || (selectedAlternative ? "alternative" : "base"),
+          }
+        : null,
+      target: target
+        ? {
+            kcal: target.kcal ?? null,
+            proteina: target.p ?? null,
+            carbs: target.c ?? null,
+            grasas: target.g ?? null,
+            source: target.statusLabel || null,
+          }
+        : null,
+      menuTotals: totals,
+      completedMenuMeals,
+      manualEntries,
+      generatedRemainingMeals,
+      consumedTotals,
+      remainingTotals,
+      nutrition: {
+        status,
+        adherencePercent,
+        completedMealsCount,
+        totalMealsCount,
+        reason: cleanString(payload.reason || "", 120),
+        note: cleanString(payload.note || "", 1000),
+        selectedAlternative: selectedAlternative
+          ? {
+              index: selectedIndex,
+              menuId: idToString(selectedAlternative.menuId),
+              name: selectedSnapshot?.name || "Alternativa",
+              totals,
+            }
+        : null,
+      },
+    });
+
+    const recentDocs = await this.menuTrackingModel.listByUserDateRange(userId, addDaysIso(date, -6), date);
+    const recentValues = (recentDocs || [])
+      .map((item) => Number(item?.nutrition?.adherencePercent))
+      .filter(Number.isFinite);
+    const recentAverage = recentValues.length
+      ? Math.round(recentValues.reduce((sum, value) => sum + value, 0) / recentValues.length)
+      : null;
+    await this._updateById(userId, {
+      stats: {
+        ...(user?.stats || {}),
+        adherencia7dPct: recentAverage,
+        comidasRegistradas7d: recentValues.length,
+      },
+      updatedAt: new Date(),
+    });
+
+    return {
+      ok: true,
+      record: {
+        id: idToString(doc?._id || doc?.id),
+        date: doc?.date,
+        dayKey: doc?.dayKey,
+        target: doc?.target || null,
+        menuTotals: doc?.menuTotals || null,
+        menuSnapshotSummary: doc?.menuSnapshotSummary || null,
+        tracking: trackingPublic(doc),
+      },
+    };
   };
 
   // =========================

@@ -102,6 +102,63 @@ class RouterUsuarios {
       denyWriteWhenReadOnlyImpersonation,
       this.controladorUsuarios.actualizarOnboardingCliente
     );
+    this.router.get(
+      "/me/invitations/pending",
+      authMiddleware,
+      this.controladorUsuarios.listMyPendingCoachInvitations
+    );
+    this.router.post(
+      "/me/invitations/:invitationId/accept",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.acceptMyCoachInvitation
+    );
+    this.router.post(
+      "/me/invitations/:invitationId/decline",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.declineMyCoachInvitation
+    );
+    this.router.post(
+      "/me/coach-notice/dismiss",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.dismissMyCoachNotice
+    );
+    this.router.post(
+      "/me/coach-relation/leave",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.leaveMyCoach
+    );
+    this.router.post(
+      "/me/coach-relation/request-change",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.requestMyCoachChange
+    );
+    this.router.get(
+      "/me/menu-tracking",
+      authMiddleware,
+      this.controladorUsuarios.listMyMenuTracking
+    );
+    this.router.get(
+      "/me/menu-tracking/week",
+      authMiddleware,
+      this.controladorUsuarios.getMyMenuTrackingWeek
+    );
+    this.router.post(
+      "/me/menu-tracking/day",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.upsertMyMenuTrackingDay
+    );
+    this.router.patch(
+      "/me/menu-tracking/day/:date",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.patchMyMenuTrackingDay
+    );
 
     const users = express.Router();
 
@@ -167,6 +224,13 @@ class RouterUsuarios {
       requireRole("coach"),
       denyWriteWhenReadOnlyImpersonation,
       this.controladorUsuarios.coachUpdateClientRoutine
+    );
+    users.patch(
+      "/me/coach-clients/:clientId/progress",
+      authMiddleware,
+      requireRole("coach"),
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.coachUpdateClientProgress
     );
     users.patch("/me", authMiddleware, denyWriteWhenReadOnlyImpersonation, this.controladorUsuarios.actualizarPerfil);
     users.patch(
