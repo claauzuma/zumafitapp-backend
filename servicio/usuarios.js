@@ -361,8 +361,8 @@ function normalizeWeeklyMenuItem(item = {}) {
     id: cleanString(item.id || item._id, 80) || null,
     alimentoId: item.alimentoId ? toMongoIdOrString(item.alimentoId) : null,
     nombreSnapshot: cleanString(item.nombreSnapshot || item.nombre || item.name, 160) || "Alimento",
-    cantidad: numberOrNull(item.cantidad, { min: 0, max: 10000 }),
-    unidad: cleanString(item.unidad || "g", 24) || "g",
+    cantidad: numberOrNull(item.cantidad ?? item.quantity, { min: 0, max: 10000 }),
+    unidad: cleanString(item.unidad || item.unit || "g", 24) || "g",
     kcal: numberOrNull(item.kcal, { min: 0, max: 20000 }),
     proteina: numberOrNull(item.proteina ?? item.protein, { min: 0, max: 1000 }),
     carbs: numberOrNull(item.carbs, { min: 0, max: 2000 }),
@@ -371,44 +371,107 @@ function normalizeWeeklyMenuItem(item = {}) {
   };
 }
 
+function weeklyMenuNumber(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function weeklyMenuHasTotals(totals = {}) {
+  return Boolean(
+    weeklyMenuNumber(totals.kcal, 0) ||
+    weeklyMenuNumber(totals.proteina ?? totals.protein, 0) ||
+    weeklyMenuNumber(totals.carbs, 0) ||
+    weeklyMenuNumber(totals.grasas ?? totals.fat, 0)
+  );
+}
+
+function weeklyMenuItemTotals(items = []) {
+  return items.reduce(
+    (acc, item) => ({
+      kcal: acc.kcal + weeklyMenuNumber(item.kcal, 0),
+      proteina: acc.proteina + weeklyMenuNumber(item.proteina ?? item.protein, 0),
+      carbs: acc.carbs + weeklyMenuNumber(item.carbs, 0),
+      grasas: acc.grasas + weeklyMenuNumber(item.grasas ?? item.fat, 0),
+    }),
+    { kcal: 0, proteina: 0, carbs: 0, grasas: 0 }
+  );
+}
+
+function weeklyMenuTotalsPayload(totals = {}) {
+  return {
+    kcal: numberOrNull(totals.kcal, { min: 0, max: 20000 }),
+    proteina: numberOrNull(totals.proteina ?? totals.protein, { min: 0, max: 1000 }),
+    carbs: numberOrNull(totals.carbs, { min: 0, max: 2000 }),
+    grasas: numberOrNull(totals.grasas ?? totals.fat, { min: 0, max: 1000 }),
+  };
+}
+
 function normalizeWeeklyMenuMeal(meal = {}, index = 0) {
-  const items = Array.isArray(meal.items) ? meal.items : [];
-  const totals = isPlainObject(meal.totales || meal.totals) ? meal.totales || meal.totals : {};
+  const rawItems = Array.isArray(meal.items)
+    ? meal.items
+    : Array.isArray(meal.foods)
+      ? meal.foods
+      : Array.isArray(meal.alimentos)
+        ? meal.alimentos
+        : [];
+  const items = rawItems.slice(0, 80).map(normalizeWeeklyMenuItem);
+  const explicitTotals = isPlainObject(meal.totales || meal.totals) ? meal.totales || meal.totals : meal;
+  const itemTotals = weeklyMenuItemTotals(items);
+  const totals = weeklyMenuHasTotals(explicitTotals) ? explicitTotals : itemTotals;
   return {
     id: cleanString(meal.id || meal._id, 80) || `meal-${index + 1}`,
     nombre: cleanString(meal.nombre || meal.name, 140) || `Comida ${index + 1}`,
     orden: numberOrNull(meal.orden ?? meal.order, { min: 1, max: 20 }) || index + 1,
     tipoComida: cleanString(meal.tipoComida || meal.type, 60) || "otro",
-    totales: {
-      kcal: numberOrNull(totals.kcal, { min: 0, max: 20000 }),
-      proteina: numberOrNull(totals.proteina ?? totals.protein, { min: 0, max: 1000 }),
-      carbs: numberOrNull(totals.carbs, { min: 0, max: 2000 }),
-      grasas: numberOrNull(totals.grasas ?? totals.fat, { min: 0, max: 1000 }),
-    },
-    items: items.slice(0, 80).map(normalizeWeeklyMenuItem),
+    totales: weeklyMenuTotalsPayload(totals),
+    items,
   };
 }
 
 function normalizeWeeklyMenuSnapshot(snapshot = {}) {
-  const meals = Array.isArray(snapshot.comidas)
-    ? snapshot.comidas
-    : Array.isArray(snapshot.meals)
-      ? snapshot.meals
-      : [];
+  const comidas = Array.isArray(snapshot.comidas) ? snapshot.comidas : null;
+  const mealsSource = Array.isArray(snapshot.meals) ? snapshot.meals : null;
+  const meals = comidas?.length ? comidas : mealsSource?.length ? mealsSource : comidas || mealsSource || [];
+  const normalizedMeals = meals.slice(0, 12).map(normalizeWeeklyMenuMeal);
   const macros = isPlainObject(snapshot.macrosObjetivo || snapshot.macros)
     ? snapshot.macrosObjetivo || snapshot.macros
     : {};
+  const explicitTotals = {
+    kcal: snapshot.kcal ?? snapshot.kcalObjetivo ?? snapshot.calories ?? snapshot.totals?.kcal ?? snapshot.totales?.kcal,
+    proteina:
+      snapshot.protein ??
+      snapshot.proteina ??
+      macros.proteina ??
+      macros.protein ??
+      snapshot.totals?.proteina ??
+      snapshot.totals?.protein ??
+      snapshot.totales?.proteina ??
+      snapshot.totales?.protein,
+    carbs: snapshot.carbs ?? macros.carbs ?? macros.carbohidratos ?? snapshot.totals?.carbs ?? snapshot.totales?.carbs,
+    grasas:
+      snapshot.fat ??
+      snapshot.grasas ??
+      macros.grasas ??
+      macros.fat ??
+      snapshot.totals?.grasas ??
+      snapshot.totals?.fat ??
+      snapshot.totales?.grasas ??
+      snapshot.totales?.fat,
+  };
+  const mealsTotals = weeklyMenuItemTotals(normalizedMeals.map((meal) => meal.totales || {}));
+  const totals = weeklyMenuHasTotals(explicitTotals) ? explicitTotals : mealsTotals;
   return {
     id: cleanString(snapshot.id || snapshot._id || snapshot.baseId || snapshot.menuBaseId, 80) || null,
     baseId: cleanString(snapshot.baseId || snapshot.menuBaseId || snapshot.id || snapshot._id, 80) || null,
     name: cleanString(snapshot.name || snapshot.nombre, 180) || "Menu sin nombre",
     description: cleanString(snapshot.description || snapshot.descripcion, 1200),
-    kcal: numberOrNull(snapshot.kcal ?? snapshot.kcalObjetivo ?? snapshot.calories, { min: 0, max: 20000 }),
-    protein: numberOrNull(snapshot.protein ?? macros.proteina ?? macros.protein, { min: 0, max: 1000 }),
-    carbs: numberOrNull(snapshot.carbs ?? macros.carbs ?? macros.carbohidratos, { min: 0, max: 2000 }),
-    fat: numberOrNull(snapshot.fat ?? snapshot.grasas ?? macros.grasas ?? macros.fat, { min: 0, max: 1000 }),
-    mealsCount: numberOrNull(snapshot.mealsCount ?? snapshot.cantidadComidas, { min: 0, max: 12 }) || meals.length,
-    meals: meals.slice(0, 12).map(normalizeWeeklyMenuMeal),
+    kcal: numberOrNull(totals.kcal, { min: 0, max: 20000 }),
+    protein: numberOrNull(totals.proteina ?? totals.protein, { min: 0, max: 1000 }),
+    carbs: numberOrNull(totals.carbs, { min: 0, max: 2000 }),
+    fat: numberOrNull(totals.grasas ?? totals.fat, { min: 0, max: 1000 }),
+    totals: weeklyMenuTotalsPayload(totals),
+    mealsCount: numberOrNull(snapshot.mealsCount ?? snapshot.cantidadComidas, { min: 0, max: 12 }) || normalizedMeals.length,
+    meals: normalizedMeals,
   };
 }
 
