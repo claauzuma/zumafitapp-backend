@@ -73,6 +73,8 @@ class ModelMongoDBClientMenuTracking {
       completedMenuMeals: Array.isArray(doc.completedMenuMeals) ? doc.completedMenuMeals : [],
       manualEntries: Array.isArray(doc.manualEntries) ? doc.manualEntries : [],
       generatedRemainingMeals: Array.isArray(doc.generatedRemainingMeals) ? doc.generatedRemainingMeals : [],
+      mealReplacements: Array.isArray(doc.mealReplacements) ? doc.mealReplacements : [],
+      foodReplacements: Array.isArray(doc.foodReplacements) ? doc.foodReplacements : [],
       consumedTotals: doc.consumedTotals || null,
       remainingTotals: doc.remainingTotals || null,
       nutrition: doc.nutrition || {},

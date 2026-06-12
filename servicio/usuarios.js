@@ -996,6 +996,8 @@ function trackingPublic(doc = null) {
       completedMenuMeals: [],
       manualEntries: [],
       generatedRemainingMeals: [],
+      mealReplacements: [],
+      foodReplacements: [],
       consumedTotals: emptyTrackingTotals(),
       remainingTotals: null,
       updatedAt: null,
@@ -1018,6 +1020,8 @@ function trackingPublic(doc = null) {
     completedMenuMeals,
     manualEntries: Array.isArray(doc.manualEntries) ? doc.manualEntries : [],
     generatedRemainingMeals: Array.isArray(doc.generatedRemainingMeals) ? doc.generatedRemainingMeals : [],
+    mealReplacements: Array.isArray(doc.mealReplacements) ? doc.mealReplacements : [],
+    foodReplacements: Array.isArray(doc.foodReplacements) ? doc.foodReplacements : [],
     consumedTotals: roundTrackingTotals(doc.consumedTotals || {}),
     remainingTotals: doc.remainingTotals ? roundTrackingTotals(doc.remainingTotals) : null,
     updatedAt: doc.updatedAt || null,
@@ -4148,10 +4152,15 @@ class ServicioUsuarios {
     const completedMealsCount = completedMenuMeals.length;
     const manualEntries = sanitizeTrackingEntries(payload.manualEntries, "manual_food");
     const generatedRemainingMeals = sanitizeTrackingEntries(payload.generatedRemainingMeals, "auto_generated_remaining");
+    const mealReplacements = sanitizeTrackingEntries(payload.mealReplacements, "client_meal_replacement");
+    const foodReplacements = sanitizeTrackingEntries(payload.foodReplacements, "client_food_replacement");
     const targetTotals = targetToTrackingTotals(target || {});
     const consumedTotals = addTrackingTotals(
       sumTrackingEntryTotals(completedMenuMeals),
-      addTrackingTotals(sumTrackingEntryTotals(manualEntries), sumTrackingEntryTotals(generatedRemainingMeals))
+      addTrackingTotals(
+        addTrackingTotals(sumTrackingEntryTotals(manualEntries), sumTrackingEntryTotals(generatedRemainingMeals)),
+        addTrackingTotals(sumTrackingEntryTotals(mealReplacements), sumTrackingEntryTotals(foodReplacements))
+      )
     );
     const remainingTotals = subtractTrackingTotals(targetTotals, consumedTotals);
     const percentFromStatus =
@@ -4198,6 +4207,8 @@ class ServicioUsuarios {
       completedMenuMeals,
       manualEntries,
       generatedRemainingMeals,
+      mealReplacements,
+      foodReplacements,
       consumedTotals,
       remainingTotals,
       nutrition: {
