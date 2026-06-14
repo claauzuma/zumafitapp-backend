@@ -54,6 +54,30 @@ function foodCategoryText(food = {}) {
   return cleanText(food.Fuente || food.fuente || food.Categoria || food.categoria || food.Categoría || food.grupo || food.Grupo || "");
 }
 
+function extendedFoodSearchText(food = {}) {
+  return cleanText([
+    foodSearchText(food),
+    food.categoriaZumaFit,
+    food.subcategoria,
+    food.subcategoriaZumaFit,
+    food.grupoOriginal,
+    ...(Array.isArray(food.tags) ? food.tags : []),
+    food.imagen?.exactaKey,
+    food.imagen?.genericaKey,
+    food.imagenExactaKey,
+    food.imagenGenericaKey,
+  ].filter(Boolean).join(" "));
+}
+
+function extendedFoodCategoryText(food = {}) {
+  return cleanText(
+    foodCategoryText(food) ||
+    food.categoriaZumaFit ||
+    food.grupoOriginal ||
+    ""
+  );
+}
+
 function searchScore(food = {}, search = "", index = 0) {
   const name = foodNameText(food);
   const text = foodSearchText(food);
@@ -78,14 +102,14 @@ function filterAlimentos(alimentos = [], filters = {}) {
 
   if (search) {
     list = list
-      .map((food, index) => ({ food, index, text: foodSearchText(food) }))
+      .map((food, index) => ({ food, index, text: extendedFoodSearchText(food) }))
       .filter((item) => item.text.includes(search))
       .sort((a, b) => searchScore(a.food, search, a.index) - searchScore(b.food, search, b.index))
       .map((item) => item.food);
   }
 
   if (category && category !== "todos") {
-    list = list.filter((food) => foodCategoryText(food) === category);
+    list = list.filter((food) => extendedFoodCategoryText(food) === category);
   }
 
   return limit ? list.slice(0, limit) : list;
@@ -527,10 +551,18 @@ class ServicioAlimentos {
       variantSeed: payload.options?.variantSeed,
     });
 
+    const foodByName = new Map(
+      [...allFoods, ...alimentosBase]
+        .map((food) => [cleanText(food.nombre || food.name || food.Alimentos), food])
+        .filter(([name]) => name)
+    );
     const fixedNames = selectedNameSet(normalizedFixed);
     const selectedPendingNames = selectedNameSet(normalizedPending);
     const foods = [...(result.proteicos || []), ...(result.carbohidratos || []), ...(result.grasas || [])].map((food) => {
       const key = cleanText(food.nombre);
+      const sourceFood = foodByName.get(key) || {};
+      const sourceImage = sourceFood.imagen && typeof sourceFood.imagen === "object" ? sourceFood.imagen : {};
+      const imageUrl = sourceImage.url || sourceFood.imagenUrl || sourceFood.imagenUrlExacta || sourceFood.imagenUrlGenerica || "";
       const source = fixedNames.has(key)
         ? "fixed"
         : addedCandidateNames.has(key)
@@ -554,6 +586,9 @@ class ServicioAlimentos {
         carbs: food.carbohidratos,
         grasas: food.grasas,
         fat: food.grasas,
+        categoria: sourceFood.categoria || sourceFood.categoriaZumaFit || sourceFood.Fuente || food.categoria || "",
+        imagen: sourceFood.imagen || null,
+        imagenUrl: imageUrl,
         maxGramos: food.maxGramos,
         fixedQuantity: source === "fixed",
         quantityPending: false,

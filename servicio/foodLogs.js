@@ -105,18 +105,19 @@ function inferMacroBasis(unit = "", raw = {}) {
 function normalizeFoodDoc(raw = {}) {
   const name = raw.Alimentos || raw.alimentos || raw.nombre || raw.name || "Sin nombre";
   const id = idToString(raw._id || raw.id || raw.alimentoId || name);
-  const unitRaw = cleanString(raw.Unidad || raw.unidad || raw.unit, 40);
+  const unitRaw = cleanString(raw.Unidad || raw.unidad || raw.unit || raw.unidadBase, 40);
   const unitLower = unitRaw.toLowerCase();
   const unidad = unitLower.startsWith("gr") || unitLower === "g" ? "g" : unitRaw || "unidad";
-  const kcal = macroNumber(raw.Calorias ?? raw.calorias ?? raw.kcal ?? raw.calories);
-  const proteina = macroNumber(raw.Proteinas ?? raw.proteinas ?? raw.proteina ?? raw.protein);
-  const carbs = macroNumber(raw.Carbohidratos ?? raw.carbohidratos ?? raw.carbs ?? raw.carbohydrates ?? raw.hidratos);
-  const grasas = macroNumber(raw.Grasas ?? raw.grasas ?? raw.fat ?? raw.fats);
+  const kcal = macroNumber(raw.Calorias ?? raw.calorias ?? raw.kcal ?? raw.calories ?? raw.kcalUnidad ?? raw.kcal100);
+  const proteina = macroNumber(raw.Proteinas ?? raw.proteinas ?? raw.proteina ?? raw.protein ?? raw.proteinaUnidad ?? raw.proteina100);
+  const carbs = macroNumber(raw.Carbohidratos ?? raw.carbohidratos ?? raw.carbs ?? raw.carbohydrates ?? raw.hidratos ?? raw.carbohidratosUnidad ?? raw.carbohidratos100);
+  const grasas = macroNumber(raw.Grasas ?? raw.grasas ?? raw.fat ?? raw.fats ?? raw.grasasUnidad ?? raw.grasas100);
   const fuente =
     cleanString(
-      raw.Fuente || raw.fuente || raw.Categoria || raw.categoria || raw["Categoria"] || raw.Grupo || raw.grupo,
+      raw.Fuente || raw.fuente || raw.Categoria || raw.categoria || raw.categoriaZumaFit || raw["Categoria"] || raw.Grupo || raw.grupo,
       120
     ) || inferFoodCategory({ name, kcal, proteina, carbs, grasas });
+  const imagen = normalizeFoodImage(raw, name, fuente);
 
   return {
     id,
@@ -130,7 +131,26 @@ function normalizeFoodDoc(raw = {}) {
     fuente,
     categoria: fuente,
     macroBasis: raw.macroBasis || inferMacroBasis(unidad, raw),
+    imagen,
+    imagenUrl: imagen.url,
     raw,
+  };
+}
+
+function normalizeFoodImage(raw = {}, name = "", categoria = "") {
+  const image = raw?.imagen && typeof raw.imagen === "object" ? raw.imagen : {};
+  const urlExacta = cleanString(image.urlExacta || raw.imagenUrlExacta, 240);
+  const urlGenerica = cleanString(image.urlGenerica || raw.imagenUrlGenerica, 240);
+  const url = cleanString(image.url || raw.imagenUrl || urlExacta || urlGenerica, 240);
+  return {
+    exactaKey: cleanString(image.exactaKey || raw.imagenExactaKey, 120),
+    genericaKey: cleanString(image.genericaKey || raw.imagenGenericaKey, 120),
+    urlExacta,
+    urlGenerica,
+    url,
+    alt: cleanString(image.alt || raw.imagenAlt || name, 180),
+    estado: cleanString(image.estado || raw.imagenEstado, 80),
+    fuente: cleanString(image.fuente || raw.imagenFuente || categoria, 120),
   };
 }
 
@@ -180,6 +200,8 @@ function buildFoodSnapshot(food = {}, cantidad = 100, unidad = food?.unidad || "
     grasas: macros.grasas,
     fuente: cleanString(normalized.fuente || normalized.categoria, 120),
     categoriaSnapshot: cleanString(normalized.categoria || normalized.fuente, 120),
+    imagen: normalized.imagen || null,
+    imagenUrl: normalized.imagenUrl || normalized.imagen?.url || "",
   };
 }
 
@@ -198,6 +220,8 @@ function scaleExistingSnapshot(log = {}, nextCantidad = 0, nextUnidad = "") {
     grasas: roundMacro((log.grasas || 0) * factor),
     fuente: cleanString(log.fuente || log.categoriaSnapshot, 120),
     categoriaSnapshot: cleanString(log.categoriaSnapshot || log.fuente, 120),
+    imagen: log.imagen || null,
+    imagenUrl: log.imagenUrl || log.imagen?.url || "",
   };
 }
 
@@ -242,6 +266,8 @@ function normalizeLog(doc = {}) {
     grasas: macroNumber(doc.grasas),
     fuente: doc.fuente || "",
     categoriaSnapshot: doc.categoriaSnapshot || "",
+    imagen: doc.imagen || null,
+    imagenUrl: doc.imagenUrl || doc.imagen?.url || "",
     notas: doc.notas || "",
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
