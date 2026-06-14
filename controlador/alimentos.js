@@ -8,7 +8,7 @@ class ControladorAlimentos {
     // GET /api/alimentos/
     obtenerAlimentos = async (req, res) => {
         try {
-            const alimentos = await this.servicio.obtenerAlimentos();
+            const alimentos = await this.servicio.obtenerAlimentos(req.query || {});
             res.json(alimentos);
         } catch (error) {
             console.error('Error al obtener alimentos:', error);

@@ -361,11 +361,11 @@ function normalizeWeeklyMenuItem(item = {}) {
     id: cleanString(item.id || item._id, 80) || null,
     alimentoId: item.alimentoId ? toMongoIdOrString(item.alimentoId) : null,
     nombreSnapshot: cleanString(item.nombreSnapshot || item.nombre || item.name, 160) || "Alimento",
-    cantidad: numberOrNull(item.cantidad ?? item.quantity, { min: 0, max: 10000 }),
+    cantidad: numberOrNull(item.cantidad ?? item.quantity ?? item.amount ?? item.gramos ?? item.grams, { min: 0, max: 10000 }),
     unidad: cleanString(item.unidad || item.unit || "g", 24) || "g",
-    kcal: numberOrNull(item.kcal, { min: 0, max: 20000 }),
+    kcal: numberOrNull(item.kcal ?? item.calorias ?? item.calories, { min: 0, max: 20000 }),
     proteina: numberOrNull(item.proteina ?? item.protein, { min: 0, max: 1000 }),
-    carbs: numberOrNull(item.carbs, { min: 0, max: 2000 }),
+    carbs: numberOrNull(item.carbs ?? item.carbohidratos ?? item.carbohydrates, { min: 0, max: 2000 }),
     grasas: numberOrNull(item.grasas ?? item.fat, { min: 0, max: 1000 }),
     categoriaSnapshot: cleanString(item.categoriaSnapshot || item.categoria || item.category, 120),
   };
@@ -378,9 +378,9 @@ function weeklyMenuNumber(value, fallback = 0) {
 
 function weeklyMenuHasTotals(totals = {}) {
   return Boolean(
-    weeklyMenuNumber(totals.kcal, 0) ||
+    weeklyMenuNumber(totals.kcal ?? totals.calorias ?? totals.calories, 0) ||
     weeklyMenuNumber(totals.proteina ?? totals.protein, 0) ||
-    weeklyMenuNumber(totals.carbs, 0) ||
+    weeklyMenuNumber(totals.carbs ?? totals.carbohidratos ?? totals.carbohydrates, 0) ||
     weeklyMenuNumber(totals.grasas ?? totals.fat, 0)
   );
 }
@@ -388,9 +388,9 @@ function weeklyMenuHasTotals(totals = {}) {
 function weeklyMenuItemTotals(items = []) {
   return items.reduce(
     (acc, item) => ({
-      kcal: acc.kcal + weeklyMenuNumber(item.kcal, 0),
+      kcal: acc.kcal + weeklyMenuNumber(item.kcal ?? item.calorias ?? item.calories, 0),
       proteina: acc.proteina + weeklyMenuNumber(item.proteina ?? item.protein, 0),
-      carbs: acc.carbs + weeklyMenuNumber(item.carbs, 0),
+      carbs: acc.carbs + weeklyMenuNumber(item.carbs ?? item.carbohidratos ?? item.carbohydrates, 0),
       grasas: acc.grasas + weeklyMenuNumber(item.grasas ?? item.fat, 0),
     }),
     { kcal: 0, proteina: 0, carbs: 0, grasas: 0 }
@@ -399,9 +399,9 @@ function weeklyMenuItemTotals(items = []) {
 
 function weeklyMenuTotalsPayload(totals = {}) {
   return {
-    kcal: numberOrNull(totals.kcal, { min: 0, max: 20000 }),
+    kcal: numberOrNull(totals.kcal ?? totals.calorias ?? totals.calories, { min: 0, max: 20000 }),
     proteina: numberOrNull(totals.proteina ?? totals.protein, { min: 0, max: 1000 }),
-    carbs: numberOrNull(totals.carbs, { min: 0, max: 2000 }),
+    carbs: numberOrNull(totals.carbs ?? totals.carbohidratos ?? totals.carbohydrates, { min: 0, max: 2000 }),
     grasas: numberOrNull(totals.grasas ?? totals.fat, { min: 0, max: 1000 }),
   };
 }
@@ -808,9 +808,9 @@ function dayKeyFromDate(dateValue) {
 
 function menuSnapshotTotals(snapshot = {}) {
   return {
-    kcal: roundTrackingNumber(snapshot?.kcal, 0),
-    proteina: roundTrackingNumber(snapshot?.protein ?? snapshot?.proteina, 0),
-    carbs: roundTrackingNumber(snapshot?.carbs, 0),
+    kcal: roundTrackingNumber(snapshot?.kcal ?? snapshot?.calorias ?? snapshot?.calories, 0),
+    proteina: roundTrackingNumber(snapshot?.protein ?? snapshot?.proteina ?? snapshot?.proteinas, 0),
+    carbs: roundTrackingNumber(snapshot?.carbs ?? snapshot?.carbohidratos ?? snapshot?.carbohydrates, 0),
     grasas: roundTrackingNumber(snapshot?.fat ?? snapshot?.grasas, 0),
   };
 }
@@ -821,9 +821,9 @@ function emptyTrackingTotals() {
 
 function roundTrackingTotals(totals = {}) {
   return {
-    kcal: roundTrackingNumber(totals.kcal, 0),
-    proteina: roundTrackingNumber(totals.proteina ?? totals.protein, 0),
-    carbs: roundTrackingNumber(totals.carbs, 0),
+    kcal: roundTrackingNumber(totals.kcal ?? totals.calorias ?? totals.calories, 0),
+    proteina: roundTrackingNumber(totals.proteina ?? totals.proteinas ?? totals.protein, 0),
+    carbs: roundTrackingNumber(totals.carbs ?? totals.carbohidratos ?? totals.carbohydrates, 0),
     grasas: roundTrackingNumber(totals.grasas ?? totals.fat, 0),
   };
 }
@@ -865,12 +865,7 @@ function snapshotMealId(meal = {}, index = 0) {
 
 function snapshotMealTotals(meal = {}) {
   const totals = isPlainObject(meal.totales || meal.totals) ? meal.totales || meal.totals : meal;
-  return roundTrackingTotals({
-    kcal: totals.kcal,
-    proteina: totals.proteina ?? totals.protein,
-    carbs: totals.carbs,
-    grasas: totals.grasas ?? totals.fat,
-  });
+  return roundTrackingTotals(totals);
 }
 
 function buildCompletedMenuMealsFromPayload(payload = {}, snapshot = {}, status = "pending") {
@@ -905,26 +900,54 @@ function buildCompletedMenuMealsFromPayload(payload = {}, snapshot = {}, status 
 function sanitizeTrackingEntry(entry = {}, fallbackSource = "manual_food", index = 0) {
   if (!isPlainObject(entry)) return null;
   const source = cleanString(entry.source || fallbackSource, 60) || fallbackSource;
-  const foods = Array.isArray(entry.foods)
-    ? entry.foods.slice(0, 40).map((food, foodIndex) => ({
+  const rawFoods = Array.isArray(entry.foods)
+    ? entry.foods
+    : Array.isArray(entry.items)
+      ? entry.items
+      : [];
+  const foods = rawFoods.slice(0, 40).map((food, foodIndex) => ({
         id: cleanString(food.id || food.alimentoId || `food-${foodIndex + 1}`, 100) || `food-${foodIndex + 1}`,
         name: cleanString(food.name || food.nombre || food.nombreSnapshot, 160) || "Alimento",
         quantity: numberOrNull(food.quantity ?? food.cantidad, { min: 0, max: 10000 }),
         unit: cleanString(food.unit || food.unidad || "g", 24) || "g",
-        kcal: numberOrNull(food.kcal, { min: 0, max: 20000 }),
-        proteina: numberOrNull(food.proteina ?? food.protein, { min: 0, max: 1000 }),
-        carbs: numberOrNull(food.carbs, { min: 0, max: 2000 }),
+        kcal: numberOrNull(food.kcal ?? food.calorias ?? food.calories, { min: 0, max: 20000 }),
+        proteina: numberOrNull(food.proteina ?? food.proteinas ?? food.protein, { min: 0, max: 1000 }),
+        carbs: numberOrNull(food.carbs ?? food.carbohidratos ?? food.carbohydrates, { min: 0, max: 2000 }),
         grasas: numberOrNull(food.grasas ?? food.fat, { min: 0, max: 1000 }),
-      }))
-    : [];
+        source: cleanString(food.source || "", 80),
+      }));
   const totals = roundTrackingTotals(entry.totals || entry);
   return {
     id: cleanString(entry.id || `${source}-${index + 1}`, 100) || `${source}-${index + 1}`,
+    date: entry.date ? cleanString(entry.date, 20) : null,
+    dayKey: entry.dayKey ? cleanString(entry.dayKey, 30) : null,
     name: cleanString(entry.name || entry.nombre, 160) || `Comida ${index + 1}`,
     source,
+    generationRunId: entry.generationRunId ? cleanString(entry.generationRunId, 120) : null,
+    runId: entry.runId ? cleanString(entry.runId, 120) : null,
+    mode: entry.mode ? cleanString(entry.mode, 80) : null,
+    scope: entry.scope ? cleanString(entry.scope, 40) : null,
+    weekStart: entry.weekStart ? cleanString(entry.weekStart, 20) : null,
+    weekEnd: entry.weekEnd ? cleanString(entry.weekEnd, 20) : null,
+    activeFromDate: entry.activeFromDate ? cleanString(entry.activeFromDate, 20) : null,
+    activeUntilDate: entry.activeUntilDate ? cleanString(entry.activeUntilDate, 20) : null,
+    isActiveReplacement: entry.isActiveReplacement === false ? false : true,
+    mealType: entry.mealType ? cleanString(entry.mealType, 60) : null,
+    replacesMealIds: Array.isArray(entry.replacesMealIds)
+      ? entry.replacesMealIds.map((id) => cleanString(id, 100)).filter(Boolean).slice(0, 20)
+      : [],
+    replacesMealTypes: Array.isArray(entry.replacesMealTypes)
+      ? entry.replacesMealTypes.map((type) => cleanString(type, 60)).filter(Boolean).slice(0, 20)
+      : [],
+    replacesMealNames: Array.isArray(entry.replacesMealNames)
+      ? entry.replacesMealNames.map((name) => cleanString(name, 140)).filter(Boolean).slice(0, 20)
+      : [],
     target: entry.target ? roundTrackingTotals(entry.target) : null,
+    items: foods,
     foods,
     totals,
+    createdAt: entry.createdAt ? cleanString(entry.createdAt, 40) : null,
+    updatedAt: entry.updatedAt ? cleanString(entry.updatedAt, 40) : null,
   };
 }
 
@@ -4151,7 +4174,7 @@ class ServicioUsuarios {
       : buildCompletedMenuMealsFromPayload(payload, selectedSnapshot, requestedStatus);
     const completedMealsCount = completedMenuMeals.length;
     const manualEntries = sanitizeTrackingEntries(payload.manualEntries, "manual_food");
-    const generatedRemainingMeals = sanitizeTrackingEntries(payload.generatedRemainingMeals, "auto_generated_remaining");
+    const generatedRemainingMeals = sanitizeTrackingEntries(payload.generatedRemainingMeals, "generated_remaining_meal");
     const mealReplacements = sanitizeTrackingEntries(payload.mealReplacements, "client_meal_replacement");
     const foodReplacements = sanitizeTrackingEntries(payload.foodReplacements, "client_food_replacement");
     const targetTotals = targetToTrackingTotals(target || {});

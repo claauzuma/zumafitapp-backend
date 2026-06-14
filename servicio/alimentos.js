@@ -30,6 +30,67 @@ const cleanText = (value = "") =>
 
 const hasValue = (value) => value !== null && value !== undefined && value !== "";
 
+function foodSearchText(food = {}) {
+  return cleanText([
+    food.Alimentos,
+    food.alimentos,
+    food.nombre,
+    food.name,
+    food.Fuente,
+    food.fuente,
+    food.Categoria,
+    food.categoria,
+    food.Categoría,
+    food.grupo,
+    food.Grupo,
+  ].filter(Boolean).join(" "));
+}
+
+function foodNameText(food = {}) {
+  return cleanText(food.Alimentos || food.alimentos || food.nombre || food.name || "");
+}
+
+function foodCategoryText(food = {}) {
+  return cleanText(food.Fuente || food.fuente || food.Categoria || food.categoria || food.Categoría || food.grupo || food.Grupo || "");
+}
+
+function searchScore(food = {}, search = "", index = 0) {
+  const name = foodNameText(food);
+  const text = foodSearchText(food);
+  if (name === search) return -4000 + index;
+  if (name.startsWith(search)) return -3000 + index;
+  if (name.includes(search)) return -2000 + index;
+  if (text.includes(search)) return -1000 + index;
+  return index;
+}
+
+function limitFromQuery(value, fallback = 0) {
+  const parsed = Math.trunc(toNumber(value, fallback));
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.min(parsed, 50);
+}
+
+function filterAlimentos(alimentos = [], filters = {}) {
+  const search = cleanText(filters.search || filters.q || filters.nombre || filters.name || "");
+  const category = cleanText(filters.category || filters.categoria || filters.fuente || "todos");
+  const limit = limitFromQuery(filters.limit, search ? 20 : 0);
+  let list = Array.isArray(alimentos) ? [...alimentos] : [];
+
+  if (search) {
+    list = list
+      .map((food, index) => ({ food, index, text: foodSearchText(food) }))
+      .filter((item) => item.text.includes(search))
+      .sort((a, b) => searchScore(a.food, search, a.index) - searchScore(b.food, search, b.index))
+      .map((item) => item.food);
+  }
+
+  if (category && category !== "todos") {
+    list = list.filter((food) => foodCategoryText(food) === category);
+  }
+
+  return limit ? list.slice(0, limit) : list;
+}
+
 function normalizeMode(value = "kcalProteina") {
   const mode = cleanText(value);
   if (["kcal", "calorias", "solo calorias", "solo_calorias"].includes(mode)) return "kcal";
@@ -325,10 +386,10 @@ class ServicioAlimentos {
     this.model = ModelFactory.get(persistencia);
   }
 
-  obtenerAlimentos = async () => {
+  obtenerAlimentos = async (filters = {}) => {
     try {
       const alimentosTotales = await this.model.obtenerAlimentos();
-      return alimentosTotales;
+      return filterAlimentos(alimentosTotales, filters);
     } catch (error) {
       console.error("Error al obtener alimentos:", error);
       throw new Error("No se pudieron obtener los alimentos");
