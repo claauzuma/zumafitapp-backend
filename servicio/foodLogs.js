@@ -205,6 +205,25 @@ function buildFoodSnapshot(food = {}, cantidad = 100, unidad = food?.unidad || "
   };
 }
 
+function snapshotFromSavedMealItem(item = {}) {
+  const nombre = item.nombre || item.nombreSnapshot || item.name || "Alimento";
+  return {
+    alimentoId: item.alimentoId || item.alimentoObjectId || null,
+    nombreSnapshot: cleanText(nombre, "Alimento", 180),
+    cantidad: macroNumber(item.cantidad ?? item.quantity ?? item.amount),
+    unidad: cleanText(item.unidad || item.unit, "g", 40),
+    kcal: macroNumber(item.kcal ?? item.calorias ?? item.calories),
+    proteina: macroNumber(item.proteina ?? item.proteinas ?? item.protein),
+    carbs: macroNumber(item.carbs ?? item.carbohidratos ?? item.carbohydrates),
+    grasas: macroNumber(item.grasas ?? item.fat ?? item.fats),
+    fibra: macroNumber(item.fibra),
+    fuente: cleanString(item.fuente || item.categoria || item.categoriaSnapshot, 120),
+    categoriaSnapshot: cleanString(item.categoriaSnapshot || item.categoria || item.category, 120),
+    imagen: item.imagen || null,
+    imagenUrl: item.imagenUrl || item.imageUrl || item.imagen?.url || "",
+  };
+}
+
 function scaleExistingSnapshot(log = {}, nextCantidad = 0, nextUnidad = "") {
   const previous = toNumber(log.cantidad, 0);
   const next = roundMacro(Math.max(0, toNumber(nextCantidad, previous)));
@@ -527,6 +546,45 @@ class ServicioFoodLogs {
       ...snapshot,
       notas: cleanString(payload.notas || payload.notes, 1000),
     });
+
+    const logs = await this.foodLogsModel.listLogsByUserDate(this._actorId(actor), date);
+    const updatedDay = await this.foodLogsModel.updateDayTotals(day._id, totalLogs(logs));
+    return await this._buildResponse(actor, date, objectiveInfo, updatedDay, logs);
+  }
+
+  async addSnapshotLogs(user, payload = {}) {
+    const actor = await this._actor(user);
+    const date = normalizeDate(payload.date);
+    this._assertCanWriteTracking(actor, date);
+
+    const mealType = normalizeMealType(payload.mealType || payload.comida);
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    if (!items.length) throw new Error("FOOD_REQUIRED");
+
+    const objectiveInfo = await this._resolveObjective(actor);
+    const day = await this.foodLogsModel.upsertDayBase({
+      userId: this._actorId(actor),
+      date,
+      objetivo: objectiveInfo.objetivo,
+      menuAsignadoId: objectiveInfo.menuAsignadoId,
+      coachId: objectiveInfo.coachId,
+    });
+
+    for (const item of items.slice(0, 80)) {
+      const snapshot = snapshotFromSavedMealItem(item);
+      if (snapshot.cantidad <= 0) continue;
+      await this.foodLogsModel.insertLog({
+        userId: this._actorId(actor),
+        foodLogDayId: day._id,
+        date,
+        mealType,
+        ...snapshot,
+        source: payload.source || "saved_meal",
+        savedMealId: payload.savedMealId || null,
+        savedMealName: payload.savedMealName || "",
+        notas: cleanString(payload.notas || payload.notes || "", 1000),
+      });
+    }
 
     const logs = await this.foodLogsModel.listLogsByUserDate(this._actorId(actor), date);
     const updatedDay = await this.foodLogsModel.updateDayTotals(day._id, totalLogs(logs));
