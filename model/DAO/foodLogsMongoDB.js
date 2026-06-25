@@ -69,6 +69,7 @@ class ModelMongoDBFoodLogs {
           userId: userValue,
           date: String(date),
           totals: { kcal: 0, proteina: 0, carbs: 0, grasas: 0 },
+          mealsConfig: [],
           createdAt: now,
         },
         $set: set,
@@ -77,6 +78,23 @@ class ModelMongoDBFoodLogs {
     );
 
     return await this.getDayByUserDate(userId, date);
+  };
+
+  updateDayMealsConfig = async (dayId, mealsConfig = []) => {
+    const _id = toObjectId(dayId);
+    if (!_id) throw new Error("ID_INVALIDO");
+
+    await this._days().updateOne(
+      { _id },
+      {
+        $set: {
+          mealsConfig,
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    return await this._days().findOne({ _id });
   };
 
   updateDayTotals = async (dayId, totals = {}) => {
@@ -162,6 +180,30 @@ class ModelMongoDBFoodLogs {
     return await this._logs().deleteOne({ _id });
   };
 
+  deleteLogsByMeal = async ({ userId, date, mealId, mealType = "" }) => {
+    const values = idValues(userId);
+    const meal = cleanId(mealId);
+    if (!values.length || !date || !meal) return { deletedCount: 0 };
+
+    const or = [{ mealId: meal }];
+    if (mealType && meal === mealType) {
+      or.push({
+        mealType,
+        $or: [
+          { mealId: { $exists: false } },
+          { mealId: null },
+          { mealId: "" },
+        ],
+      });
+    }
+
+    return await this._logs().deleteMany({
+      userId: { $in: values },
+      date: String(date),
+      $or: or,
+    });
+  };
+
   async ensureIndexes() {
     const days = this._days();
     await days.createIndex({ userId: 1, date: 1 }, { unique: true });
@@ -172,6 +214,7 @@ class ModelMongoDBFoodLogs {
     await logs.createIndex({ userId: 1, date: -1 });
     await logs.createIndex({ foodLogDayId: 1 });
     await logs.createIndex({ userId: 1, mealType: 1, date: -1 });
+    await logs.createIndex({ userId: 1, date: -1, mealId: 1 });
   }
 }
 

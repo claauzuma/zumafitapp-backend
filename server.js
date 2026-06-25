@@ -19,6 +19,7 @@ import RouterClienteMenus from "./router/clienteMenus.js";
 import RouterFoodLogs from "./router/foodLogs.js";
 import RouterAdmin from "./router/admin.js";
 import RouterComidasGuardadas from "./router/comidasGuardadas.js";
+import RouterNutritionLibrary from "./router/nutritionLibrary.js";
 
 import passport from "./auth/google.js";
 import { setupGoogleAuth } from "./auth/google.js";
@@ -99,8 +100,8 @@ class Server {
       origin: (origin, cb) => {
         if (!origin) return cb(null, true); // postman/mobile/webview
 
-        if (origin === "http://localhost:5173") return cb(null, true);
-        if (/^http:\/\/192\.168\.\d+\.\d+:5173$/.test(origin)) return cb(null, true);
+        if (/^http:\/\/(localhost|127\.0\.0\.1):517\d$/.test(origin)) return cb(null, true);
+        if (/^http:\/\/192\.168\.\d+\.\d+:517\d$/.test(origin)) return cb(null, true);
 
         if (origin === "https://zumafitweb.netlify.app") return cb(null, true);
         if (/^https:\/\/.*--zumafitapp\.netlify\.app$/.test(origin)) return cb(null, true);
@@ -150,6 +151,7 @@ class Server {
     this.app.use("/api/clientes", new RouterClienteMenus(this.persistencia).start());
     this.app.use("/api/tracking", new RouterFoodLogs(this.persistencia).start());
     this.app.use("/api/admin", new RouterAdmin().start());
+    this.app.use("/api", new RouterNutritionLibrary().start());
     this.app.use("/api", new RouterComidasGuardadas().start());
 
     this.app.use((req, res) => res.status(404).json({ status: false, errors: "not found" }));

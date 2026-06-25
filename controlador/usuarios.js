@@ -1,5 +1,6 @@
 import Servicio from "../servicio/usuarios.js";
 import cloudinary from "cloudinary";
+import { getClientNutritionCapabilities } from "../servicio/clientNutritionCapabilities.js";
 
 function getCookieOptions() {
   const isProd = process.env.NODE_ENV === "production";
@@ -169,6 +170,9 @@ function mapUserPublic(user) {
     settings: user.settings || {},
     adminMeta: user.adminMeta || {},
     clientPermissions: user.clientPermissions || {},
+    nutritionCapabilities: String(user.role || "").toLowerCase() === "cliente"
+      ? getClientNutritionCapabilities(user)
+      : null,
 
     metas: user.metas || {},
     onboarding: user.onboarding || {},
@@ -237,6 +241,8 @@ function mapUserPublic(user) {
     },
 
     menu: {
+      activeSource: user?.menu?.activeSource || "none",
+      activeOwnMenuId: user?.menu?.activeOwnMenuId || null,
       mode: user?.menu?.mode || {
         type: "automatic",
         lockedByCoach: false,

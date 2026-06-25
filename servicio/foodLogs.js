@@ -5,7 +5,7 @@ import ModelMongoDBUsuarios from "../model/DAO/usuariosMongoDB.js";
 import ModelMongoDBMenus from "../model/DAO/menusMongoDB.js";
 import ModelMongoDBAlimentos from "../model/DAO/alimentosMongoDB.js";
 
-const MEAL_TYPES = ["desayuno", "almuerzo", "merienda", "cena", "snack"];
+const MEAL_TYPES = ["desayuno", "almuerzo", "merienda", "cena", "snack", "otra"];
 const MEAL_TYPE_SET = new Set(MEAL_TYPES);
 const DEFAULT_OBJECTIVE = { kcal: 1900, proteina: 140, carbs: 205, grasas: 58 };
 
@@ -70,9 +70,79 @@ function normalizeDate(value) {
 }
 
 function normalizeMealType(value) {
-  const token = normalizeToken(value, "");
+  const rawToken = normalizeToken(value, "");
+  const token = rawToken === "otro" || rawToken === "libre" ? "otra" : rawToken;
   if (!MEAL_TYPE_SET.has(token)) throw new Error("INVALID_MEAL_TYPE");
   return token;
+}
+
+function generatedMealId() {
+  return `meal_${new ObjectId().toString()}`;
+}
+
+function normalizeMealId(value = "") {
+  const raw = cleanString(value, 80);
+  if (!raw) return "";
+  return raw.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 80);
+}
+
+function mealTypeLabel(value = "") {
+  const labels = {
+    desayuno: "Desayuno",
+    almuerzo: "Almuerzo",
+    merienda: "Merienda",
+    cena: "Cena",
+    snack: "Snack",
+    otra: "Otra",
+  };
+  return labels[value] || "Comida";
+}
+
+function normalizeMealMeta(value = {}) {
+  const input = value || {};
+  return {
+    kcal: macroNumber(input.kcal),
+    proteina: macroNumber(input.proteina ?? input.proteinas),
+    carbs: macroNumber(input.carbs ?? input.carbohidratos),
+    grasas: macroNumber(input.grasas),
+  };
+}
+
+function hasMealMeta(meta = {}) {
+  return Object.values(normalizeMealMeta(meta)).some((value) => value > 0);
+}
+
+function normalizeMealConfig(raw = {}, index = 0) {
+  const tipo = normalizeMealType(raw.tipo || raw.type || raw.mealType || "snack");
+  const mealId = normalizeMealId(raw.mealId || raw.id) || generatedMealId();
+  const meta = normalizeMealMeta(raw.meta || raw.target || {});
+  return {
+    mealId,
+    tipo,
+    nombre: cleanText(raw.nombre || raw.label || mealTypeLabel(tipo), mealTypeLabel(tipo), 80),
+    orden: Math.max(0, Number(raw.orden ?? raw.order ?? index) || index),
+    meta: hasMealMeta(meta) ? meta : null,
+    createdAt: raw.createdAt || new Date(),
+    updatedAt: new Date(),
+  };
+}
+
+function normalizeMealsConfig(value = []) {
+  const used = new Set();
+  return (Array.isArray(value) ? value : [])
+    .slice(0, 24)
+    .map((meal, index) => normalizeMealConfig(meal, index))
+    .map((meal) => {
+      if (!used.has(meal.mealId)) {
+        used.add(meal.mealId);
+        return meal;
+      }
+      const next = { ...meal, mealId: generatedMealId() };
+      used.add(next.mealId);
+      return next;
+    })
+    .sort((a, b) => (a.orden || 0) - (b.orden || 0))
+    .map((meal, index) => ({ ...meal, orden: index }));
 }
 
 function emptyTotals() {
@@ -275,6 +345,7 @@ function normalizeLog(doc = {}) {
     foodLogDayId: idToString(doc.foodLogDayId),
     date: doc.date,
     mealType: doc.mealType,
+    mealId: normalizeMealId(doc.mealId || "") || "",
     alimentoId: doc.alimentoId ? idToString(doc.alimentoId) : null,
     nombreSnapshot: doc.nombreSnapshot || "Alimento",
     cantidad: macroNumber(doc.cantidad),
@@ -293,10 +364,37 @@ function normalizeLog(doc = {}) {
   };
 }
 
-function groupLogsByMeal(logs = []) {
-  const grouped = Object.fromEntries(MEAL_TYPES.map((meal) => [meal, []]));
+function buildMealsConfig(day = null, logs = []) {
+  const stored = normalizeMealsConfig(day?.mealsConfig || []);
+  const byId = new Map(stored.map((meal) => [meal.mealId, meal]));
+  const out = [...stored];
+
   logs.map(normalizeLog).forEach((log) => {
-    const key = MEAL_TYPE_SET.has(log.mealType) ? log.mealType : "snack";
+    const tipo = MEAL_TYPE_SET.has(log.mealType) ? log.mealType : "snack";
+    const mealId = normalizeMealId(log.mealId) || tipo;
+    if (byId.has(mealId)) return;
+    const meal = {
+      mealId,
+      tipo,
+      nombre: mealTypeLabel(tipo),
+      orden: out.length,
+      meta: null,
+      legacy: !log.mealId,
+    };
+    byId.set(mealId, meal);
+    out.push(meal);
+  });
+
+  return out.sort((a, b) => (a.orden || 0) - (b.orden || 0));
+}
+
+function groupLogsByMeal(logs = [], mealsConfig = []) {
+  const grouped = Object.fromEntries((mealsConfig || []).map((meal) => [meal.mealId, []]));
+  logs.map(normalizeLog).forEach((log) => {
+    const fallbackType = MEAL_TYPE_SET.has(log.mealType) ? log.mealType : "snack";
+    const key = normalizeMealId(log.mealId) || fallbackType;
+    log.mealId = key;
+    if (!grouped[key]) grouped[key] = [];
     grouped[key].push(log);
   });
   return grouped;
@@ -311,6 +409,7 @@ function normalizeDay(doc = null, date = "") {
     date: doc.date || date,
     objetivo: doc.objetivo || null,
     totals: doc.totals || emptyTotals(),
+    mealsConfig: normalizeMealsConfig(doc.mealsConfig || []),
     menuAsignadoId: doc.menuAsignadoId ? idToString(doc.menuAsignadoId) : null,
     coachId: doc.coachId ? idToString(doc.coachId) : null,
     status: doc.status || "active",
@@ -324,6 +423,17 @@ function normalizeRole(user = {}) {
   if (role === "client" || role === "customer") return "cliente";
   if (role === "trainer" || role === "nutritionist" || role === "entrenador" || role === "nutricionista") return "coach";
   return role;
+}
+
+function currentCoachIdForUser(user = {}) {
+  return user?.coach?.entrenadorId || user?.coach?.coachId || user?.coachId || null;
+}
+
+function canUseAssignedMenuForActor(actor = {}, menu = null) {
+  const currentCoachId = currentCoachIdForUser(actor);
+  if (!currentCoachId || !menu) return false;
+  if (menu.estado !== "activo" || menu.activa === false) return false;
+  return sameId(menu.coachId, currentCoachId);
 }
 
 function extractUserGoals(user = {}) {
@@ -412,7 +522,11 @@ class ServicioFoodLogs {
 
   async _resolveObjective(actor) {
     const clientId = this._actorId(actor);
-    const activeMenu = await this.menusModel.getActiveForClient(clientId);
+    const currentCoachId = currentCoachIdForUser(actor);
+    const activeMenuCandidate = currentCoachId
+      ? await this.menusModel.getActiveForClientAndCoach(clientId, currentCoachId)
+      : null;
+    const activeMenu = canUseAssignedMenuForActor(actor, activeMenuCandidate) ? activeMenuCandidate : null;
 
     if (activeMenu) {
       const objective = totalsFromAssignedMenu(activeMenu);
@@ -428,7 +542,7 @@ class ServicioFoodLogs {
           grasas: objective.grasas,
         },
         menuAsignadoId: activeMenu._id || activeMenu.id || null,
-        coachId: activeMenu.coachId || actor?.coach?.entrenadorId || null,
+        coachId: activeMenu.coachId || currentCoachId || null,
       };
     }
 
@@ -439,7 +553,7 @@ class ServicioFoodLogs {
         source: userGoals.source,
         planificado: null,
         menuAsignadoId: null,
-        coachId: actor?.coach?.entrenadorId || null,
+        coachId: currentCoachId || null,
       };
     }
 
@@ -448,7 +562,7 @@ class ServicioFoodLogs {
       source: "default",
       planificado: null,
       menuAsignadoId: null,
-      coachId: actor?.coach?.entrenadorId || null,
+      coachId: currentCoachId || null,
     };
   }
 
@@ -495,12 +609,43 @@ class ServicioFoodLogs {
     throw new Error("FOOD_REQUIRED");
   }
 
+  async _ensureMealConfig(day = null, meal = {}) {
+    if (!day?._id) return day;
+    const current = normalizeMealsConfig(day.mealsConfig || []);
+    const mealId = normalizeMealId(meal.mealId || meal.id);
+    if (!mealId || current.some((item) => item.mealId === mealId)) return day;
+    const next = normalizeMealsConfig([
+      ...current,
+      {
+        mealId,
+        tipo: meal.tipo || meal.type || meal.mealType || "snack",
+        nombre: meal.nombre || meal.label || mealTypeLabel(meal.tipo || meal.type || meal.mealType),
+        orden: current.length,
+        meta: meal.meta || meal.target || null,
+      },
+    ]);
+    return await this.foodLogsModel.updateDayMealsConfig(day._id, next);
+  }
+
+  async _dayForConfig(actor, date) {
+    const objectiveInfo = await this._resolveObjective(actor);
+    const day = await this.foodLogsModel.upsertDayBase({
+      userId: this._actorId(actor),
+      date,
+      objetivo: objectiveInfo.objetivo,
+      menuAsignadoId: objectiveInfo.menuAsignadoId,
+      coachId: objectiveInfo.coachId,
+    });
+    return { objectiveInfo, day };
+  }
+
   async _buildResponse(actor, date, objectiveInfo, dayOverride = null, logsOverride = null) {
     const userId = this._actorId(actor);
     const day = dayOverride || (await this.foodLogsModel.getDayByUserDate(userId, date));
     const logs = logsOverride || (await this.foodLogsModel.listLogsByUserDate(userId, date));
     const totals = totalLogs(logs);
     const objetivo = objectiveInfo?.objetivo || day?.objetivo || DEFAULT_OBJECTIVE;
+    const mealsConfig = buildMealsConfig(day, logs);
 
     return {
       date,
@@ -510,7 +655,8 @@ class ServicioFoodLogs {
       remaining: remainingTotals(objetivo, totals),
       planificado: objectiveInfo?.planificado || null,
       day: normalizeDay(day, date),
-      meals: groupLogsByMeal(logs),
+      mealsConfig,
+      meals: groupLogsByMeal(logs, mealsConfig),
     };
   }
 
@@ -522,12 +668,50 @@ class ServicioFoodLogs {
     return await this._buildResponse(actor, date, objectiveInfo);
   }
 
+  async updateMealsConfig(user, payload = {}) {
+    const actor = await this._actor(user);
+    const date = normalizeDate(payload.date);
+    this._assertCanWriteTracking(actor, date);
+    const { objectiveInfo, day } = await this._dayForConfig(actor, date);
+    const mealsConfig = normalizeMealsConfig(payload.mealsConfig || payload.meals || payload.comidas || []);
+    const updatedDay = await this.foodLogsModel.updateDayMealsConfig(day._id, mealsConfig);
+    const logs = await this.foodLogsModel.listLogsByUserDate(this._actorId(actor), date);
+    return await this._buildResponse(actor, date, objectiveInfo, updatedDay, logs);
+  }
+
+  async deleteMeal(user, mealId, payload = {}) {
+    const actor = await this._actor(user);
+    const date = normalizeDate(payload.date);
+    this._assertCanWriteTracking(actor, date);
+    const cleanMealId = normalizeMealId(mealId);
+    if (!cleanMealId) throw new Error("ID_INVALIDO");
+
+    const { objectiveInfo, day } = await this._dayForConfig(actor, date);
+    const mealsConfig = normalizeMealsConfig(day.mealsConfig || []);
+    const currentMeal = mealsConfig.find((meal) => meal.mealId === cleanMealId);
+    const mealType = currentMeal?.tipo || (MEAL_TYPE_SET.has(cleanMealId) ? cleanMealId : "");
+
+    await this.foodLogsModel.deleteLogsByMeal({
+      userId: this._actorId(actor),
+      date,
+      mealId: cleanMealId,
+      mealType,
+    });
+
+    const nextConfig = normalizeMealsConfig(mealsConfig.filter((meal) => meal.mealId !== cleanMealId));
+    const dayWithConfig = await this.foodLogsModel.updateDayMealsConfig(day._id, nextConfig);
+    const logs = await this.foodLogsModel.listLogsByUserDate(this._actorId(actor), date);
+    const updatedDay = await this.foodLogsModel.updateDayTotals(dayWithConfig._id, totalLogs(logs));
+    return await this._buildResponse(actor, date, objectiveInfo, updatedDay, logs);
+  }
+
   async addLog(user, payload = {}) {
     const actor = await this._actor(user);
     const date = normalizeDate(payload.date);
     this._assertCanWriteTracking(actor, date);
 
     const mealType = normalizeMealType(payload.mealType || payload.comida);
+    const mealId = normalizeMealId(payload.mealId || payload.mealConfigId || payload.mealKey) || mealType;
     const objectiveInfo = await this._resolveObjective(actor);
     const day = await this.foodLogsModel.upsertDayBase({
       userId: this._actorId(actor),
@@ -536,6 +720,7 @@ class ServicioFoodLogs {
       menuAsignadoId: objectiveInfo.menuAsignadoId,
       coachId: objectiveInfo.coachId,
     });
+    await this._ensureMealConfig(day, { mealId, tipo: mealType, nombre: payload.mealName || payload.nombreComida });
 
     const snapshot = await this._snapshotFromPayload(payload);
     await this.foodLogsModel.insertLog({
@@ -543,6 +728,7 @@ class ServicioFoodLogs {
       foodLogDayId: day._id,
       date,
       mealType,
+      mealId,
       ...snapshot,
       notas: cleanString(payload.notas || payload.notes, 1000),
     });
@@ -558,6 +744,7 @@ class ServicioFoodLogs {
     this._assertCanWriteTracking(actor, date);
 
     const mealType = normalizeMealType(payload.mealType || payload.comida);
+    const mealId = normalizeMealId(payload.mealId || payload.mealConfigId || payload.mealKey) || mealType;
     const items = Array.isArray(payload.items) ? payload.items : [];
     if (!items.length) throw new Error("FOOD_REQUIRED");
 
@@ -569,6 +756,7 @@ class ServicioFoodLogs {
       menuAsignadoId: objectiveInfo.menuAsignadoId,
       coachId: objectiveInfo.coachId,
     });
+    await this._ensureMealConfig(day, { mealId, tipo: mealType, nombre: payload.mealName || payload.nombreComida });
 
     for (const item of items.slice(0, 80)) {
       const snapshot = snapshotFromSavedMealItem(item);
@@ -578,6 +766,7 @@ class ServicioFoodLogs {
         foodLogDayId: day._id,
         date,
         mealType,
+        mealId,
         ...snapshot,
         source: payload.source || "saved_meal",
         savedMealId: payload.savedMealId || null,
@@ -603,6 +792,10 @@ class ServicioFoodLogs {
 
     if (payload.mealType !== undefined || payload.comida !== undefined) {
       patch.mealType = normalizeMealType(payload.mealType || payload.comida);
+    }
+
+    if (payload.mealId !== undefined || payload.mealConfigId !== undefined || payload.mealKey !== undefined) {
+      patch.mealId = normalizeMealId(payload.mealId || payload.mealConfigId || payload.mealKey);
     }
 
     if (
@@ -653,5 +846,7 @@ class ServicioFoodLogs {
     return await this._buildResponse(actor, date, objectiveInfo, updatedDay, logs);
   }
 }
+
+export { canUseAssignedMenuForActor };
 
 export default ServicioFoodLogs;

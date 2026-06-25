@@ -176,6 +176,45 @@ class ModelMongoDBComidasGuardadas {
     return await this.getById(id);
   };
 
+  revokeAssignmentsForClientAndCoach = async (clienteId, coachId) => {
+    const clientValues = idValues(clienteId);
+    const coachValues = idValues(coachId);
+    if (!clientValues.length || !coachValues.length) return { matchedCount: 0, modifiedCount: 0 };
+
+    const byObject = await this._col().updateMany(
+      {
+        asignadaA: {
+          $elemMatch: {
+            clienteId: { $in: clientValues },
+            coachId: { $in: coachValues },
+          },
+        },
+      },
+      {
+        $pull: {
+          asignadaA: {
+            clienteId: { $in: clientValues },
+            coachId: { $in: coachValues },
+          },
+        },
+        $set: { updatedAt: new Date() },
+      }
+    );
+
+    const byLegacyId = await this._col().updateMany(
+      { asignadaA: { $in: clientValues } },
+      {
+        $pull: { asignadaA: { $in: clientValues } },
+        $set: { updatedAt: new Date() },
+      }
+    );
+
+    return {
+      matchedCount: (byObject.matchedCount || 0) + (byLegacyId.matchedCount || 0),
+      modifiedCount: (byObject.modifiedCount || 0) + (byLegacyId.modifiedCount || 0),
+    };
+  };
+
   async ensureIndexes() {
     const col = this._col();
     await col.createIndex({ ownerId: 1, ownerType: 1, updatedAt: -1 });

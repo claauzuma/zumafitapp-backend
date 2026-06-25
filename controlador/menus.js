@@ -1,4 +1,5 @@
 import ServicioMenus from "../servicio/menus.js";
+import ServicioMenusExcelImport from "../servicio/menusExcelImport.js";
 
 function sendError(res, error) {
   const msg = String(error?.message || "");
@@ -20,6 +21,13 @@ function sendError(res, error) {
   if (msg === "MENU_BASE_REQUIRED") return res.status(400).json({ error: "Falta menuBaseId" });
   if (msg === "ID_INVALIDO") return res.status(400).json({ error: "ID invalido" });
   if (msg === "DUPLICATE_IDENTICAL") return res.status(409).json({ error: "La copia es identica a un menu existente. Cambia nombre, comidas o cantidades antes de guardar." });
+  if (msg === "EXCEL_FILE_REQUIRED") return res.status(400).json({ error: "Subi un archivo Excel para importar" });
+  if (msg === "EXCEL_FILE_TOO_LARGE") return res.status(413).json({ error: "El archivo Excel supera el tamano maximo permitido" });
+  if (msg === "EXCEL_FILE_INVALID_TYPE") return res.status(400).json({ error: "El archivo debe ser .xlsx o .xls" });
+  if (msg === "MENUS_SHEET_REQUIRED") return res.status(400).json({ error: "El archivo debe contener una hoja llamada Menus" });
+  if (msg === "IMPORT_TOKEN_INVALID") return res.status(400).json({ error: "La previsualizacion vencio o no existe. Volve a subir el Excel." });
+  if (msg === "IMPORT_HAS_ERRORS") return res.status(400).json({ error: "La importacion tiene errores. Activá importar solo validos o corregi el Excel." });
+  if (msg === "IMPORT_NO_VALID_MENUS") return res.status(400).json({ error: "No hay menus validos para importar." });
 
   console.error("Error menus:", error);
   return res.status(500).json({ error: "Error en el servidor" });
@@ -28,6 +36,7 @@ function sendError(res, error) {
 class ControladorMenus {
   constructor() {
     this.servicio = new ServicioMenus();
+    this.importadorExcel = new ServicioMenusExcelImport();
   }
 
   list = async (req, res) => {
@@ -183,6 +192,24 @@ class ControladorMenus {
         req.body || {}
       );
       return res.status(201).json({ ok: true, menu });
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
+  previewAdminExcelImport = async (req, res) => {
+    try {
+      const data = await this.importadorExcel.preview(req.file, req.body || {}, req.user || {});
+      return res.json(data);
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
+  confirmAdminExcelImport = async (req, res) => {
+    try {
+      const data = await this.importadorExcel.confirm(req.body?.importToken, req.body || {}, req.user || {});
+      return res.json(data);
     } catch (error) {
       return sendError(res, error);
     }

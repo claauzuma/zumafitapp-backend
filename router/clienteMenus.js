@@ -2,6 +2,7 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 
 import ControladorMenus from "../controlador/menus.js";
+import ControladorClientOwnMenus from "../controlador/clientOwnMenus.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { denyWriteWhenReadOnlyImpersonation } from "../middleware/denyWriteWhenReadOnlyImpersonation.js";
 
@@ -16,10 +17,69 @@ class RouterClienteMenus {
   constructor() {
     this.router = express.Router();
     this.controladorMenus = new ControladorMenus();
+    this.controladorClientOwnMenus = new ControladorClientOwnMenus();
   }
 
   start() {
     console.log("RouterClienteMenus activo");
+
+    this.router.post(
+      "/me/menus/deactivate",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientOwnMenus.deactivate
+    );
+    this.router.get(
+      "/me/nutrition-capabilities",
+      authMiddleware,
+      this.controladorClientOwnMenus.capabilities
+    );
+    this.router.get(
+      "/me/menus",
+      authMiddleware,
+      this.controladorClientOwnMenus.list
+    );
+    this.router.post(
+      "/me/menus",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientOwnMenus.create
+    );
+    this.router.get(
+      "/me/menus/:menuId",
+      authMiddleware,
+      this.controladorClientOwnMenus.get
+    );
+    this.router.patch(
+      "/me/menus/:menuId",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientOwnMenus.update
+    );
+    this.router.delete(
+      "/me/menus/:menuId",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientOwnMenus.remove
+    );
+    this.router.post(
+      "/me/menus/:menuId/duplicate",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientOwnMenus.duplicate
+    );
+    this.router.post(
+      "/me/menus/:menuId/activate",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientOwnMenus.activate
+    );
 
     this.router.post(
       "/:clienteId/menus/asignar",

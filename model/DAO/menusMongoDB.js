@@ -84,6 +84,7 @@ function buildAssignedFilter(filters = {}) {
   if (filters.clienteId) query.clienteId = { $in: idValues(filters.clienteId) };
   if (filters.coachId) query.coachId = { $in: idValues(filters.coachId) };
   if (estado && estado !== "todos") query.estado = estado;
+  if (estado === "activo") query.activa = { $ne: false };
 
   return addSearch(query, filters.search);
 }
@@ -164,6 +165,45 @@ class ModelMongoDBMenus {
     return await this._base().deleteOne({ _id });
   };
 
+  revokeBaseAssignmentsForClientAndCoach = async (clienteId, coachId) => {
+    const clientValues = idValues(clienteId);
+    const coachValues = idValues(coachId);
+    if (!clientValues.length || !coachValues.length) return { matchedCount: 0, modifiedCount: 0 };
+
+    const byObject = await this._base().updateMany(
+      {
+        asignadoA: {
+          $elemMatch: {
+            clienteId: { $in: clientValues },
+            coachId: { $in: coachValues },
+          },
+        },
+      },
+      {
+        $pull: {
+          asignadoA: {
+            clienteId: { $in: clientValues },
+            coachId: { $in: coachValues },
+          },
+        },
+        $set: { updatedAt: new Date() },
+      }
+    );
+
+    const byLegacyId = await this._base().updateMany(
+      { asignadoA: { $in: clientValues } },
+      {
+        $pull: { asignadoA: { $in: clientValues } },
+        $set: { updatedAt: new Date() },
+      }
+    );
+
+    return {
+      matchedCount: (byObject.matchedCount || 0) + (byLegacyId.matchedCount || 0),
+      modifiedCount: (byObject.modifiedCount || 0) + (byLegacyId.modifiedCount || 0),
+    };
+  };
+
   listAssigned = async (filters = {}) => {
     const col = this._assigned();
     const { limit, skip } = normalizePaging({ ...filters, max: 300 });
@@ -195,8 +235,50 @@ class ModelMongoDBMenus {
       {
         clienteId: { $in: values },
         estado: "activo",
+        activa: { $ne: false },
       },
       { sort: { fechaInicio: -1, updatedAt: -1 } }
+    );
+  };
+
+  getActiveForClientAndCoach = async (clienteId, coachId) => {
+    const clientValues = idValues(clienteId);
+    const coachValues = idValues(coachId);
+    if (!clientValues.length || !coachValues.length) return null;
+
+    return await this._assigned().findOne(
+      {
+        clienteId: { $in: clientValues },
+        coachId: { $in: coachValues },
+        estado: "activo",
+        activa: { $ne: false },
+      },
+      { sort: { fechaInicio: -1, updatedAt: -1 } }
+    );
+  };
+
+  revokeActiveForClientAndCoach = async (clienteId, coachId, patch = {}) => {
+    const clientValues = idValues(clienteId);
+    const coachValues = idValues(coachId);
+    if (!clientValues.length || !coachValues.length) return { matchedCount: 0, modifiedCount: 0 };
+
+    const now = new Date();
+    return await this._assigned().updateMany(
+      {
+        clienteId: { $in: clientValues },
+        coachId: { $in: coachValues },
+        estado: "activo",
+      },
+      {
+        $set: {
+          activa: false,
+          estado: "revocado",
+          revokedAt: now,
+          revokedReason: patch.revokedReason || "coach_unlinked",
+          revokedBy: patch.revokedBy || null,
+          updatedAt: now,
+        },
+      }
     );
   };
 
@@ -273,6 +355,8 @@ class ModelMongoDBMenus {
   async ensureIndexes() {
     const base = this._base();
     await base.createIndex({ ownerType: 1, ownerId: 1 });
+    await base.createIndex({ ownerType: 1, ownerId: 1, activa: 1, createdAt: -1 });
+    await base.createIndex({ ownerType: 1, ownerId: 1, nombreNormalizado: 1 });
     await base.createIndex({ estado: 1, visibilidad: 1, updatedAt: -1 });
     await base.createIndex({ rangoKcal: 1, estado: 1 });
     await base.createIndex({ "macrosObjetivo.proteina": 1 });

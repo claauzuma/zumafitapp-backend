@@ -30,6 +30,20 @@ class RouterFoodLogs {
       this.controladorFoodLogs.addLog
     );
     this.router.patch(
+      "/day/meals",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorFoodLogs.updateMealsConfig
+    );
+    this.router.delete(
+      "/day/meals/:mealId",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorFoodLogs.deleteMeal
+    );
+    this.router.patch(
       "/day/logs/:logId",
       authMiddleware,
       denyWriteWhenReadOnlyImpersonation,

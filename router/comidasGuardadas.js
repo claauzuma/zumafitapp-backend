@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 import rateLimit from "express-rate-limit";
 
 import ControladorComidasGuardadas from "../controlador/comidasGuardadas.js";
@@ -12,6 +13,24 @@ const writeLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+const excelUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 1,
+  },
+});
+
+function uploadExcel(req, res, next) {
+  return excelUpload.single("file")(req, res, (error) => {
+    if (!error) return next();
+    if (error?.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({ error: "El archivo Excel supera el tamano maximo permitido" });
+    }
+    return res.status(400).json({ error: "No se pudo leer el archivo Excel" });
+  });
+}
 
 class RouterComidasGuardadas {
   constructor() {
@@ -132,6 +151,23 @@ class RouterComidasGuardadas {
       denyWriteWhenReadOnlyImpersonation,
       writeLimiter,
       this.controlador.updateAdminGlobal
+    );
+    this.router.post(
+      "/admin/comidas-globales/importar-excel/preview",
+      authMiddleware,
+      requireRole("admin"),
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      uploadExcel,
+      this.controlador.previewAdminExcelImport
+    );
+    this.router.post(
+      "/admin/comidas-globales/importar-excel/confirm",
+      authMiddleware,
+      requireRole("admin"),
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controlador.confirmAdminExcelImport
     );
 
     return this.router;

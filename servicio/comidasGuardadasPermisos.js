@@ -1,3 +1,5 @@
+import { getClientNutritionLimitsForPlan } from "./clientNutritionCapabilities.js";
+
 export function idToString(id) {
   return id?.toString?.() || String(id || "");
 }
@@ -24,7 +26,7 @@ export function getOwnerType(user = {}) {
   const role = normalizeRole(user);
   if (role === "admin") return "admin";
   if (role === "coach") return "coach";
-  return "user";
+  return "cliente";
 }
 
 export function isAdmin(user = {}) {
@@ -44,10 +46,7 @@ export function getSavedMealLimit(user = {}) {
   if (role === "admin") return Number.POSITIVE_INFINITY;
   if (role === "coach") return 10000;
 
-  const plan = normalizePlan(user);
-  if (plan === "vip") return 10000;
-  if (plan === "pro") return 50;
-  return 5;
+  return getClientNutritionLimitsForPlan(normalizePlan(user)).ownMealsLimit;
 }
 
 export function canCreateSavedMeal(user = {}, currentCount = 0) {
@@ -63,13 +62,43 @@ export function isMealOwner(user = {}, meal = {}) {
 export function isMealAssignedToUser(userOrId = {}, meal = {}) {
   const userId = typeof userOrId === "string" ? userOrId : idToString(userOrId?._id || userOrId?.id);
   if (!userId) return false;
-  return (Array.isArray(meal?.asignadaA) ? meal.asignadaA : []).some((id) => idToString(id) === userId);
+  return (Array.isArray(meal?.asignadaA) ? meal.asignadaA : []).some((entry) => {
+    if (entry && typeof entry === "object" && !Array.isArray(entry)) {
+      return idToString(entry.clienteId || entry.userId || entry.id) === userId;
+    }
+    return idToString(entry) === userId;
+  });
 }
 
 function planAllowsVisibility(user = {}, visibility = "") {
-  if (visibility === "global") return true;
-  if (visibility !== "premium") return false;
-  return ["pro", "vip", "coach", "nutri", "trainernutri", "gym", "admin"].includes(normalizePlan(user)) || isCoach(user) || isAdmin(user);
+  const raw = String(visibility || "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  const normalized =
+    raw === "publica" || raw === "sistema"
+      ? "global"
+      : raw === "coaches"
+        ? "solo_coaches"
+        : raw === "clientes"
+          ? "solo_clientes"
+          : raw === "clientesasignados" || raw === "clientes_asignados"
+            ? "asignada"
+            : raw;
+  const plan = normalizePlan(user);
+  const tier = plan === "vip" || ["coach", "nutri", "trainernutri", "trainer_nutri", "gym", "admin"].includes(plan)
+    ? "vip"
+    : plan === "pro"
+      ? "pro"
+      : "free";
+
+  if (normalized === "global") return true;
+  if (normalized === "premium") return tier === "vip";
+  if (normalized === "solo_coaches") return isCoach(user) && tier !== "free";
+  if (normalized === "solo_clientes") return isClient(user) && tier === "vip";
+  return false;
 }
 
 export function canAccessSavedMeal(user = {}, meal = {}) {
@@ -97,5 +126,5 @@ export function canAssignSavedMeal(user = {}, meal = {}) {
   if (isAdmin(user)) return true;
   if (!isCoach(user)) return false;
   if (isMealOwner(user, meal)) return true;
-  return ["gimnasio", "global", "premium"].includes(String(meal.visibilidad || ""));
+  return ["gimnasio", "global", "premium", "solo_coaches"].includes(String(meal.visibilidad || ""));
 }

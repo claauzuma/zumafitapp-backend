@@ -12,6 +12,8 @@ import ModelMongoDBInvitedUsers from "../model/DAO/invitedUsersMongoDB.js";
 import ModelMongoDBCoachPlanConfigs from "../model/DAO/coachPlanConfigsMongoDB.js";
 import ModelMongoDBImpersonationAudit from "../model/DAO/impersonationAuditMongoDB.js";
 import ModelMongoDBClientMenuTracking from "../model/DAO/clientMenuTrackingMongoDB.js";
+import ModelMongoDBMenus from "../model/DAO/menusMongoDB.js";
+import ModelMongoDBComidasGuardadas from "../model/DAO/comidasGuardadasMongoDB.js";
 import {
   createEmptyCoachOverrides,
   createTrialSubscription,
@@ -159,10 +161,15 @@ function getUserDefaults({ role = "cliente", plan = "free", tipo = "entrenado" }
     metasActuales: {
       kcal: null,
       macros: { p: null, c: null, g: null },
+      source: "system",
+      sourceCoachId: null,
+      needsReview: false,
       updatedAt: null,
     },
 
     menu: {
+      activeSource: "none",
+      activeOwnMenuId: null,
       mode: {
         type: "automatic", // automatic | manual | hybrid
         lockedByCoach: false,
@@ -306,6 +313,29 @@ function toMongoIdOrString(id) {
 
 function idToString(id) {
   return id?.toString?.() || String(id || "");
+}
+
+function currentCoachIdFromUser(user = {}) {
+  return idToString(
+    user?.coach?.entrenadorId ||
+    user?.coach?.coachId ||
+    user?.coachId ||
+    user?.entrenadorId ||
+    user?.profesionalId ||
+    ""
+  );
+}
+
+function weeklyPlanCoachId(menu = {}) {
+  const weeklyPlan = menu?.weeklyPlan || {};
+  return idToString(
+    weeklyPlan.sourceCoachId ||
+    weeklyPlan.updatedByCoachId ||
+    weeklyPlan.coachId ||
+    menu.updatedByCoachId ||
+    menu.mode?.updatedByCoachId ||
+    ""
+  );
 }
 
 function numberOrNull(value, { min = null, max = null } = {}) {
@@ -499,6 +529,129 @@ function normalizeAssignedMenusByDay(value = {}) {
   }, {});
 }
 
+function hasAssignedMenuEntries(value = {}) {
+  return Object.values(normalizeAssignedMenusByDay(value || {})).some(Boolean);
+}
+
+function isCoachGeneratedWeeklyPlan(user = {}) {
+  const menu = user?.menu || {};
+  const weeklyPlan = menu?.weeklyPlan || {};
+  const generatedBy = String(weeklyPlan.generatedBy || "").trim().toLowerCase();
+  const modeSource = String(menu?.mode?.source || "").trim().toLowerCase();
+
+  return (
+    generatedBy === "coach" ||
+    modeSource === "coach" ||
+    String(menu?.activeSource || "").trim().toLowerCase() === "coach" ||
+    Boolean(weeklyPlanCoachId(menu)) ||
+    hasAssignedMenuEntries(weeklyPlan.assignedMenusByDay || {})
+  );
+}
+
+function shouldUseWeeklyNutritionPlan(user = {}) {
+  const currentCoachId = currentCoachIdFromUser(user);
+  const activeSource = String(user?.menu?.activeSource || "none").trim().toLowerCase();
+
+  if (!currentCoachId) return false;
+  if (activeSource === "own") return false;
+  if (!isCoachGeneratedWeeklyPlan(user)) return true;
+
+  const sourceCoachId = weeklyPlanCoachId(user?.menu || {});
+  if (sourceCoachId && sourceCoachId !== currentCoachId) return false;
+
+  return true;
+}
+
+function resolveWeeklyNutritionPlanForUser(user = {}) {
+  const weeklyPlan = user?.menu?.weeklyPlan || {};
+  if (shouldUseWeeklyNutritionPlan(user)) return weeklyPlan;
+
+  return {
+    ...weeklyPlan,
+    caloriesByDay: {},
+    macrosByDay: {},
+    mealsByDay: {},
+  };
+}
+
+function shouldClearCoachWeeklyPlanOnDisconnect(client = {}, coachId = null) {
+  if (!isCoachGeneratedWeeklyPlan(client)) return false;
+  const sourceCoachId = weeklyPlanCoachId(client?.menu || {});
+  const disconnectedCoachId = idToString(coachId);
+  if (!sourceCoachId || !disconnectedCoachId) return true;
+  return sourceCoachId === disconnectedCoachId;
+}
+
+function menuDocTotals(doc = {}) {
+  const totals = doc.macrosTotales || doc.totales || doc.totalesActuales || {};
+  const macros = doc.macrosObjetivo || {};
+  return {
+    kcal: totals.kcal ?? doc.kcalObjetivo ?? doc.kcal,
+    proteina: totals.proteina ?? totals.proteinas ?? macros.proteina ?? macros.protein,
+    carbs: totals.carbs ?? totals.carbohidratos ?? macros.carbs ?? macros.carbohidratos,
+    grasas: totals.grasas ?? macros.grasas ?? macros.fat,
+  };
+}
+
+function normalizeOwnMenuDayEntry(menu = {}, day = {}) {
+  const days = isPlainObject(menu.dias || menu.days) ? menu.dias || menu.days : {};
+  const found = findDayValue(days, day);
+  if (!found.found) return null;
+  const raw = Array.isArray(found.value) ? { comidas: found.value } : found.value;
+  if (!isPlainObject(raw)) return null;
+  return {
+    ...raw,
+    nombre: raw.nombre || raw.name || `${menu.nombre || "Menu"} - ${day.label}`,
+    comidas: Array.isArray(raw.comidas) ? raw.comidas : Array.isArray(raw.meals) ? raw.meals : [],
+    kcalObjetivo: raw.kcalObjetivo ?? raw.kcal ?? raw.macrosTotales?.kcal,
+    macrosObjetivo: raw.macrosObjetivo || {
+      proteina: raw.macrosTotales?.proteina,
+      carbs: raw.macrosTotales?.carbs,
+      grasas: raw.macrosTotales?.grasas,
+    },
+  };
+}
+
+function menuDocSnapshotForDay(menu = {}, day = {}, source = "own") {
+  const hasExplicitDays = isPlainObject(menu.dias || menu.days) && Object.keys(menu.dias || menu.days).length > 0;
+  const dayEntry = normalizeOwnMenuDayEntry(menu, day);
+  if (hasExplicitDays && !dayEntry) return null;
+  const totals = dayEntry ? menuDocTotals(dayEntry) : menuDocTotals(menu);
+  const comidas = dayEntry?.comidas?.length ? dayEntry.comidas : Array.isArray(menu.comidas) ? menu.comidas : [];
+  return {
+    id: idToString(menu._id || menu.id),
+    baseId: idToString(menu._id || menu.id),
+    name: dayEntry?.nombre || menu.nombre || "Menu propio",
+    description: dayEntry?.descripcion || menu.descripcion || "",
+    source,
+    kcal: totals.kcal,
+    macrosObjetivo: {
+      proteina: totals.proteina,
+      carbs: totals.carbs,
+      grasas: totals.grasas,
+    },
+    comidas,
+    mealsCount: comidas.length,
+  };
+}
+
+function buildAssignedMenusByDayFromMenuDoc(menu = {}, source = "own") {
+  if (!menu) return {};
+  return WEEKLY_MENU_DAY_META.reduce((acc, day) => {
+    const snapshot = menuDocSnapshotForDay(menu, day, source);
+    if (!snapshot) return acc;
+    const normalized = normalizeWeeklyMenuSnapshot(snapshot);
+    if (!normalized?.meals?.length) return acc;
+    acc[day.key] = {
+      menuId: idToString(menu._id || menu.id),
+      source,
+      assignedAt: menu.updatedAt || menu.createdAt || new Date(),
+      menuSnapshot: normalized,
+    };
+    return acc;
+  }, {});
+}
+
 function normalizeProgressCheckin(raw = {}, fallback = {}) {
   const input = isPlainObject(raw) ? raw : {};
   const fallbackDate = fallback.date || new Date().toISOString().slice(0, 10);
@@ -645,6 +798,117 @@ function macroKcal(protein, carbs, fat) {
   return Math.round((Number(protein) * 4) + (Number(carbs) * 4) + (Number(fat) * 9));
 }
 
+function normalizeGoalSource(source = "") {
+  const value = String(source || "").trim().toLowerCase();
+  return ["self", "coach", "system"].includes(value) ? value : "";
+}
+
+function normalizeMetasActuales(metas = {}, fallbackSource = "system") {
+  const macros = metas?.macros || {};
+  return {
+    ...(metas || {}),
+    kcal: hasNumber(metas?.kcal) ? Math.max(0, Number(metas.kcal)) : null,
+    macros: {
+      ...(macros || {}),
+      p: hasNumber(macros.p) ? Math.max(0, Number(macros.p)) : null,
+      c: hasNumber(macros.c) ? Math.max(0, Number(macros.c)) : null,
+      g: hasNumber(macros.g) ? Math.max(0, Number(macros.g)) : null,
+    },
+    source: normalizeGoalSource(metas?.source) || fallbackSource,
+    sourceCoachId: metas?.sourceCoachId || null,
+    needsReview: !!metas?.needsReview,
+    updatedAt: metas?.updatedAt || null,
+  };
+}
+
+function hasValidMetas(metas = {}) {
+  const normalized = normalizeMetasActuales(metas);
+  return (
+    hasNumber(normalized.kcal) ||
+    hasNumber(normalized.macros?.p) ||
+    hasNumber(normalized.macros?.c) ||
+    hasNumber(normalized.macros?.g)
+  );
+}
+
+function buildSelfGoalsBackup(currentMetas = {}) {
+  const source = normalizeGoalSource(currentMetas?.source) || "self";
+  if (source === "coach" || !hasValidMetas(currentMetas)) return null;
+  const normalized = normalizeMetasActuales(currentMetas, source);
+  return {
+    kcal: normalized.kcal,
+    macros: {
+      p: normalized.macros.p,
+      c: normalized.macros.c,
+      g: normalized.macros.g,
+    },
+    source,
+    updatedAt: normalized.updatedAt || new Date(),
+  };
+}
+
+function resetCoachDerivedClientPermissions(permissions = {}) {
+  const next = isPlainObject(permissions) ? { ...permissions } : {};
+  delete next.menu;
+  delete next.routine;
+
+  next.tracking = {
+    ...(isPlainObject(permissions?.tracking) ? permissions.tracking : {}),
+    canTrackFood: true,
+    canEditPastDays: true,
+    canMarkMenuMealsCompleted: true,
+    canAutoCompleteRemainingMeals: true,
+    canUseMenuAlternatives: true,
+  };
+  next.foodTracking = {
+    ...(isPlainObject(permissions?.foodTracking) ? permissions.foodTracking : {}),
+    canTrackFood: true,
+    canEditPastDays: true,
+  };
+
+  return next;
+}
+
+function restoreMetasAfterCoachDisconnect(client = {}, coachId = null) {
+  const current = normalizeMetasActuales(client?.metasActuales || {}, "system");
+  const currentSource = normalizeGoalSource(current.source) || "system";
+  const currentSourceCoach = idToString(current.sourceCoachId);
+  const disconnectedCoach = idToString(coachId);
+  const isCoachGoal =
+    currentSource === "coach" &&
+    (!disconnectedCoach || !currentSourceCoach || currentSourceCoach === disconnectedCoach);
+
+  if (!isCoachGoal) {
+    return {
+      ...current,
+      source: currentSource,
+      sourceCoachId: currentSource === "coach" ? current.sourceCoachId : null,
+      updatedAt: current.updatedAt || new Date(),
+    };
+  }
+
+  const backup = client?.nutrition?.selfGoalsBackup;
+  if (hasValidMetas(backup)) {
+    const restored = normalizeMetasActuales(backup, normalizeGoalSource(backup?.source) || "self");
+    return {
+      ...restored,
+      source: normalizeGoalSource(restored.source) || "self",
+      sourceCoachId: null,
+      needsReview: true,
+      updatedAt: new Date(),
+      restoredFromBackupAt: new Date(),
+    };
+  }
+
+  return {
+    ...current,
+    source: "system",
+    sourceCoachId: null,
+    needsReview: true,
+    updatedAt: new Date(),
+  };
+}
+
 function deriveCarbsForKcal(kcal, protein, fat) {
   const targetKcal = Math.max(0, Number(kcal) || 0);
   const p = hasNumber(protein) ? Number(protein) : 0;
@@ -737,7 +1001,7 @@ function buildGeneralNutritionTarget(day, base, targetKcal, shouldAdjust) {
 
 function resolveClientNutritionWeek(user = {}) {
   const base = buildBaseNutritionTarget(user);
-  const weeklyPlan = user?.menu?.weeklyPlan || {};
+  const weeklyPlan = resolveWeeklyNutritionPlanForUser(user);
   const caloriesByDay = weeklyPlan?.caloriesByDay || {};
   const macrosByDay = weeklyPlan?.macrosByDay || {};
   const weeklyKcalTarget = hasNumber(base.kcal) ? Number(base.kcal) * WEEKLY_MENU_DAY_META.length : null;
@@ -1056,7 +1320,8 @@ function clientMenuTrackingPermissions(user = {}) {
   const menu = isPlainObject(permissions.menu) ? permissions.menu : {};
   const tracking = isPlainObject(permissions.tracking) ? permissions.tracking : {};
   const hasCoach = !!user?.coach?.entrenadorId;
-  const canViewAssignedMenus = hasCoach ? boolFrom(menu.canViewMenu, true) : true;
+  const activeSource = String(user?.menu?.activeSource || "none");
+  const canViewAssignedMenus = activeSource === "own" ? true : hasCoach ? boolFrom(menu.canViewMenu, true) : true;
 
   return {
     canViewAssignedMenus,
@@ -1147,6 +1412,8 @@ class ServicioUsuarios {
     if (typeof this.menuTrackingModel.ensureIndexes === "function") {
       this.menuTrackingModel.ensureIndexes().catch(() => {});
     }
+    this.menusModel = new ModelMongoDBMenus();
+    this.comidasGuardadasModel = new ModelMongoDBComidasGuardadas();
   }
 
   // -------------------------
@@ -1479,6 +1746,56 @@ class ServicioUsuarios {
     return normalizeRole(u?.role) === "cliente";
   }
 
+  async _resolveClientMenuPlan(user = {}) {
+    const userId = idToString(user?._id || user?.id);
+    const assignedMenusByDay = user?.menu?.weeklyPlan?.assignedMenusByDay || {};
+    const currentCoachId = user?.coach?.entrenadorId || user?.coach?.coachId || user?.coachId || null;
+    const hasCoach = Boolean(currentCoachId);
+    if (hasCoach && hasAssignedMenuEntries(assignedMenusByDay)) {
+      return {
+        activeSource: "coach",
+        assignments: assignedMenusByDay,
+        activeMenu: null,
+      };
+    }
+
+    const activeAssigned = hasCoach && userId
+      ? await this.menusModel.getActiveForClientAndCoach(userId, currentCoachId).catch(() => null)
+      : null;
+    if (activeAssigned) {
+      return {
+        activeSource: "coach",
+        assignments: buildAssignedMenusByDayFromMenuDoc(activeAssigned, "coach"),
+        activeMenu: activeAssigned,
+      };
+    }
+
+    const activeOwnMenuId = idToString(user?.menu?.activeOwnMenuId);
+    if (String(user?.menu?.activeSource || "none") === "own" && activeOwnMenuId) {
+      const ownMenu = await this.menusModel.getBaseById(activeOwnMenuId).catch(() => null);
+      if (
+        ownMenu &&
+        ownMenu.ownerType === "cliente" &&
+        idToString(ownMenu.ownerId) === userId &&
+        ownMenu.estado !== "inactivo" &&
+        ownMenu.activa !== false &&
+        ownMenu.activo !== false
+      ) {
+        return {
+          activeSource: "own",
+          assignments: buildAssignedMenusByDayFromMenuDoc(ownMenu, "own"),
+          activeMenu: ownMenu,
+        };
+      }
+    }
+
+    return {
+      activeSource: "none",
+      assignments: {},
+      activeMenu: null,
+    };
+  }
+
   async _listAllUsersNormalized() {
     if (typeof this.model.obtenerUsuarios !== "function") {
       throw new Error("MODEL_SIN_LISTADO_USUARIOS");
@@ -1532,26 +1849,158 @@ class ServicioUsuarios {
     return clients.length;
   }
 
-  async _unassignAllClientsFromCoach(coachId, adminId = null) {
-    if (typeof this.model.unassignClientsByCoachId === "function") {
-      return await this.model.unassignClientsByCoachId(coachId, adminId);
-    }
+  _coachUnlinkedNotice({ coachId = null, reason = "coach_unlinked", now = new Date() } = {}) {
+    return {
+      type: "coach_unlinked",
+      status: "unread",
+      coachId: coachId ? idToString(coachId) : null,
+      reason,
+      message: "Ahora gestionas tu nutricion de forma independiente.",
+      createdAt: now,
+    };
+  }
 
-    const clients = await this._listClientsForCoach(coachId);
-    for (const client of clients) {
-      await this._updateById(client._id, {
-        coach: {
-          ...(client?.coach || {}),
-          entrenadorId: null,
-          assignedAt: null,
-          assignedByAdminId: adminId,
-          source: null,
+  _disconnectClientPatch(client = {}, { coachId = null, reason = "coach_unlinked", actor = null, now = new Date() } = {}) {
+    const disconnectedCoachId = coachId || client?.coach?.entrenadorId || null;
+    const actorId = idToString(actor?._id || actor?.id || actor);
+    const nextMetas = restoreMetasAfterCoachDisconnect(client, disconnectedCoachId);
+    const currentWeeklyPlan = client?.menu?.weeklyPlan || {};
+    const clearCoachWeeklyPlan = shouldClearCoachWeeklyPlanOnDisconnect(client, disconnectedCoachId);
+
+    return {
+      coach: {
+        ...(client?.coach || {}),
+        entrenadorId: null,
+        assignedAt: null,
+        assignedByAdminId: null,
+        assignedByCoachId: null,
+        source: null,
+        endedAt: now,
+        endedBy: actorId || "system",
+        endedReason: reason,
+      },
+      menu: {
+        ...(client?.menu || {}),
+        activeSource: "none",
+        activeOwnMenuId: null,
+        ...(clearCoachWeeklyPlan
+          ? {
+              updatedByCoachId: null,
+              coachNotes: "",
+            }
+          : {}),
+        weeklyPlan: {
+          ...currentWeeklyPlan,
+          ...(clearCoachWeeklyPlan
+            ? {
+                caloriesByDay: {},
+                macrosByDay: {},
+                mealsByDay: {},
+                generatedBy: null,
+                generatorMode: null,
+                sourceCoachId: null,
+                updatedByCoachId: null,
+                coachClearedAt: now,
+              }
+            : {}),
+          assignedMenusByDay: {},
+          updatedAt: now,
         },
-        updatedAt: new Date(),
+        updatedAt: now,
+      },
+      clientPermissions: resetCoachDerivedClientPermissions(client?.clientPermissions || {}),
+      metasActuales: nextMetas,
+      nutrition: {
+        ...(client?.nutrition || {}),
+        coachDisconnectedAt: now,
+        coachDisconnectedReason: reason,
+      },
+      clientCoachNotice: this._coachUnlinkedNotice({ coachId: disconnectedCoachId, reason, now }),
+      coachChangeRequest: null,
+      updatedAt: now,
+    };
+  }
+
+  async disconnectClientFromCoach({ clientId, coachId = null, reason = "coach_unlinked", actor = null } = {}) {
+    const client = await this.getById(clientId);
+    if (!client) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(client)) throw new Error("USER_NOT_CLIENT");
+
+    const currentCoachId = idToString(client?.coach?.entrenadorId);
+    const disconnectCoachId = idToString(coachId || currentCoachId);
+    const now = new Date();
+    const actorId = idToString(actor?._id || actor?.id || actor);
+    let revokedMenus = { matchedCount: 0, modifiedCount: 0 };
+    let revokedLibraryMenus = { matchedCount: 0, modifiedCount: 0 };
+    let revokedLibraryMeals = { matchedCount: 0, modifiedCount: 0 };
+
+    if (disconnectCoachId && typeof this.menusModel.revokeActiveForClientAndCoach === "function") {
+      revokedMenus = await this.menusModel.revokeActiveForClientAndCoach(clientId, disconnectCoachId, {
+        revokedReason: reason,
+        revokedBy: actorId || null,
       });
     }
 
-    return { matchedCount: clients.length, modifiedCount: clients.length };
+    if (disconnectCoachId && typeof this.menusModel.revokeBaseAssignmentsForClientAndCoach === "function") {
+      revokedLibraryMenus = await this.menusModel.revokeBaseAssignmentsForClientAndCoach(clientId, disconnectCoachId);
+    }
+
+    if (disconnectCoachId && typeof this.comidasGuardadasModel?.revokeAssignmentsForClientAndCoach === "function") {
+      revokedLibraryMeals = await this.comidasGuardadasModel.revokeAssignmentsForClientAndCoach(clientId, disconnectCoachId);
+    }
+
+    const updated = await this.updateById(
+      clientId,
+      this._disconnectClientPatch(client, {
+        coachId: disconnectCoachId,
+        reason,
+        actor,
+        now,
+      })
+    );
+
+    return {
+      user: updated,
+      status: "unassigned",
+      revokedMenus,
+      revokedLibraryMenus,
+      revokedLibraryMeals,
+    };
+  }
+
+  async _unassignAllClientsFromCoach(coachId, adminId = null) {
+    const clients = await this._listClientsForCoach(coachId);
+    let modifiedCount = 0;
+    const failures = [];
+    for (const client of clients) {
+      try {
+        await this.disconnectClientFromCoach({
+          clientId: client._id || client.id,
+          coachId,
+          reason: "coach_deleted",
+          actor: adminId,
+        });
+        modifiedCount += 1;
+      } catch (error) {
+        failures.push({
+          clientId: String(client._id || client.id || ""),
+          message: error?.message || "UNKNOWN_ERROR",
+        });
+      }
+    }
+
+    if (failures.length) {
+      const error = new Error("COACH_CLIENT_UNASSIGN_PARTIAL");
+      error.details = failures;
+      error.unassignedClients = {
+        matchedCount: clients.length,
+        modifiedCount,
+        failedCount: failures.length,
+      };
+      throw error;
+    }
+
+    return { matchedCount: clients.length, modifiedCount, failedCount: 0 };
   }
 
   async _getCoachPlanConfig(planCode) {
@@ -2855,25 +3304,17 @@ class ServicioUsuarios {
       throw new Error("COACH_UNLINK_REQUIRES_ADMIN");
     }
 
-    const updated = await this.updateById(user._id || user.id || userId, {
-      coach: {
-        ...(user?.coach || {}),
-        entrenadorId: null,
-        assignedAt: null,
-        assignedByAdminId: null,
-        assignedByCoachId: null,
-        source: null,
-        endedAt: new Date(),
-        endedBy: "client",
-      },
-      clientCoachNotice: null,
-      coachChangeRequest: null,
-      updatedAt: new Date(),
+    const result = await this.disconnectClientFromCoach({
+      clientId: user._id || user.id || userId,
+      coachId,
+      reason: "client_left_coach",
+      actor: user._id || user.id || userId,
     });
 
     return {
-      user: updated,
+      user: result.user,
       status: "unassigned",
+      revokedMenus: result.revokedMenus,
     };
   };
 
@@ -3523,6 +3964,9 @@ class ServicioUsuarios {
         ...(user?.metasActuales?.macros || {}),
         ...(payload?.metasActuales?.macros || {}),
       },
+      source: normalizeGoalSource(payload?.metasActuales?.source) || "self",
+      sourceCoachId: null,
+      needsReview: payload?.metasActuales?.needsReview === true ? true : false,
       updatedAt: new Date(),
     };
 
@@ -3616,11 +4060,22 @@ class ServicioUsuarios {
       }
     }
 
+    let clientForAssignment = client;
+    if (currentCoachId && String(currentCoachId || "") !== String(coachId)) {
+      const disconnected = await this.disconnectClientFromCoach({
+        clientId,
+        coachId: currentCoachId,
+        reason: "coach_changed",
+        actor: adminId,
+      });
+      clientForAssignment = disconnected.user || client;
+    }
+
     const now = new Date();
 
     return await this.updateById(clientId, {
       coach: {
-        ...(client?.coach || {}),
+        ...(clientForAssignment?.coach || {}),
         entrenadorId: toMongoIdOrString(coach._id || coach.id || coachId),
         assignedAt: now,
         assignedByAdminId: adminId,
@@ -3637,18 +4092,14 @@ class ServicioUsuarios {
     if (!client) throw new Error("NOT_FOUND");
     if (!this._isClientUser(client)) throw new Error("USER_NOT_CLIENT");
 
-    return await this.updateById(clientId, {
-      coach: {
-        ...(client?.coach || {}),
-        entrenadorId: null,
-        assignedAt: null,
-        assignedByAdminId: adminId,
-        source: null,
-      },
-      clientCoachNotice: null,
-      coachChangeRequest: null,
-      updatedAt: new Date(),
+    const result = await this.disconnectClientFromCoach({
+      clientId,
+      coachId: client?.coach?.entrenadorId,
+      reason: "admin_unassigned_coach",
+      actor: adminId,
     });
+
+    return result.user;
   };
 
   adminGetCoachClients = async (coachId) => {
@@ -3783,6 +4234,7 @@ class ServicioUsuarios {
     const currentMetas = client?.metasActuales || {};
     const currentMacros = currentMetas?.macros || {};
     const incomingMacros = isPlainObject(incoming?.macros) ? incoming.macros : {};
+    const selfGoalsBackup = buildSelfGoalsBackup(currentMetas);
 
     const nextMetas = {
       ...currentMetas,
@@ -3797,6 +4249,9 @@ class ServicioUsuarios {
       },
       updatedAt: now,
       updatedByCoachId: toMongoIdOrString(coach._id || coach.id || coachId),
+      source: "coach",
+      sourceCoachId: toMongoIdOrString(coach._id || coach.id || coachId),
+      needsReview: false,
     };
 
     const currentGoal = client?.goal || {};
@@ -3817,22 +4272,32 @@ class ServicioUsuarios {
       updatedAt: now,
     };
 
+    if (selfGoalsBackup) {
+      patch.nutrition = {
+        ...(client?.nutrition || {}),
+        selfGoalsBackup,
+      };
+    }
+
     const weeklyPlan = isPlainObject(incoming?.weeklyPlan) ? incoming.weeklyPlan : {};
     const weeklyPlanPatch = {};
     if (isPlainObject(weeklyPlan?.caloriesByDay)) weeklyPlanPatch.caloriesByDay = weeklyPlan.caloriesByDay;
     if (isPlainObject(weeklyPlan?.macrosByDay)) weeklyPlanPatch.macrosByDay = weeklyPlan.macrosByDay;
     if (Object.keys(weeklyPlanPatch).length) {
       const currentMenu = client?.menu || {};
+      const coachObjectId = toMongoIdOrString(coach._id || coach.id || coachId);
       patch.menu = {
         ...currentMenu,
         weeklyPlan: {
           ...(currentMenu?.weeklyPlan || {}),
           ...weeklyPlanPatch,
           generatedBy: "coach",
+          sourceCoachId: coachObjectId,
+          updatedByCoachId: coachObjectId,
           updatedAt: now,
         },
         updatedAt: now,
-        updatedByCoachId: toMongoIdOrString(coach._id || coach.id || coachId),
+        updatedByCoachId: coachObjectId,
       };
     }
 
@@ -3849,6 +4314,7 @@ class ServicioUsuarios {
 
     const now = new Date();
     const current = client?.menu || {};
+    const coachObjectId = toMongoIdOrString(coach._id || coach.id || coachId);
     const mealConfig = isPlainObject(incoming?.mealConfig) ? incoming.mealConfig : {};
     const restrictions = isPlainObject(incoming?.restrictions) ? incoming.restrictions : {};
     const weeklyPlan = isPlainObject(incoming?.weeklyPlan) ? incoming.weeklyPlan : {};
@@ -3900,11 +4366,19 @@ class ServicioUsuarios {
           : {}),
         generatedBy: "coach",
         generatorMode: modeType,
+        sourceCoachId: coachObjectId,
+        updatedByCoachId: coachObjectId,
         updatedAt: now,
       },
       coachNotes: cleanString(incoming?.coachNotes, 3000),
+      ...(isPlainObject(weeklyPlan?.assignedMenusByDay)
+        ? {
+            activeSource: "coach",
+            activeOwnMenuId: null,
+          }
+        : {}),
       updatedAt: now,
-      updatedByCoachId: toMongoIdOrString(coach._id || coach.id || coachId),
+      updatedByCoachId: coachObjectId,
     };
 
     const updated = await this.updateById(clientId, {
@@ -4054,7 +4528,8 @@ class ServicioUsuarios {
     const docs = await this.menuTrackingModel.listByUserDateRange(userId, start, end);
     const trackingByDate = new Map((docs || []).map((doc) => [String(doc.date), doc]));
     const nutritionWeek = resolveClientNutritionWeek(user);
-    const assignments = normalizeAssignedMenusByDay(user?.menu?.weeklyPlan?.assignedMenusByDay || {});
+    const activePlan = await this._resolveClientMenuPlan(user);
+    const assignments = normalizeAssignedMenusByDay(activePlan.assignments || {});
 
     const days = WEEKLY_MENU_DAY_META.map((day, index) => {
       const date = addDaysIso(start, index);
@@ -4104,6 +4579,11 @@ class ServicioUsuarios {
             source: user.coach.source || null,
           }
         : null,
+      activePlan: {
+        source: activePlan.activeSource,
+        menuId: activePlan.activeMenu ? idToString(activePlan.activeMenu._id || activePlan.activeMenu.id) : null,
+        name: activePlan.activeMenu?.nombre || activePlan.activeMenu?.name || null,
+      },
       nutrition: nutritionWeek,
       permissions: clientMenuTrackingPermissions(user),
       days,
@@ -4156,7 +4636,8 @@ class ServicioUsuarios {
 
     const nutritionWeek = resolveClientNutritionWeek(user);
     const target = nutritionWeek.targets[dayKey] || null;
-    const assignments = normalizeAssignedMenusByDay(user?.menu?.weeklyPlan?.assignedMenusByDay || {});
+    const activePlan = await this._resolveClientMenuPlan(user);
+    const assignments = normalizeAssignedMenusByDay(activePlan.assignments || {});
     const assignment = assignments[dayKey] || null;
     const primary = assignment?.primaryMenu || assignment || null;
     const alternatives = Array.isArray(assignment?.alternatives) ? assignment.alternatives : [];
@@ -4645,5 +5126,13 @@ class ServicioUsuarios {
     return await this.model.getUpdatedAtById(userId);
   };
 }
+
+export {
+  buildSelfGoalsBackup,
+  resolveClientNutritionWeek,
+  resetCoachDerivedClientPermissions,
+  restoreMetasAfterCoachDisconnect,
+  shouldUseWeeklyNutritionPlan,
+};
 
 export default ServicioUsuarios;

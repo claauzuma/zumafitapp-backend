@@ -102,6 +102,17 @@ function idToString(id) {
   return id?.toString?.() || String(id || "");
 }
 
+function currentCoachIdForClient(client = {}) {
+  return cleanId(
+    client?.coach?.entrenadorId ||
+    client?.coach?.coachId ||
+    client?.coachId ||
+    client?.entrenadorId ||
+    client?.profesionalId ||
+    ""
+  );
+}
+
 function toMongoIdOrString(id) {
   const value = cleanId(id);
   if (!value) return null;
@@ -769,17 +780,37 @@ class ServicioMenus {
       assignedByRole: this._role(actor),
     };
 
-    return normalizeDoc(await this.menusModel.createAssigned(assigned));
+    const created = await this.menusModel.createAssigned(assigned);
+    await this.usuariosModel.updateById(clienteId, {
+      menu: {
+        ...(client?.menu || {}),
+        activeSource: "coach",
+        activeOwnMenuId: null,
+        updatedAt: new Date(),
+      },
+      updatedAt: new Date(),
+    });
+
+    return normalizeDoc(created);
   }
 
   async listClienteMenus(user, clienteId, filters = {}) {
     const actor = await this._actor(user);
     await this._assertNutritionAccess(actor);
-    await this._getClientForActor(actor, clienteId);
+    const client = await this._getClientForActor(actor, clienteId);
+    const currentCoachId = currentCoachIdForClient(client);
+    if (!currentCoachId) {
+      return {
+        menus: [],
+        total: 0,
+      };
+    }
 
     const data = await this.menusModel.listAssigned({
       ...filters,
       clienteId,
+      coachId: currentCoachId,
+      estado: filters.estado || "activo",
     });
 
     return {
@@ -791,18 +822,29 @@ class ServicioMenus {
   async getClienteMenuActivo(user, clienteId) {
     const actor = await this._actor(user);
     await this._assertNutritionAccess(actor);
-    await this._getClientForActor(actor, clienteId);
-    return normalizeDoc(await this.menusModel.getActiveForClient(clienteId));
+    const client = await this._getClientForActor(actor, clienteId);
+    const currentCoachId = currentCoachIdForClient(client);
+    if (!currentCoachId) return null;
+    return normalizeDoc(await this.menusModel.getActiveForClientAndCoach(clienteId, currentCoachId));
   }
 
   async getClienteMenu(user, clienteId, menuAsignadoId) {
     const actor = await this._actor(user);
     await this._assertNutritionAccess(actor);
-    await this._getClientForActor(actor, clienteId);
+    const client = await this._getClientForActor(actor, clienteId);
 
     const assigned = await this.menusModel.getAssignedById(menuAsignadoId);
     if (!assigned) throw new Error("NOT_FOUND");
     if (!sameId(assigned.clienteId, clienteId)) throw new Error("FORBIDDEN");
+    const currentCoachId = currentCoachIdForClient(client);
+    if (
+      !currentCoachId ||
+      assigned.activa === false ||
+      assigned.estado !== "activo" ||
+      !sameId(assigned.coachId, currentCoachId)
+    ) {
+      throw new Error("NOT_FOUND");
+    }
 
     return normalizeDoc(assigned);
   }

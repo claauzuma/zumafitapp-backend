@@ -40,6 +40,24 @@ class ControladorFoodLogs {
     }
   };
 
+  updateMealsConfig = async (req, res) => {
+    try {
+      const data = await this.servicio.updateMealsConfig(req.user, req.body || {});
+      return res.json({ ok: true, ...data });
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
+  deleteMeal = async (req, res) => {
+    try {
+      const data = await this.servicio.deleteMeal(req.user, req.params.mealId, req.body || {});
+      return res.json({ ok: true, ...data });
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
   updateLog = async (req, res) => {
     try {
       const data = await this.servicio.updateLog(req.user, req.params.logId, req.body || {});

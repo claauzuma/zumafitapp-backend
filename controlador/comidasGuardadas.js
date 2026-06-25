@@ -1,4 +1,5 @@
 import ServicioComidasGuardadas from "../servicio/comidasGuardadas.js";
+import ServicioComidasGuardadasExcelImport from "../servicio/comidasGuardadasExcelImport.js";
 
 function sendError(res, error) {
   const msg = String(error?.message || "");
@@ -21,6 +22,13 @@ function sendError(res, error) {
   if (msg === "INVALID_MEAL_TYPE") return res.status(400).json({ error: "Tipo de comida invalido" });
   if (msg === "TRACKING_NOT_ALLOWED") return res.status(403).json({ error: "Tu cuenta no tiene habilitado el tracking de alimentos" });
   if (msg === "PAST_DAYS_NOT_ALLOWED") return res.status(403).json({ error: "No tenes habilitada la edicion de dias anteriores" });
+  if (msg === "EXCEL_FILE_REQUIRED") return res.status(400).json({ error: "Subi un archivo Excel para importar" });
+  if (msg === "EXCEL_FILE_TOO_LARGE") return res.status(413).json({ error: "El archivo Excel supera el tamano maximo permitido" });
+  if (msg === "EXCEL_FILE_INVALID_TYPE") return res.status(400).json({ error: "El archivo debe ser .xlsx o .xls" });
+  if (msg === "HOJA1_REQUIRED") return res.status(400).json({ error: "El archivo debe contener una hoja llamada Hoja1" });
+  if (msg === "IMPORT_TOKEN_INVALID") return res.status(400).json({ error: "La vista previa expiro o no es valida. Volve a subir el Excel." });
+  if (msg === "IMPORT_HAS_ERRORS") return res.status(409).json({ error: "La importacion tiene errores. Activa importar solo validas o corregi el Excel." });
+  if (msg === "IMPORT_NO_VALID_MEALS") return res.status(400).json({ error: "No hay comidas validas para importar" });
 
   console.error("Error comidasGuardadas:", error);
   return res.status(500).json({ error: "Error en el servidor" });
@@ -29,6 +37,7 @@ function sendError(res, error) {
 class ControladorComidasGuardadas {
   constructor() {
     this.servicio = new ServicioComidasGuardadas();
+    this.importadorExcel = new ServicioComidasGuardadasExcelImport();
   }
 
   list = async (req, res) => {
@@ -174,6 +183,24 @@ class ControladorComidasGuardadas {
     try {
       const comida = await this.servicio.update(req.user, req.params.id, req.body || {});
       return res.json({ ok: true, comida });
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
+  previewAdminExcelImport = async (req, res) => {
+    try {
+      const preview = await this.importadorExcel.preview(req.file, req.body || {}, req.user || {});
+      return res.json(preview);
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
+  confirmAdminExcelImport = async (req, res) => {
+    try {
+      const data = await this.importadorExcel.confirm(req.body?.importToken, req.body || {}, req.user || {});
+      return res.status(201).json(data);
     } catch (error) {
       return sendError(res, error);
     }

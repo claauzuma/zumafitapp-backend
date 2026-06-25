@@ -402,15 +402,27 @@ class ServicioComidasGuardadas {
     if (isAdmin(actor)) return active;
 
     const own = { ownerId: { $in: idValues(actorId) } };
-    const assigned = { asignadaA: { $in: idValues(actorId) } };
-    const publicVisibilities = normalizePlan(actor) === "free" ? ["global"] : ["global", "premium"];
+    const assigned = {
+      $or: [
+        { asignadaA: { $in: idValues(actorId) } },
+        { "asignadaA.clienteId": { $in: idValues(actorId) } },
+      ],
+    };
+    const plan = normalizePlan(actor);
+    const publicVisibilities =
+      plan === "vip" || ["coach", "nutri", "trainernutri", "trainer_nutri", "gym", "admin"].includes(plan)
+        ? ["global", "premium"]
+        : plan === "pro"
+          ? ["global"]
+          : ["global"];
 
     if (scope === "mine") return { $and: [active, own] };
     if (scope === "assigned" || scope === "coach") return { $and: [active, assigned] };
     if (scope === "templates" && isCoach(actor)) return { $and: [active, own] };
 
     const access = [own, assigned, { visibilidad: { $in: publicVisibilities } }];
-    if (isCoach(actor)) access.push({ visibilidad: "gimnasio" });
+    if (isCoach(actor)) access.push({ visibilidad: { $in: ["gimnasio", "solo_coaches"] } });
+    if (!isCoach(actor) && normalizePlan(actor) === "vip") access.push({ visibilidad: "solo_clientes" });
     return { $and: [active, { $or: access }] };
   }
 
