@@ -3,6 +3,7 @@ import rateLimit from "express-rate-limit";
 
 import ControladorMenus from "../controlador/menus.js";
 import ControladorClientOwnMenus from "../controlador/clientOwnMenus.js";
+import ControladorClientAccessContext from "../controlador/clientAccessContext.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { denyWriteWhenReadOnlyImpersonation } from "../middleware/denyWriteWhenReadOnlyImpersonation.js";
 
@@ -18,6 +19,7 @@ class RouterClienteMenus {
     this.router = express.Router();
     this.controladorMenus = new ControladorMenus();
     this.controladorClientOwnMenus = new ControladorClientOwnMenus();
+    this.controladorClientAccessContext = new ControladorClientAccessContext();
   }
 
   start() {
@@ -29,6 +31,58 @@ class RouterClienteMenus {
       denyWriteWhenReadOnlyImpersonation,
       writeLimiter,
       this.controladorClientOwnMenus.deactivate
+    );
+    this.router.get(
+      "/me/access-context",
+      authMiddleware,
+      this.controladorClientAccessContext.get
+    );
+    this.router.post(
+      "/me/trial/pro/start",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientAccessContext.startProTrial
+    );
+    this.router.get(
+      "/me/trial",
+      authMiddleware,
+      this.controladorClientAccessContext.getTrial
+    );
+    this.router.post(
+      "/me/trial/activate",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientAccessContext.startProTrial
+    );
+    this.router.post(
+      "/me/trial/onboarding-offer/ack",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientAccessContext.acknowledgeTrialOnboardingOffer
+    );
+    this.router.post(
+      "/me/trial/expiry-notice/ack",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientAccessContext.acknowledgeTrialExpiryNotice
+    );
+    this.router.post(
+      "/me/plan-change-requests",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientAccessContext.createPlanChangeRequest
+    );
+    this.router.post(
+      "/me/plan-change",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientAccessContext.createPlanChangeRequest
     );
     this.router.get(
       "/me/nutrition-capabilities",

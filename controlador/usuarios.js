@@ -1,6 +1,7 @@
 import Servicio from "../servicio/usuarios.js";
 import cloudinary from "cloudinary";
 import { getClientNutritionCapabilities } from "../servicio/clientNutritionCapabilities.js";
+import { accessErrorPayload, getGoalsChangeStatus, isAccessGateError } from "../servicio/accessGates.js";
 
 function getCookieOptions() {
   const isProd = process.env.NODE_ENV === "production";
@@ -58,6 +59,17 @@ function appendQuery(url, params = {}) {
 function adminError(res, error) {
   const msg = String(error?.message || "");
 
+  if (isAccessGateError(error)) {
+    const code = error?.code || msg;
+    const conflictCodes = new Set([
+      "PLAN_LIMIT_REACHED",
+      "GOALS_CHANGE_COOLDOWN",
+      "GOALS_CHANGE_LIMIT_REACHED",
+      "COACH_CLIENT_LIMIT_REACHED",
+    ]);
+    return res.status(conflictCodes.has(code) ? 409 : 403).json(accessErrorPayload(error));
+  }
+
   if (msg === "NOMBRE_REQUERIDO") return res.status(400).json({ error: "Ingresa el nombre" });
   if (msg === "APELLIDO_REQUERIDO") return res.status(400).json({ error: "Ingresa el apellido" });
   if (msg === "EMAIL_REQUERIDO") return res.status(400).json({ error: "Ingresa el email" });
@@ -91,8 +103,11 @@ function adminError(res, error) {
   if (msg === "CLIENT_NOT_ASSIGNED_TO_COACH") {
     return res.status(403).json({ error: "Este cliente no esta asignado a tu cuenta profesional" });
   }
-  if (msg === "CLIENT_ALREADY_HAS_COACH") {
+  if (msg === "CLIENT_ALREADY_HAS_COACH" || msg === "CLIENT_ALREADY_HAS_ACTIVE_COACH") {
     return res.status(409).json({ error: "Ya tenes un coach activo asignado" });
+  }
+  if (msg === "CLIENT_ALREADY_HAS_PENDING_COACH") {
+    return res.status(409).json({ error: "Ya aceptaste una invitacion y estas esperando activacion del profesional" });
   }
   if (msg === "CLIENT_HAS_NO_COACH") {
     return res.status(400).json({ error: "No tenes un coach activo asignado" });
@@ -111,6 +126,12 @@ function adminError(res, error) {
   }
   if (msg === "COACH_FEATURE_NOT_ALLOWED") {
     return res.status(403).json({ error: "Tu plan no permite esta accion" });
+  }
+  if (msg === "COACH_SERVICE_PACKAGE_NOT_ALLOWED" || msg === "COACH_PACKAGE_NOT_ALLOWED") {
+    return res.status(403).json({ error: "Tu plan profesional no permite ofrecer ese paquete de servicio" });
+  }
+  if (msg === "INVITATION_NOT_ACCEPTED_PENDING_ACTIVATION") {
+    return res.status(409).json({ error: "La invitacion todavia no fue aceptada por el cliente" });
   }
   if (msg === "PAYLOAD_INVALIDO") return res.status(400).json({ error: "Datos invalidos" });
   if (msg === "CANNOT_ASSIGN_SELF") {
@@ -162,6 +183,9 @@ function mapUserPublic(user) {
 
     profile: user.profile || {},
     coachProfile: user.coachProfile || null,
+    professionalStatus: user.professionalStatus || user.coachProfile?.status || null,
+    professionalScopes: user.professionalScopes || user.approvedScopes || null,
+    coachSubscription: user.coachSubscription || null,
     coachCapabilities: user.coachCapabilities || null,
     coachOverrides: user.coachOverrides || null,
     effectiveCapabilities: user.effectiveCapabilities || null,
@@ -170,12 +194,18 @@ function mapUserPublic(user) {
     settings: user.settings || {},
     adminMeta: user.adminMeta || {},
     clientPermissions: user.clientPermissions || {},
+    personalPlan: user.personalPlan || null,
+    personalSubscription: user.personalSubscription || {},
+    personalTrial: user.personalTrial || user.trial || {},
+    coachAccess: user.coachAccess || {},
     nutritionCapabilities: String(user.role || "").toLowerCase() === "cliente"
       ? getClientNutritionCapabilities(user)
       : null,
 
     metas: user.metas || {},
     onboarding: user.onboarding || {},
+    goalsMetadata: user.goalsMetadata || {},
+    goalsAccess: getGoalsChangeStatus(user, { actorType: "client" }),
     coach: user.coach || {},
     clientCoachNotice: user.clientCoachNotice || null,
     coachChangeRequest: user.coachChangeRequest || null,
@@ -1234,6 +1264,16 @@ class ControladorUsuarios {
     }
   };
 
+  clientUpdateGoals = async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?._id || null;
+      const user = await this.servicio.clientUpdateGoals(userId, req.body || {});
+      return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
   // =========================
   // ADMIN: RELACIÓN COACH <-> CLIENTE
   // =========================
@@ -1337,6 +1377,7 @@ class ControladorUsuarios {
         },
         onboarding: body.onboarding || {},
         clientPermissions: body.clientPermissions || {},
+        servicePackage: body.servicePackage || body.coachAccess?.servicePackage || "service_pro",
       });
 
       return res.status(201).json({ ok: true, ...data });
@@ -1385,6 +1426,27 @@ class ControladorUsuarios {
       });
 
       return res.json({ ok: true, ...result });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  activateMyClientInvitation = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const { invitationId } = req.params;
+      const data = await this.servicio.coachActivateClientInvitation({
+        coachId,
+        invitationId,
+      });
+
+      return res.json({
+        ok: true,
+        status: data.status,
+        invitation: data.invitation,
+        client: mapUserPublic(data.client),
+        coach: mapUserPublic(data.coach),
+      });
     } catch (error) {
       return adminError(res, error);
     }

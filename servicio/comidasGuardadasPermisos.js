@@ -14,7 +14,22 @@ export function normalizeRole(userOrRole = {}) {
 }
 
 export function normalizePlan(userOrPlan = {}) {
-  const raw = typeof userOrPlan === "string" ? userOrPlan : userOrPlan?.plan || userOrPlan?.subscription?.planCode;
+  if (typeof userOrPlan !== "string") {
+    const trial = userOrPlan?.personalTrial || userOrPlan?.trial || {};
+    const status = String(trial?.status || "").trim().toLowerCase();
+    const endsAt = trial?.endsAt ? new Date(trial.endsAt) : null;
+    if (
+      ["active", "trialing"].includes(status) &&
+      endsAt &&
+      Number.isFinite(endsAt.getTime()) &&
+      endsAt.getTime() >= Date.now()
+    ) {
+      return "pro";
+    }
+  }
+  const raw = typeof userOrPlan === "string"
+    ? userOrPlan
+    : userOrPlan?.personalPlan || userOrPlan?.plan || userOrPlan?.subscription?.planCode || userOrPlan?.personalSubscription?.plan;
   const plan = String(raw || "free").trim().toLowerCase();
   if (["premium", "pro"].includes(plan)) return "pro";
   if (["premium2", "vip"].includes(plan)) return "vip";

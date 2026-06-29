@@ -9,6 +9,11 @@ import {
   normalizeClientPlan,
   normalizeClientRole,
 } from "./clientNutritionCapabilities.js";
+import { resolveClientAccessContext } from "./clientAccessContext.js";
+import {
+  requireMenuDaysLimit,
+  requireQuota,
+} from "./accessGates.js";
 import {
   canViewNutritionItem,
   idValues,
@@ -452,6 +457,20 @@ class ServicioClientOwnMenus {
         idToString(menu.ownerId) === this._userId(user);
       if (!ownsMenu) {
         nextMenu = { ...(user?.menu || {}), activeSource: "none", activeOwnMenuId: null, updatedAt: new Date() };
+      } else {
+        try {
+          requireMenuDaysLimit(user, menu);
+        } catch (error) {
+          if (error?.code !== "PLAN_LIMIT_REACHED" || error?.resource !== "menuDays") throw error;
+          nextMenu = {
+            ...(user?.menu || {}),
+            activeSource: "none",
+            activeOwnMenuId: null,
+            lastIncompatibleOwnMenuId: toMongoIdOrString(activeOwnMenuId),
+            lastIncompatibleReason: "MENU_DAYS_LIMIT",
+            updatedAt: new Date(),
+          };
+        }
       }
     }
 
@@ -463,17 +482,10 @@ class ServicioClientOwnMenus {
 
   async _assertLimit(user) {
     const userId = this._userId(user);
-    const capabilities = getClientNutritionCapabilities(user);
+    const capabilities = this._capabilitiesFromAccessContext(user);
     const current = await this._ownMenuCount(userId);
-    const limit = Number(capabilities.limits.ownMenus);
-    if (Number.isFinite(limit) && current >= limit) {
-      throw serviceError("PLAN_LIMIT_REACHED", `Alcanzaste el limite de ${limit} menus de tu plan`, {
-        resource: "ownMenus",
-        current,
-        limit,
-        plan: capabilities.plan,
-      });
-    }
+    requireQuota(user, "ownMenus", current);
+    return capabilities;
   }
 
   async _rollbackCreatedMenu(menuId, reason = "rollback") {
@@ -488,7 +500,7 @@ class ServicioClientOwnMenus {
   }
 
   async _assertLimitAfterWrite(user, createdMenuId) {
-    const capabilities = getClientNutritionCapabilities(user);
+    const capabilities = this._capabilitiesFromAccessContext(user);
     const current = await this._ownMenuCount(this._userId(user));
     const limit = Number(capabilities.limits.ownMenus);
     if (Number.isFinite(limit) && current > limit) {
@@ -613,7 +625,24 @@ class ServicioClientOwnMenus {
     const actor = await this._actor(user);
     const hasCoachMenu = await this._hasCoachMenuActive(actor);
     const activeSource = hasCoachMenu ? "coach" : actor?.menu?.activeSource || "none";
-    return getClientNutritionCapabilities(actor, { activeMenuSource: activeSource });
+    return this._capabilitiesFromAccessContext(actor, { activeMenuSource: activeSource });
+  }
+
+  _capabilitiesFromAccessContext(user, { activeMenuSource = null } = {}) {
+    const context = resolveClientAccessContext(user);
+    const requestedActiveSource = activeMenuSource || user?.menu?.activeSource || "none";
+    const source = requestedActiveSource === "coach" && !context.hasCoach ? "none" : requestedActiveSource;
+    return {
+      ...(context.capabilities || getClientNutritionCapabilities(user)),
+      plan: context.effectivePersonalPlan || context.capabilities?.plan || "free",
+      personalPlan: context.personalPlan || context.capabilities?.personalPlan || "free",
+      effectivePersonalPlan: context.effectivePersonalPlan || context.personalPlan || "free",
+      hasCoach: context.hasCoach,
+      clientType: context.clientType,
+      servicePackage: context.coachAccess?.servicePackage || context.capabilities?.servicePackage || null,
+      serviceLabel: context.coachAccess?.label || context.capabilities?.serviceLabel || null,
+      activeMenuSource: ["own", "coach"].includes(source) ? source : "none",
+    };
   }
 
   async list(user, filters = {}) {
@@ -662,7 +691,7 @@ class ServicioClientOwnMenus {
 
   async create(user, payload = {}) {
     const actor = await this._actor(user);
-    const capabilities = getClientNutritionCapabilities(actor);
+    const capabilities = this._capabilitiesFromAccessContext(actor);
     if (!capabilities.canCreateOwnMenu) throw serviceError("CLIENT_MENU_FORBIDDEN", "Tu plan no permite crear menus");
     validateRawMenuPayload(payload);
     await this._assertLimit(actor);
@@ -674,6 +703,7 @@ class ServicioClientOwnMenus {
     doc.nombre = await this._uniqueNameForUser(actor, doc.nombre);
     doc.nombreNormalizado = normalizedName(doc.nombre);
     doc.createdAt = new Date();
+    requireMenuDaysLimit(actor, doc);
     await this._validateMenuPayload(doc);
 
     const created = await this.menusModel.createBase(doc);
@@ -690,11 +720,12 @@ class ServicioClientOwnMenus {
 
   async update(user, menuId, payload = {}) {
     const actor = await this._actor(user);
-    const capabilities = getClientNutritionCapabilities(actor);
+    const capabilities = this._capabilitiesFromAccessContext(actor);
     if (!capabilities.canEditOwnMenu) throw serviceError("CLIENT_MENU_FORBIDDEN", "Tu plan no permite editar menus");
     validateRawMenuPayload(payload);
     const current = await this._getOwnedMenu(actor, menuId);
     const patch = this._normalizePayload(payload, actor, current);
+    requireMenuDaysLimit(actor, patch);
     if (payload.nombre !== undefined || payload.name !== undefined) {
       const others = (await this._ownMenusRaw(this._userId(actor), { limit: 500 })).filter((menu) => idToString(menu._id) !== idToString(menuId));
       patch.nombre = nextUniqueName(patch.nombre, others.map((menu) => menu.nombre));
@@ -708,7 +739,7 @@ class ServicioClientOwnMenus {
 
   async remove(user, menuId, payload = {}) {
     const actor = await this._actor(user);
-    const capabilities = getClientNutritionCapabilities(actor);
+    const capabilities = this._capabilitiesFromAccessContext(actor);
     if (!capabilities.canDeleteOwnMenu) throw serviceError("CLIENT_MENU_FORBIDDEN", "Tu plan no permite eliminar menus");
     const current = await this._getOwnedMenu(actor, menuId);
     const isActive = actor?.menu?.activeSource === "own" && idToString(actor?.menu?.activeOwnMenuId) === idToString(menuId);
@@ -730,10 +761,11 @@ class ServicioClientOwnMenus {
 
   async duplicate(user, menuId, payload = {}) {
     const actor = await this._actor(user);
-    const capabilities = getClientNutritionCapabilities(actor);
+    const capabilities = this._capabilitiesFromAccessContext(actor);
     if (!capabilities.canDuplicateOwnMenu) throw serviceError("CLIENT_MENU_FORBIDDEN", "Tu plan no permite duplicar menus");
     await this._assertLimit(actor);
     const current = await this._getVisibleMenu(actor, menuId);
+    requireMenuDaysLimit(actor, current);
     const copyName = await this._uniqueNameForUser(actor, payload.nombre || current.nombre || "Mi menu");
     const now = new Date();
     const copy = {
@@ -769,6 +801,7 @@ class ServicioClientOwnMenus {
     if (!hasValidMenuContent(menu)) {
       throw serviceError("INVALID_MENU", "El menu necesita al menos una comida con alimentos para activarse");
     }
+    requireMenuDaysLimit(user, menu);
     if (await this._hasCoachMenuActive(user)) {
       throw serviceError("COACH_MENU_ACTIVE", "No podes activar un menu propio mientras existe un menu activo asignado por tu coach.");
     }
@@ -786,7 +819,7 @@ class ServicioClientOwnMenus {
 
   async activate(user, menuId) {
     const actor = await this._actor(user);
-    const capabilities = getClientNutritionCapabilities(actor);
+    const capabilities = this._capabilitiesFromAccessContext(actor);
     if (!capabilities.canActivateOwnMenu) throw serviceError("CLIENT_MENU_FORBIDDEN", "Tu plan no permite activar menus");
     const menu = await this._getOwnedMenu(actor, menuId);
     const nextUser = await this._activate(actor, menu);

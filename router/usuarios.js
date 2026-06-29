@@ -164,6 +164,12 @@ class RouterUsuarios {
 
     users.get("/me/updatedAt", authMiddleware, this.controladorUsuarios.getUpdatedAt);
     users.get("/me", authMiddleware, this.controladorUsuarios.obtenerPerfil);
+    users.patch(
+      "/me/goals",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.clientUpdateGoals
+    );
     users.get("/me/coach-clients", authMiddleware, this.controladorUsuarios.getMyCoachClients);
     users.get(
       "/me/client-invitations",
@@ -190,6 +196,13 @@ class RouterUsuarios {
       requireRole("coach"),
       denyWriteWhenReadOnlyImpersonation,
       this.controladorUsuarios.cancelMyClientInvitation
+    );
+    users.patch(
+      "/me/client-invitations/:invitationId/activate",
+      authMiddleware,
+      requireRole("coach"),
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.activateMyClientInvitation
     );
     users.delete(
       "/me/client-invitations/:invitationId",

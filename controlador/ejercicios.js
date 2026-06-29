@@ -1,7 +1,9 @@
 import ServicioRutinas from "../servicio/rutinas.js";
+import { accessErrorPayload, isAccessGateError } from "../servicio/accessGates.js";
 
 function sendError(res, error) {
   const msg = String(error?.message || "");
+  if (isAccessGateError(error)) return res.status(msg === "FEATURE_COMING_SOON" ? 409 : 403).json(accessErrorPayload(error));
 
   if (msg === "NO_AUTENTICADO") return res.status(401).json({ error: "No autenticado" });
   if (msg === "NOT_FOUND") return res.status(404).json({ error: "Ejercicio no encontrado" });

@@ -47,6 +47,7 @@ function cleanCoachSnapshot(value) {
     nombre: String(value.nombre || value?.profile?.nombre || "").trim(),
     apellido: String(value.apellido || value?.profile?.apellido || "").trim(),
     plan: value.plan || null,
+    servicePackage: value.servicePackage || null,
     specialties: {
       training: !!value?.specialties?.training || !!value?.coachProfile?.specialties?.training,
       nutrition: !!value?.specialties?.nutrition || !!value?.coachProfile?.specialties?.nutrition,
@@ -108,6 +109,27 @@ class ModelMongoDBInvitedUsers {
       invitedByType: doc.invitedByType || "admin",
       source: doc.source || "admin_invite",
       assignedCoachId: storedId(doc.assignedCoachId),
+      servicePackage: doc.servicePackage || doc?.coachAccess?.servicePackage || null,
+      serviceScopes: Array.isArray(doc.serviceScopes || doc?.coachAccess?.serviceScopes)
+        ? (doc.serviceScopes || doc.coachAccess.serviceScopes).map((scope) => String(scope || "").trim()).filter(Boolean)
+        : [],
+      price: doc.price && typeof doc.price === "object" && !Array.isArray(doc.price)
+        ? {
+            amount: Number.isFinite(Number(doc.price.amount)) ? Number(doc.price.amount) : null,
+            currency: String(doc.price.currency || "ARS").toUpperCase(),
+            interval: String(doc.price.interval || "month"),
+            paymentMode: String(doc.price.paymentMode || "external"),
+          }
+        : null,
+      modality: String(doc.modality || "").trim() || null,
+      message: String(doc.message || "").trim().slice(0, 500),
+      coachAccess: doc.coachAccess && typeof doc.coachAccess === "object" && !Array.isArray(doc.coachAccess)
+        ? {
+            ...doc.coachAccess,
+            coachId: storedId(doc.coachAccess.coachId),
+            invitationId: doc.coachAccess.invitationId || null,
+          }
+        : null,
       targetRole: doc.targetRole || doc.role || null,
       clientPermissions: cleanClientPermissions(doc.clientPermissions),
       ...(onboarding ? { onboarding } : {}),

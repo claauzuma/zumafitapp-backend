@@ -1,9 +1,11 @@
 import ServicioFoodLogs from "../servicio/foodLogs.js";
+import { accessErrorPayload, isAccessGateError } from "../servicio/accessGates.js";
 
 function sendError(res, error) {
   const msg = String(error?.message || "");
 
   if (msg === "NO_AUTENTICADO") return res.status(401).json({ error: "No autenticado" });
+  if (isAccessGateError(error)) return res.status(msg === "PLAN_CAPABILITY_REQUIRED" ? 403 : 409).json(accessErrorPayload(error));
   if (msg === "FORBIDDEN") return res.status(403).json({ error: "No tenes permisos para este tracking" });
   if (msg === "TRACKING_NOT_ALLOWED") return res.status(403).json({ error: "Tu cuenta no tiene habilitado el tracking de alimentos" });
   if (msg === "PAST_DAYS_NOT_ALLOWED") return res.status(403).json({ error: "No tenes habilitada la edicion de dias anteriores" });

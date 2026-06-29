@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  default as ServicioClientOwnMenus,
   hasValidMenuContent,
   nextUniqueName,
   normalizeMealType,
@@ -57,4 +58,48 @@ test("valida payload crudo antes de normalizar silenciosamente", () => {
     () => validateRawMenuPayload({ selectedDays: ["noday"] }),
     (error) => error.code === "VALIDATION_ERROR" && error.details.some((item) => item.includes("Dia invalido"))
   );
+});
+
+test("desactiva menu propio activo si excede los dias permitidos por Free", async () => {
+  const servicio = new ServicioClientOwnMenus();
+  const user = {
+    _id: "cliente-1",
+    role: "cliente",
+    personalPlan: "free",
+    menu: {
+      activeSource: "own",
+      activeOwnMenuId: "menu-1",
+    },
+  };
+  const weeklyMenu = {
+    _id: "menu-1",
+    ownerType: "cliente",
+    ownerId: "cliente-1",
+    estado: "activo",
+    activa: true,
+    activo: true,
+    dias: {
+      monday: { comidas: [{ items: [{ alimentoId: "a" }] }] },
+      tuesday: { comidas: [{ items: [{ alimentoId: "a" }] }] },
+    },
+  };
+  let persistedPatch = null;
+
+  servicio.menusModel = {
+    getBaseById: async () => weeklyMenu,
+  };
+  servicio.usuariosModel = {
+    updateById: async (_id, patch) => {
+      persistedPatch = patch;
+      return { ...user, ...patch };
+    },
+  };
+
+  const repaired = await servicio._repairMenuState(user);
+
+  assert.equal(repaired.menu.activeSource, "none");
+  assert.equal(repaired.menu.activeOwnMenuId, null);
+  assert.equal(repaired.menu.lastIncompatibleOwnMenuId, "menu-1");
+  assert.equal(repaired.menu.lastIncompatibleReason, "MENU_DAYS_LIMIT");
+  assert.equal(persistedPatch.menu.lastIncompatibleReason, "MENU_DAYS_LIMIT");
 });

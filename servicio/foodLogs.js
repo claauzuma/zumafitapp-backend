@@ -4,6 +4,7 @@ import ModelMongoDBFoodLogs from "../model/DAO/foodLogsMongoDB.js";
 import ModelMongoDBUsuarios from "../model/DAO/usuariosMongoDB.js";
 import ModelMongoDBMenus from "../model/DAO/menusMongoDB.js";
 import ModelMongoDBAlimentos from "../model/DAO/alimentosMongoDB.js";
+import { requireTrackingHistoryRange } from "./accessGates.js";
 
 const MEAL_TYPES = ["desayuno", "almuerzo", "merienda", "cena", "snack", "otra"];
 const MEAL_TYPE_SET = new Set(MEAL_TYPES);
@@ -515,6 +516,7 @@ class ServicioFoodLogs {
 
   _assertCanWriteTracking(actor, date) {
     this._assertClient(actor);
+    requireTrackingHistoryRange(actor, { date });
     const permissions = actor?.clientPermissions?.tracking || actor?.clientPermissions?.foodTracking || {};
     if (permissions.canTrackFood === false) throw new Error("TRACKING_NOT_ALLOWED");
     if (date !== todayString() && permissions.canEditPastDays === false) throw new Error("PAST_DAYS_NOT_ALLOWED");
@@ -664,6 +666,7 @@ class ServicioFoodLogs {
     const actor = await this._actor(user);
     this._assertClient(actor);
     const date = normalizeDate(query.date);
+    requireTrackingHistoryRange(actor, { date });
     const objectiveInfo = await this._resolveObjective(actor);
     return await this._buildResponse(actor, date, objectiveInfo);
   }

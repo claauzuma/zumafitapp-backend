@@ -14,6 +14,22 @@ import ModelMongoDBImpersonationAudit from "../model/DAO/impersonationAuditMongo
 import ModelMongoDBClientMenuTracking from "../model/DAO/clientMenuTrackingMongoDB.js";
 import ModelMongoDBMenus from "../model/DAO/menusMongoDB.js";
 import ModelMongoDBComidasGuardadas from "../model/DAO/comidasGuardadasMongoDB.js";
+import ModelMongoDBCoachClientCapacity from "../model/DAO/coachClientCapacityMongoDB.js";
+import {
+  getGoalsChangeStatus,
+  goalsMetadataPatch,
+  requireCapability,
+  requireCoachAuthority,
+  requireGoalsChangeAllowed,
+  requireTrackingHistoryRange,
+} from "./accessGates.js";
+import { recordAccessAuditEvent } from "./accessAuditEvents.js";
+import {
+  normalizeCoachSubscription,
+  requireCoachCanOfferService,
+  requireCoachSubscriptionActive,
+  requireProfessionalScope,
+} from "./professionalAccessRules.js";
 import {
   createEmptyCoachOverrides,
   createTrialSubscription,
@@ -326,6 +342,26 @@ function currentCoachIdFromUser(user = {}) {
   );
 }
 
+function activeCoachIdFromUser(user = {}) {
+  const legacyCoachId = currentCoachIdFromUser(user);
+  if (legacyCoachId) return legacyCoachId;
+  const access = user?.coachAccess || {};
+  const status = String(access.status || "").toLowerCase();
+  if (status === "active" && access.coachId) return idToString(access.coachId);
+  return "";
+}
+
+function normalizeServicePackage(value = "") {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\s-]+/g, "_");
+  if (["service_vip", "coach_vip", "vip"].includes(normalized)) return "service_vip";
+  return "service_pro";
+}
+
 function weeklyPlanCoachId(menu = {}) {
   const weeklyPlan = menu?.weeklyPlan || {};
   return idToString(
@@ -549,6 +585,7 @@ function isCoachGeneratedWeeklyPlan(user = {}) {
 }
 
 function shouldUseWeeklyNutritionPlan(user = {}) {
+  if (isSelfGeneratedWeeklyPlan(user)) return true;
   const currentCoachId = currentCoachIdFromUser(user);
   const activeSource = String(user?.menu?.activeSource || "none").trim().toLowerCase();
 
@@ -783,6 +820,84 @@ function findDayValue(source, day) {
     : { found: true, value: source[matchingKey] };
 }
 
+function weeklyPlanHasValues(weeklyPlan = {}) {
+  return (
+    isPlainObject(weeklyPlan?.caloriesByDay) && Object.keys(weeklyPlan.caloriesByDay).length > 0
+  ) || (
+    isPlainObject(weeklyPlan?.macrosByDay) && Object.keys(weeklyPlan.macrosByDay).length > 0
+  );
+}
+
+function isSelfGeneratedWeeklyPlan(user = {}) {
+  const weeklyPlan = user?.menu?.weeklyPlan || {};
+  const source = normalizeDayName(weeklyPlan.source || user?.menu?.weeklyPlanSource || "");
+  return ["self", "client", "cliente"].includes(source) && weeklyPlanHasValues(weeklyPlan);
+}
+
+function normalizeWeeklyGoalsPayload(weeklyPlan = {}) {
+  if (!isPlainObject(weeklyPlan)) return null;
+  const mode = cleanString(weeklyPlan.mode || "same_all_days", 60) || "same_all_days";
+  if (mode === "same_all_days") {
+    return {
+      mode,
+      caloriesByDay: {},
+      macrosByDay: {},
+      trainingDays: [],
+    };
+  }
+
+  const caloriesByDay = {};
+  const macrosByDay = {};
+  const rawCalories = isPlainObject(weeklyPlan.caloriesByDay) ? weeklyPlan.caloriesByDay : {};
+  const rawMacros = isPlainObject(weeklyPlan.macrosByDay) ? weeklyPlan.macrosByDay : {};
+
+  WEEKLY_MENU_DAY_META.forEach((day) => {
+    const calorieEntry = findDayValue(rawCalories, day);
+    const macroEntry = findDayValue(rawMacros, day);
+    const rawMacro = isPlainObject(macroEntry.value) ? macroEntry.value : {};
+
+    if (calorieEntry.found && calorieEntry.value !== "" && calorieEntry.value !== null && calorieEntry.value !== undefined) {
+      caloriesByDay[day.key] = numberOrNull(calorieEntry.value, { min: 800, max: 7000 });
+    }
+
+    const macroPatch = {};
+    if (rawMacro.p !== undefined || rawMacro.proteina !== undefined || rawMacro.protein !== undefined) {
+      macroPatch.p = numberOrNull(rawMacro.p ?? rawMacro.proteina ?? rawMacro.protein, { min: 0, max: 500 });
+    }
+    if (rawMacro.c !== undefined || rawMacro.carbs !== undefined || rawMacro.carbohidratos !== undefined) {
+      macroPatch.c = numberOrNull(rawMacro.c ?? rawMacro.carbs ?? rawMacro.carbohidratos, { min: 0, max: 900 });
+    }
+    if (rawMacro.g !== undefined || rawMacro.grasas !== undefined || rawMacro.fat !== undefined) {
+      macroPatch.g = numberOrNull(rawMacro.g ?? rawMacro.grasas ?? rawMacro.fat, { min: 0, max: 400 });
+    }
+    if (Object.keys(macroPatch).length) macrosByDay[day.key] = macroPatch;
+  });
+
+  return {
+    mode,
+    caloriesByDay,
+    macrosByDay,
+    trainingDays: cleanStringArray(weeklyPlan.trainingDays, 7, 24)
+      .map((day) => getWeekDayMeta(day)?.key)
+      .filter(Boolean),
+  };
+}
+
+function weeklyGoalsSignature(weeklyPlan = {}) {
+  const normalized = normalizeWeeklyGoalsPayload(weeklyPlan) || {
+    mode: "same_all_days",
+    caloriesByDay: {},
+    macrosByDay: {},
+    trainingDays: [],
+  };
+  return JSON.stringify({
+    mode: normalized.mode,
+    caloriesByDay: normalized.caloriesByDay || {},
+    macrosByDay: normalized.macrosByDay || {},
+    trainingDays: [...new Set(normalized.trainingDays || [])].sort(),
+  });
+}
+
 function roundTrackingNumber(value, fallback = 0) {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
@@ -796,6 +911,27 @@ function hasNumber(value) {
 function macroKcal(protein, carbs, fat) {
   if (!hasNumber(protein) || !hasNumber(carbs) || !hasNumber(fat)) return null;
   return Math.round((Number(protein) * 4) + (Number(carbs) * 4) + (Number(fat) * 9));
+}
+
+function comparableNumber(value) {
+  return hasNumber(value) ? Math.round(Number(value) * 100) / 100 : null;
+}
+
+function goalsSignature(goal = {}, metas = {}) {
+  const macros = metas?.macros || {};
+  return JSON.stringify({
+    goal: {
+      type: cleanString(goal?.type, 60) || null,
+      targetWeightKg: comparableNumber(goal?.targetWeightKg),
+      approach: cleanString(goal?.approach, 120) || null,
+    },
+    metas: {
+      kcal: comparableNumber(metas?.kcal),
+      p: comparableNumber(macros?.p),
+      c: comparableNumber(macros?.c),
+      g: comparableNumber(macros?.g),
+    },
+  });
 }
 
 function normalizeGoalSource(source = "") {
@@ -1347,6 +1483,15 @@ function anyTruthy(value = {}) {
   return Object.values(value || {}).some(Boolean);
 }
 
+function disableCapabilitySection(value = {}) {
+  return Object.fromEntries(
+    Object.entries(value || {}).map(([key, entry]) => [
+      key,
+      typeof entry === "number" ? 0 : false,
+    ])
+  );
+}
+
 function normalizeBuilderMode(mode, fallback = "manual") {
   const m = String(mode || fallback).trim().toLowerCase();
   if (["automatic", "auto", "automatica", "automatico"].includes(m)) return "automatic";
@@ -1414,6 +1559,10 @@ class ServicioUsuarios {
     }
     this.menusModel = new ModelMongoDBMenus();
     this.comidasGuardadasModel = new ModelMongoDBComidasGuardadas();
+    this.coachCapacityModel = new ModelMongoDBCoachClientCapacity();
+    if (typeof this.coachCapacityModel.ensureIndexes === "function") {
+      this.coachCapacityModel.ensureIndexes().catch(() => {});
+    }
   }
 
   // -------------------------
@@ -1453,6 +1602,20 @@ class ServicioUsuarios {
       status: "accepted",
       acceptedAt: new Date(),
       updatedAt: new Date(),
+    };
+
+    if (acceptedUserId) patch.acceptedUserId = toMongoIdOrString(acceptedUserId);
+
+    return await this.invitedModel.updateById(id, patch);
+  }
+
+  async _markCoachInviteAcceptedPendingActivation(id, acceptedUserId = null) {
+    if (!id || typeof this.invitedModel.updateById !== "function") return null;
+    const now = new Date();
+    const patch = {
+      status: "accepted_pending_activation",
+      acceptedAt: now,
+      updatedAt: now,
     };
 
     if (acceptedUserId) patch.acceptedUserId = toMongoIdOrString(acceptedUserId);
@@ -1506,6 +1669,15 @@ class ServicioUsuarios {
       coachId: idToString(invite.assignedCoachId || snapshot.id || invite.invitedBy),
       coachName,
       coachEmail: snapshot.email || coach?.email || "",
+      servicePackage: normalizeServicePackage(invite.servicePackage || invite?.coachAccess?.servicePackage || snapshot.servicePackage || "service_pro"),
+      serviceLabel: normalizeServicePackage(invite.servicePackage || invite?.coachAccess?.servicePackage || snapshot.servicePackage || "service_pro") === "service_vip"
+        ? "Coach VIP"
+        : "Coach Pro",
+      serviceScopes: Array.isArray(invite.serviceScopes || invite?.coachAccess?.serviceScopes)
+        ? (invite.serviceScopes || invite.coachAccess.serviceScopes).map((scope) => String(scope || "").trim()).filter(Boolean)
+        : ["training", "nutrition"],
+      price: invite.price || null,
+      modality: invite.modality || null,
       message: cleanString(invite.message || "", 500),
       createdAt: invite.createdAt || invite.invitedAt || null,
       invitedAt: invite.invitedAt || invite.createdAt || null,
@@ -1574,7 +1746,7 @@ class ServicioUsuarios {
       throw new Error("COACH_INVITES_DISABLED");
     }
 
-    const specialties = coach?.coachProfile?.specialties || {};
+    const specialties = coach?.professionalScopes || coach?.coachProfile?.specialties || {};
     if (!specialties.training && !specialties.nutrition) {
       throw new Error("COACH_SPECIALTIES_REQUERIDAS");
     }
@@ -1596,6 +1768,30 @@ class ServicioUsuarios {
     }
 
     const coachIdToStore = toMongoIdOrString(coachRealId);
+    const servicePackage = normalizeServicePackage(invite.servicePackage || invite.coachAccess?.servicePackage || "service_pro");
+    const serviceScopes = Array.isArray(invite.serviceScopes || invite.coachAccess?.serviceScopes) && (invite.serviceScopes || invite.coachAccess.serviceScopes).length
+      ? (invite.serviceScopes || invite.coachAccess.serviceScopes).map((scope) => String(scope || "").trim().toLowerCase()).filter(Boolean)
+      : ["training", "nutrition"];
+    const now = new Date();
+    const pendingCoachAccess = {
+      status: "accepted_pending_activation",
+      coachId: coachIdToStore,
+      servicePackage,
+      serviceScopes,
+      billingOwner: "coach",
+      invitationId: invite._id || invite.id || null,
+      startedAt: null,
+      endsAt: null,
+      suspendedAt: null,
+      endedAt: null,
+      updatedAt: now,
+    };
+    const activeCoachAccess = {
+      ...pendingCoachAccess,
+      status: "active",
+      startedAt: now,
+      updatedAt: now,
+    };
 
     return {
       coach,
@@ -1607,11 +1803,16 @@ class ServicioUsuarios {
       ),
       coachAssignment: {
         entrenadorId: coachIdToStore,
-        assignedAt: new Date(),
+        assignedAt: now,
         assignedByAdminId: null,
         assignedByCoachId: coachIdToStore,
         source: "coach_invite",
+        invitationId: invite._id || invite.id || null,
+        servicePackage,
       },
+      pendingCoachAccess,
+      activeCoachAccess,
+      coachAccess: pendingCoachAccess,
     };
   }
 
@@ -1698,8 +1899,8 @@ class ServicioUsuarios {
       ...(coachInviteAcceptance
         ? { onboarding: this._onboardingFromCoachInvite(invite?.onboarding || {}, now) }
         : {}),
-      ...(coachInviteAcceptance?.coachAssignment
-        ? { coach: coachInviteAcceptance.coachAssignment }
+      ...(coachInviteAcceptance?.pendingCoachAccess
+        ? { coachAccess: coachInviteAcceptance.pendingCoachAccess }
         : {}),
       ...(coachInviteAcceptance?.clientPermissions
         ? { clientPermissions: coachInviteAcceptance.clientPermissions }
@@ -1959,6 +2160,40 @@ class ServicioUsuarios {
       })
     );
 
+    let releasedCapacity = { released: false, used: null };
+    if (disconnectCoachId) {
+      releasedCapacity = await this.coachCapacityModel.releaseSlot({
+        coachId: disconnectCoachId,
+        invitationId: client?.coachAccess?.invitationId || null,
+        clientId,
+        now,
+      });
+    }
+
+    await recordAccessAuditEvent({
+      subjectType: "client",
+      subjectId: clientId,
+      actorType: actorId ? "admin" : "system",
+      actorId: actorId || null,
+      event: "coach_access_ended",
+      previousValue: {
+        coach: client?.coach || null,
+        coachAccess: client?.coachAccess || null,
+      },
+      nextValue: {
+        coach: updated?.coach || null,
+        coachAccess: updated?.coachAccess || null,
+      },
+      reason,
+      metadata: {
+        coachId: disconnectCoachId || null,
+        releasedCapacity,
+        revokedMenus,
+        revokedLibraryMenus,
+        revokedLibraryMeals,
+      },
+    });
+
     return {
       user: updated,
       status: "unassigned",
@@ -2057,13 +2292,50 @@ class ServicioUsuarios {
       options.currentClients !== undefined
         ? Number(options.currentClients || 0)
         : await this._countClientsForCoach(coach._id || coach.id);
-    const planConfig = options.planConfig || (await this._getCoachPlanConfig(coach.plan));
+    const professionalSubscription = normalizeCoachSubscription(coach);
+    const legacyPlan = professionalSubscription?.plan === "coach_ai"
+      ? "vip"
+      : professionalSubscription?.plan === "coach_pro"
+        ? "pro"
+        : "trial_pro";
+    const planConfig = options.planConfig || (await this._getCoachPlanConfig(coach.coachSubscription ? legacyPlan : coach.plan));
 
-    return resolveEffectiveCoachCapabilities({
-      coach,
+    const resolved = resolveEffectiveCoachCapabilities({
+      coach: {
+        ...coach,
+        plan: coach.coachSubscription ? legacyPlan : coach.plan,
+      },
       planConfig,
       currentClients,
     });
+
+    const subscriptionLimit = Number(professionalSubscription.clientLimit || 0);
+    if (subscriptionLimit > 0) {
+      resolved.maxClients = Math.min(Number(resolved.maxClients || subscriptionLimit), subscriptionLimit);
+      resolved.canReceiveClients = resolved.canReceiveClients && currentClients < resolved.maxClients;
+    }
+
+    resolved.professionalSubscription = professionalSubscription;
+
+    if (professionalSubscription.explicit && !professionalSubscription.canInviteOrActivate) {
+      resolved.canReceiveClients = false;
+      resolved.subscriptionBlocked = true;
+      resolved.features = {
+        ...(resolved.features || {}),
+        clients: {
+          ...(resolved.features?.clients || {}),
+          canAssign: false,
+        },
+        routines: disableCapabilitySection(resolved.features?.routines || {}),
+        menus: disableCapabilitySection(resolved.features?.menus || {}),
+        metrics: {
+          ...(resolved.features?.metrics || {}),
+          advanced: false,
+        },
+      };
+    }
+
+    return resolved;
   }
 
   async _withEffectiveCapabilities(user, options = {}) {
@@ -2947,7 +3219,9 @@ class ServicioUsuarios {
       throw new Error("COACH_INVITES_DISABLED");
     }
 
-    const specialties = coach?.coachProfile?.specialties || {};
+    requireCoachSubscriptionActive(coach, { action: "invite_clients" });
+
+    const specialties = coach?.professionalScopes || coach?.coachProfile?.specialties || {};
     if (!specialties.training && !specialties.nutrition) {
       throw new Error("COACH_SPECIALTIES_REQUERIDAS");
     }
@@ -2956,9 +3230,18 @@ class ServicioUsuarios {
     const assignedClients = Number(coach?.effectiveCapabilities?.currentClients || 0);
     const pendingInvitations = await this._countPendingClientInvitationsForCoach(coachRealId);
     const reservedClients = assignedClients + pendingInvitations;
+    const professionalSubscription = normalizeCoachSubscription(coach);
     const effectiveCapabilities = await this._resolveEffectiveCapabilities(coach, {
       currentClients: reservedClients,
     });
+    const subscriptionLimit = Number(professionalSubscription.clientLimit || 0);
+    if (subscriptionLimit > 0 && reservedClients >= subscriptionLimit) {
+      const error = new Error("COACH_CLIENT_LIMIT_REACHED");
+      error.code = "COACH_CLIENT_LIMIT_REACHED";
+      error.limit = subscriptionLimit;
+      error.current = reservedClients;
+      throw error;
+    }
 
     if (effectiveCapabilities?.isTrialExpired || !effectiveCapabilities?.features?.clients?.canAssign) {
       throw new Error("COACH_NOT_AVAILABLE");
@@ -3036,6 +3319,7 @@ class ServicioUsuarios {
     profile = {},
     clientPermissions = {},
     onboarding = {},
+    servicePackage = "service_pro",
   }) => {
     email = String(email || "").trim().toLowerCase();
     const nombre = String(profile?.nombre || "").trim();
@@ -3055,6 +3339,8 @@ class ServicioUsuarios {
       pendingInvitations,
       reservedClients,
     } = await this._assertCoachCanInviteClients(coachId);
+    const normalizedServicePackage = normalizeServicePackage(servicePackage);
+    requireCoachCanOfferService(coach, normalizedServicePackage);
 
     const existingUser = await this._findUserByEmail(email);
     if (existingUser) throw new Error("USUARIO_YA_EXISTE");
@@ -3064,6 +3350,13 @@ class ServicioUsuarios {
 
     const existingInvite = await this._findInviteByEmail(email);
     if (existingInvite) throw new Error("INVITACION_PENDIENTE_EXISTENTE");
+    if (typeof this.invitedModel.findByEmail === "function") {
+      const existingCoachInvite = (await this.invitedModel.findByEmail(email) || []).find((invite) => (
+        this._isCoachClientInvite(invite) &&
+        ["pending", "accepted_pending_activation", "active"].includes(String(invite.status || "pending"))
+      ));
+      if (existingCoachInvite) throw new Error("INVITACION_PENDIENTE_EXISTENTE");
+    }
 
     const sanitizedPermissions = this._sanitizeClientPermissionsForCoach(
       coach,
@@ -3086,6 +3379,29 @@ class ServicioUsuarios {
       invitedByType: "coach",
       source: "coach_invite",
       assignedCoachId: coachIdToStore,
+      servicePackage: normalizedServicePackage,
+      serviceScopes: ["training", "nutrition"],
+      price: {
+        amount: null,
+        currency: "ARS",
+        interval: "month",
+        paymentMode: "external",
+      },
+      modality: "external",
+      message: "",
+      coachAccess: {
+        status: "invited",
+        coachId: coachIdToStore,
+        servicePackage: normalizedServicePackage,
+        serviceScopes: ["training", "nutrition"],
+        billingOwner: "coach",
+        invitationId: null,
+        startedAt: null,
+        endsAt: null,
+        suspendedAt: null,
+        endedAt: null,
+        updatedAt: new Date(),
+      },
       targetRole: "cliente",
       clientPermissions: sanitizedPermissions,
       onboarding: sanitizedOnboarding,
@@ -3096,9 +3412,10 @@ class ServicioUsuarios {
         nombre: coachProfile.nombre || "",
         apellido: coachProfile.apellido || "",
         plan: effectiveCapabilities?.planCode || coach.plan || null,
+        servicePackage: normalizedServicePackage,
         specialties: {
-          training: !!coach?.coachProfile?.specialties?.training,
-          nutrition: !!coach?.coachProfile?.specialties?.nutrition,
+          training: !!(coach?.professionalScopes || coach?.coachProfile?.specialties || {}).training,
+          nutrition: !!(coach?.professionalScopes || coach?.coachProfile?.specialties || {}).nutrition,
         },
       },
       invitedAt: new Date(),
@@ -3107,6 +3424,22 @@ class ServicioUsuarios {
       expiresAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
+    });
+
+    await recordAccessAuditEvent({
+      subjectType: "client",
+      subjectId: null,
+      actorType: "coach",
+      actorId: coach._id || coach.id || coachId,
+      event: "coach_invitation_created",
+      previousValue: null,
+      nextValue: {
+        invitationId: created?._id || created?.id || null,
+        email,
+        servicePackage: normalizedServicePackage,
+      },
+      reason: "coach_created_client_invitation",
+      metadata: { reservedClients, assignedClients, pendingInvitations },
     });
 
     return {
@@ -3180,7 +3513,7 @@ class ServicioUsuarios {
       .filter((invite) => (
         invite &&
         String(invite.email || "").toLowerCase().trim() === email &&
-        String(invite.status || "pending") === "pending" &&
+        ["pending", "accepted_pending_activation"].includes(String(invite.status || "pending")) &&
         this._isCoachClientInvite(invite) &&
         !this._isInviteExpired(invite)
       ))
@@ -3196,23 +3529,24 @@ class ServicioUsuarios {
 
     const invite = await this._getPendingCoachClientInvitationForUser(user, invitationId);
     const acceptance = await this._prepareCoachClientInviteAcceptance(invite);
-    if (!acceptance?.coachAssignment) throw new Error("INVITATION_NOT_FOUND");
+    if (!acceptance?.pendingCoachAccess) throw new Error("INVITATION_NOT_FOUND");
 
-    const currentCoachId = idToString(user?.coach?.entrenadorId);
+    const currentCoachId = activeCoachIdFromUser(user);
     const nextCoachId = idToString(acceptance.coachAssignment.entrenadorId);
-    if (currentCoachId && currentCoachId !== nextCoachId) {
-      throw new Error("CLIENT_ALREADY_HAS_COACH");
+    if (currentCoachId) {
+      throw new Error("CLIENT_ALREADY_HAS_ACTIVE_COACH");
+    }
+    const pendingCoachAccess = user?.coachAccess || {};
+    const pendingCoachId = String(pendingCoachAccess.status || "") === "accepted_pending_activation"
+      ? idToString(pendingCoachAccess.coachId)
+      : "";
+    if (pendingCoachId && pendingCoachId !== nextCoachId) {
+      throw new Error("CLIENT_ALREADY_HAS_PENDING_COACH");
     }
 
     const now = new Date();
     const patch = {
-      coach: {
-        ...(user?.coach || {}),
-        ...acceptance.coachAssignment,
-        assignedAt: user?.coach?.assignedAt && currentCoachId === nextCoachId
-          ? user.coach.assignedAt
-          : acceptance.coachAssignment.assignedAt,
-      },
+      coachAccess: acceptance.pendingCoachAccess,
       clientPermissions: acceptance.clientPermissions,
       updatedAt: now,
     };
@@ -3225,7 +3559,7 @@ class ServicioUsuarios {
     }
 
     const updated = await this.updateById(user._id || user.id || userId, patch);
-    const acceptedInvite = await this._acceptInviteById(invite._id, updated?._id || updated?.id);
+    const acceptedInvite = await this._markCoachInviteAcceptedPendingActivation(invite._id, updated?._id || updated?.id);
     const redirect = this._clientInvitationNextPath(updated);
 
     if (typeof this.invitedModel.findByEmail === "function") {
@@ -3245,11 +3579,174 @@ class ServicioUsuarios {
         })));
     }
 
+    await recordAccessAuditEvent({
+      subjectType: "client",
+      subjectId: updated?._id || updated?.id || userId,
+      actorType: "client",
+      actorId: updated?._id || updated?.id || userId,
+      event: "coach_invitation_accepted",
+      previousValue: { coachAccess: user?.coachAccess || null },
+      nextValue: { coachAccess: acceptance.pendingCoachAccess },
+      reason: "client_accepted_coach_invitation",
+      metadata: {
+        invitationId: invite?._id || invite?.id || null,
+        coachId: nextCoachId,
+        servicePackage: acceptance.pendingCoachAccess?.servicePackage || null,
+      },
+    });
+
     return {
       user: updated,
       invitation: this._publicCoachClientInvitation(acceptedInvite || invite, acceptance.coach),
       coach: acceptance.coach,
+      status: "accepted_pending_activation",
       ...redirect,
+    };
+  };
+
+  coachActivateClientInvitation = async ({ coachId, invitationId }) => {
+    const coach = await this.getById(coachId);
+    if (!coach) throw new Error("COACH_NOT_FOUND");
+    if (!this._isCoachUser(coach)) throw new Error("USER_NOT_COACH");
+
+    const resolvedCoachId = coach._id || coach.id || coachId;
+    const invitation = await this._getCoachOwnedClientInvitation({
+      coachId: resolvedCoachId,
+      invitationId,
+    });
+
+    if (String(invitation?.status || "") !== "accepted_pending_activation") {
+      throw new Error("INVITATION_NOT_ACCEPTED_PENDING_ACTIVATION");
+    }
+    if (this._isInviteExpired(invitation)) throw new Error("INVITATION_EXPIRED");
+
+    const acceptance = await this._prepareCoachClientInviteAcceptance(invitation);
+    if (!acceptance?.activeCoachAccess || !acceptance?.coachAssignment) {
+      throw new Error("INVITATION_NOT_FOUND");
+    }
+
+    requireCoachCanOfferService(coach, acceptance.activeCoachAccess.servicePackage);
+
+    const client = invitation.acceptedUserId
+      ? await this.getById(invitation.acceptedUserId)
+      : await this._findUserByEmail(invitation.email);
+    if (!client) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(client)) throw new Error("USER_NOT_CLIENT");
+
+    const currentCoachId = activeCoachIdFromUser(client);
+    const nextCoachId = idToString(acceptance.coachAssignment.entrenadorId);
+    if (currentCoachId && currentCoachId !== nextCoachId) {
+      throw new Error("CLIENT_ALREADY_HAS_ACTIVE_COACH");
+    }
+
+    const subscription = normalizeCoachSubscription(coach);
+    const currentActiveClients = await this.model.countClientsByCoachId(coach._id || coach.id || coachId);
+    const capacity = await this.coachCapacityModel.reserveSlot({
+      coachId: resolvedCoachId,
+      invitationId: invitation._id,
+      clientId: client._id || client.id,
+      limit: subscription.clientLimit,
+      activeCount: currentActiveClients,
+      now: new Date(),
+    });
+
+    if (!capacity.reserved) {
+      const error = new Error("COACH_CLIENT_LIMIT_REACHED");
+      error.code = "COACH_CLIENT_LIMIT_REACHED";
+      error.limit = Number(subscription.clientLimit);
+      error.current = Number(capacity.used || currentActiveClients || 0);
+      throw error;
+    }
+
+    const now = new Date();
+    const personalPlan = toDbPlan(client.personalPlan || client.plan || client?.personalSubscription?.plan || "free");
+    const personalSubscription = client.personalSubscription || {};
+    const periodEndRaw = personalSubscription.currentPeriodEnd || personalSubscription.paidUntil || null;
+    const periodEnd = periodEndRaw ? new Date(periodEndRaw) : null;
+    const hasPaidPeriod = ["pro", "vip"].includes(personalPlan) && periodEnd && Number.isFinite(periodEnd.getTime()) && periodEnd.getTime() > now.getTime();
+    const patch = {
+      coach: {
+        ...(client?.coach || {}),
+        ...acceptance.coachAssignment,
+        assignedAt: now,
+      },
+      coachAccess: acceptance.activeCoachAccess,
+      clientPermissions: acceptance.clientPermissions,
+      updatedAt: now,
+    };
+
+    if (["pro", "vip"].includes(personalPlan)) {
+      patch.personalSubscription = {
+        ...personalSubscription,
+        plan: personalPlan,
+        status: hasPaidPeriod ? "cancel_at_period_end" : "suppressed_by_coach",
+        autoRenew: false,
+        currentPeriodEnd: hasPaidPeriod ? periodEnd : (personalSubscription.currentPeriodEnd || null),
+        suppressedReason: "coach_access",
+        updatedAt: now,
+      };
+    }
+
+    let updated;
+    let activatedInvite;
+    try {
+      updated = await this.updateById(client._id || client.id, patch);
+      activatedInvite = await this.invitedModel.updateById(invitation._id, {
+        status: "active",
+        activatedAt: now,
+        updatedAt: now,
+      });
+    } catch (error) {
+      await this.coachCapacityModel.releaseSlot({
+        coachId: resolvedCoachId,
+        invitationId: invitation._id,
+        clientId: client._id || client.id,
+        now: new Date(),
+      });
+      throw error;
+    }
+
+    await recordAccessAuditEvent({
+      subjectType: "client",
+      subjectId: updated?._id || updated?.id || client?._id || client?.id,
+      actorType: "coach",
+      actorId: coach._id || coach.id || coachId,
+      event: "coach_access_activated",
+      previousValue: {
+        coachAccess: client?.coachAccess || null,
+        personalSubscription: client?.personalSubscription || null,
+      },
+      nextValue: {
+        coachAccess: acceptance.activeCoachAccess,
+        personalSubscription: patch.personalSubscription || client?.personalSubscription || null,
+      },
+      reason: "coach_activated_client_access",
+      metadata: {
+        invitationId: invitation?._id || invitation?.id || null,
+        servicePackage: acceptance.activeCoachAccess?.servicePackage || null,
+      },
+    });
+
+    if (patch.personalSubscription?.status) {
+      await recordAccessAuditEvent({
+        subjectType: "client",
+        subjectId: updated?._id || updated?.id || client?._id || client?.id,
+        actorType: "system",
+        actorId: null,
+        event: "personal_renewal_suppressed",
+        previousValue: { personalSubscription: client?.personalSubscription || null },
+        nextValue: { personalSubscription: patch.personalSubscription },
+        reason: "coach_access_primary",
+        metadata: { coachId: coach._id || coach.id || coachId },
+      });
+    }
+
+    return {
+      user: updated,
+      client: updated,
+      invitation: this._publicCoachClientInvitation(activatedInvite || invitation, coach),
+      coach,
+      status: "active",
     };
   };
 
@@ -3970,11 +4467,29 @@ class ServicioUsuarios {
       updatedAt: new Date(),
     };
 
-    return await this.updateById(id, {
+    const updated = await this.updateById(id, {
       goal: nextGoal,
       metasActuales: nextMetas,
+      goalsMetadata: {
+        ...(user?.goalsMetadata || {}),
+        ...goalsMetadataPatch("admin", new Date()),
+      },
       updatedAt: new Date(),
     });
+
+    await recordAccessAuditEvent({
+      subjectType: "client",
+      subjectId: id,
+      actorType: "admin",
+      actorId: null,
+      event: "goals_changed",
+      previousValue: { goal: user?.goal || {}, metasActuales: user?.metasActuales || {} },
+      nextValue: { goal: nextGoal, metasActuales: nextMetas },
+      reason: "admin_update_goals",
+      metadata: { source: "admin_users" },
+    });
+
+    return updated;
   };
 
   adminUpdateDailyGoals = async (id, metasDiarias = {}) => {
@@ -3986,6 +4501,122 @@ class ServicioUsuarios {
       metasDiarias,
       updatedAt: new Date(),
     });
+  };
+
+  clientUpdateGoals = async (userId, payload = {}) => {
+    const user = await this.getById(userId);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(user)) throw new Error("USER_NOT_CLIENT");
+
+    const incoming = isPlainObject(payload?.metasActuales) || isPlainObject(payload?.goal)
+      ? payload
+      : { metasActuales: payload };
+    const incomingMetas = isPlainObject(incoming?.metasActuales) ? incoming.metasActuales : {};
+    const incomingMacros = isPlainObject(incomingMetas?.macros)
+      ? incomingMetas.macros
+      : isPlainObject(incoming?.macros)
+        ? incoming.macros
+        : {};
+    const now = new Date();
+
+    const nextMetas = {
+      ...(user?.metasActuales || {}),
+      ...(incomingMetas?.kcal !== undefined ? { kcal: numberOrNull(incomingMetas.kcal, { min: 800, max: 7000 }) } : {}),
+      macros: {
+        ...(user?.metasActuales?.macros || {}),
+        ...(incomingMacros?.p !== undefined ? { p: numberOrNull(incomingMacros.p, { min: 0, max: 500 }) } : {}),
+        ...(incomingMacros?.c !== undefined ? { c: numberOrNull(incomingMacros.c, { min: 0, max: 900 }) } : {}),
+        ...(incomingMacros?.g !== undefined ? { g: numberOrNull(incomingMacros.g, { min: 0, max: 400 }) } : {}),
+      },
+      source: "self",
+      sourceCoachId: null,
+      needsReview: false,
+      updatedAt: now,
+      updatedByClientId: toMongoIdOrString(user._id || user.id || userId),
+    };
+
+    const incomingGoal = isPlainObject(incoming?.goal) ? incoming.goal : {};
+    const nextGoal = {
+      ...(user?.goal || {}),
+      ...(incomingGoal?.type !== undefined ? { type: cleanString(incomingGoal.type, 60) || null } : {}),
+      ...(incomingGoal?.targetWeightKg !== undefined
+        ? { targetWeightKg: numberOrNull(incomingGoal.targetWeightKg, { min: 30, max: 250 }) }
+        : {}),
+      ...(incomingGoal?.approach !== undefined ? { approach: cleanString(incomingGoal.approach, 120) || null } : {}),
+      updatedAt: now,
+      updatedByClientId: toMongoIdOrString(user._id || user.id || userId),
+    };
+
+    const hasWeeklyPayload = isPlainObject(incoming?.weeklyPlan);
+    const normalizedWeeklyPlan = hasWeeklyPayload ? normalizeWeeklyGoalsPayload(incoming.weeklyPlan) : null;
+    const weeklyPlanUsesAdvancedTargets = normalizedWeeklyPlan && weeklyPlanHasValues(normalizedWeeklyPlan);
+    if (weeklyPlanUsesAdvancedTargets) {
+      requireCapability(user, "nutrition.weeklyPlanning");
+    }
+    const nextMenu = hasWeeklyPayload
+      ? {
+          ...(user?.menu || {}),
+          weeklyPlan: {
+            ...(user?.menu?.weeklyPlan || {}),
+            ...normalizedWeeklyPlan,
+            source: "self",
+            updatedByClientId: toMongoIdOrString(user._id || user.id || userId),
+            updatedAt: now,
+          },
+          updatedAt: now,
+        }
+      : null;
+    const weeklyPlanChanged = hasWeeklyPayload
+      ? weeklyGoalsSignature(user?.menu?.weeklyPlan || {}) !== weeklyGoalsSignature(nextMenu?.weeklyPlan || {})
+      : false;
+
+    const previousSignature = goalsSignature(user?.goal || {}, user?.metasActuales || {});
+    const nextSignature = goalsSignature(nextGoal, nextMetas);
+    const nutritionChanged =
+      goalsSignature({}, user?.metasActuales || {}) !== goalsSignature({}, nextMetas) || weeklyPlanChanged;
+    const trainingChanged = goalsSignature(user?.goal || {}, {}) !== goalsSignature(nextGoal, {});
+
+    if (previousSignature === nextSignature && !weeklyPlanChanged) {
+      return user;
+    }
+
+    const goalsAccess = nutritionChanged ? getGoalsChangeStatus(user, { actorType: "client", now }) : null;
+    if (nutritionChanged) requireGoalsChangeAllowed(user, { actorType: "client", now });
+    if (trainingChanged) requireCoachAuthority(user, "training");
+
+    const updated = await this.updateById(userId, {
+      ...(trainingChanged ? { goal: nextGoal } : {}),
+      ...(nutritionChanged ? { metasActuales: nextMetas } : {}),
+      ...(nextMenu ? { menu: nextMenu } : {}),
+      ...(nutritionChanged
+        ? {
+            goalsMetadata: {
+              ...(user?.goalsMetadata || {}),
+              ...goalsMetadataPatch("client", now, {
+                previousMetadata: user?.goalsMetadata || {},
+                consumeManualChange: goalsAccess.changesLimit !== null,
+                changesLimit: goalsAccess.changesLimit || undefined,
+                windowDays: goalsAccess.windowDays || undefined,
+              }),
+            },
+          }
+        : {}),
+      updatedAt: now,
+    });
+
+    await recordAccessAuditEvent({
+      subjectType: "client",
+      subjectId: user._id || user.id || userId,
+      actorType: "client",
+      actorId: user._id || user.id || userId,
+      event: "goals_changed",
+      previousValue: { goal: user?.goal || {}, metasActuales: user?.metasActuales || {} },
+      nextValue: { goal: nextGoal, metasActuales: nextMetas },
+      reason: "client_update_goals",
+      metadata: { source: "client_goals_endpoint" },
+    });
+
+    return updated;
   };
 
   actualizarPerfil = async (id, updates = {}) => {
@@ -4162,15 +4793,15 @@ class ServicioUsuarios {
   };
 
   _assertCoachFeature(coach, section, mode = "manual") {
-    const specialties = coach?.coachProfile?.specialties || {};
-
-    if (section === "menus" && !specialties.nutrition) {
-      throw new Error("COACH_NUTRITION_NOT_ALLOWED");
+    if (section === "menus") {
+      requireProfessionalScope(coach, "nutrition");
     }
 
-    if (section === "routines" && !specialties.training) {
-      throw new Error("COACH_TRAINING_NOT_ALLOWED");
+    if (section === "routines") {
+      requireProfessionalScope(coach, "training");
     }
+
+    requireCoachSubscriptionActive(coach, { action: section });
 
     const effective = coach?.effectiveCapabilities || {};
     const featureKey = featureKeyForMode(mode);
@@ -4184,8 +4815,8 @@ class ServicioUsuarios {
   }
 
   _assertNutritionEditAllowed(coach) {
-    const specialties = coach?.coachProfile?.specialties || {};
-    if (!specialties.nutrition) throw new Error("COACH_NUTRITION_NOT_ALLOWED");
+    requireProfessionalScope(coach, "nutrition");
+    requireCoachSubscriptionActive(coach, { action: "nutrition" });
 
     const features = coach?.effectiveCapabilities?.features?.menus || {};
     if (
@@ -4269,6 +4900,10 @@ class ServicioUsuarios {
     const patch = {
       metasActuales: nextMetas,
       goal: nextGoal,
+      goalsMetadata: {
+        ...(client?.goalsMetadata || {}),
+        ...goalsMetadataPatch("coach", now),
+      },
       updatedAt: now,
     };
 
@@ -4302,6 +4937,18 @@ class ServicioUsuarios {
     }
 
     const updated = await this.updateById(clientId, patch);
+
+    await recordAccessAuditEvent({
+      subjectType: "client",
+      subjectId: clientId,
+      actorType: "coach",
+      actorId: coach._id || coach.id || coachId,
+      event: "goals_changed",
+      previousValue: { goal: client?.goal || {}, metasActuales: client?.metasActuales || {} },
+      nextValue: { goal: nextGoal, metasActuales: nextMetas },
+      reason: "coach_update_client_nutrition",
+      metadata: { servicePackage: client?.coachAccess?.servicePackage || client?.coach?.servicePackage || null },
+    });
 
     return { coach, client: updated };
   };
@@ -4458,6 +5105,11 @@ class ServicioUsuarios {
 
   coachUpdateClientProgress = async ({ coachId, clientId, payload = {} }) => {
     const { coach, client } = await this._getCoachClientPair({ coachId, clientId });
+    const scopes = coach?.professionalScopes || coach?.coachProfile?.specialties || {};
+    if (!scopes.training && !scopes.nutrition) {
+      requireProfessionalScope(coach, "training");
+    }
+    requireCoachSubscriptionActive(coach, { action: "progress" });
     const now = new Date();
     const incoming = isPlainObject(payload?.progress) ? payload.progress : payload;
     const currentProgress = isPlainObject(client?.progress) ? client.progress : {};
@@ -4525,6 +5177,7 @@ class ServicioUsuarios {
 
     const start = mondayOfWeek(query.start || query.date || new Date().toISOString().slice(0, 10));
     const end = addDaysIso(start, 6);
+    requireTrackingHistoryRange(user, { start, end });
     const docs = await this.menuTrackingModel.listByUserDateRange(userId, start, end);
     const trackingByDate = new Map((docs || []).map((doc) => [String(doc.date), doc]));
     const nutritionWeek = resolveClientNutritionWeek(user);
@@ -4604,8 +5257,12 @@ class ServicioUsuarios {
   listMyMenuTracking = async (actor, query = {}) => {
     const userId = actor?.id || actor?._id;
     if (!userId) throw new Error("NO_AUTENTICADO");
+    const user = await this.getById(userId);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(user)) throw new Error("USER_NOT_CLIENT");
     const from = normalizeMenuTrackingDate(query.from || addDaysIso(new Date().toISOString().slice(0, 10), -30));
     const to = normalizeMenuTrackingDate(query.to || new Date().toISOString().slice(0, 10));
+    requireTrackingHistoryRange(user, { from, to });
     const docs = await this.menuTrackingModel.listByUserDateRange(userId, from, to);
     return {
       from,
@@ -4631,6 +5288,7 @@ class ServicioUsuarios {
     if (!this._isClientUser(user)) throw new Error("USER_NOT_CLIENT");
 
     const date = normalizeMenuTrackingDate(payload.date);
+    requireTrackingHistoryRange(user, { date });
     const dayKey = getWeekDayMeta(payload.dayKey)?.key || dayKeyFromDate(date);
     const requestedStatus = MENU_TRACKING_STATUS.has(String(payload.status || "")) ? String(payload.status) : "pending";
 

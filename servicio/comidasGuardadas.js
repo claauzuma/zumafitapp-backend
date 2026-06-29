@@ -4,6 +4,7 @@ import ModelMongoDBComidasGuardadas, { idValues } from "../model/DAO/comidasGuar
 import ModelMongoDBAlimentos from "../model/DAO/alimentosMongoDB.js";
 import ModelMongoDBUsuarios from "../model/DAO/usuariosMongoDB.js";
 import ServicioFoodLogs from "./foodLogs.js";
+import { requireQuota } from "./accessGates.js";
 import {
   canAccessSavedMeal,
   canAssignSavedMeal,
@@ -480,7 +481,11 @@ class ServicioComidasGuardadas {
         activo: { $ne: false },
       },
     });
-    if (!canCreateSavedMeal(actor, ownCount)) throw new Error("SAVED_MEAL_LIMIT");
+    if (isClient(actor)) {
+      requireQuota(actor, "ownMeals", ownCount);
+    } else if (!canCreateSavedMeal(actor, ownCount)) {
+      throw new Error("SAVED_MEAL_LIMIT");
+    }
     const doc = await this._normalizePayload(actor, payload, context);
     return normalizeDoc(await this.model.create(doc));
   }
@@ -559,6 +564,16 @@ class ServicioComidasGuardadas {
     if (!current) throw new Error("NOT_FOUND");
     if (!canEditSavedMeal(actor, current)) throw new Error("COPY_REQUIRED");
     const next = favorita === null ? !current.favorita : !!favorita;
+    if (isClient(actor) && next && !current.favorita) {
+      const currentFavorites = await this.model.count({
+        query: {
+          ownerId: { $in: idValues(this._actorId(actor)) },
+          favorita: true,
+          activo: { $ne: false },
+        },
+      });
+      requireQuota(actor, "favorites", currentFavorites);
+    }
     return normalizeDoc(await this.model.updateById(id, { favorita: next }));
   }
 

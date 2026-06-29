@@ -1,10 +1,12 @@
 import ServicioComidasGuardadas from "../servicio/comidasGuardadas.js";
 import ServicioComidasGuardadasExcelImport from "../servicio/comidasGuardadasExcelImport.js";
+import { accessErrorPayload, isAccessGateError } from "../servicio/accessGates.js";
 
 function sendError(res, error) {
   const msg = String(error?.message || "");
 
   if (msg === "NO_AUTENTICADO") return res.status(401).json({ error: "No autenticado" });
+  if (isAccessGateError(error)) return res.status(msg === "PLAN_CAPABILITY_REQUIRED" ? 403 : 409).json(accessErrorPayload(error));
   if (msg === "FORBIDDEN") return res.status(403).json({ error: "No tenes permisos para esta comida" });
   if (msg === "NOT_FOUND") return res.status(404).json({ error: "Comida guardada no encontrada" });
   if (msg === "COPY_REQUIRED") {

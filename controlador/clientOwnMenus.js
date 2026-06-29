@@ -1,4 +1,5 @@
 import ServicioClientOwnMenus from "../servicio/clientOwnMenus.js";
+import { accessErrorPayload, isAccessGateError } from "../servicio/accessGates.js";
 
 function sendError(res, error) {
   const code = error?.code || error?.message || "ERROR";
@@ -14,6 +15,7 @@ function sendError(res, error) {
 
   if (code === "NO_AUTENTICADO") return res.status(401).json(payload);
   if (code === "USER_NOT_CLIENT") return res.status(403).json(payload);
+  if (isAccessGateError(error)) return res.status(code === "PLAN_CAPABILITY_REQUIRED" ? 403 : 409).json(accessErrorPayload(error));
   if (code === "CLIENT_MENU_FORBIDDEN" || code === "NOT_MENU_OWNER") return res.status(403).json(payload);
   if (code === "MENU_NOT_FOUND") return res.status(404).json(payload);
   if (code === "PLAN_LIMIT_REACHED" || code === "COACH_MENU_ACTIVE" || code === "ACTIVE_MENU_DELETE_CONFIRMATION_REQUIRED") {

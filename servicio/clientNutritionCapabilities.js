@@ -15,8 +15,13 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     deleteOwnMenu: true,
     duplicateOwnMenu: true,
     activateOwnMenu: true,
-    ownMenusLimit: 2,
-    ownMealsLimit: 10,
+    ownMenusLimit: 1,
+    ownMealsLimit: 5,
+    menuDaysLimit: 1,
+    favoritesLimit: 3,
+    trackingHistoryDays: 7,
+    manualObjectiveChangeDays: 30,
+    manualObjectiveChangesPerWindow: 2,
     basicLibrary: true,
     globalLibrary: false,
     premiumLibrary: false,
@@ -30,8 +35,13 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     deleteOwnMenu: true,
     duplicateOwnMenu: true,
     activateOwnMenu: true,
-    ownMenusLimit: 20,
+    ownMenusLimit: 10,
     ownMealsLimit: 100,
+    menuDaysLimit: 7,
+    favoritesLimit: 20,
+    trackingHistoryDays: null,
+    manualObjectiveChangeDays: null,
+    manualObjectiveChangesPerWindow: null,
     basicLibrary: true,
     globalLibrary: true,
     premiumLibrary: false,
@@ -45,8 +55,13 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     deleteOwnMenu: true,
     duplicateOwnMenu: true,
     activateOwnMenu: true,
-    ownMenusLimit: 100,
+    ownMenusLimit: 50,
     ownMealsLimit: 500,
+    menuDaysLimit: 7,
+    favoritesLimit: 100,
+    trackingHistoryDays: null,
+    manualObjectiveChangeDays: null,
+    manualObjectiveChangesPerWindow: null,
     basicLibrary: true,
     globalLibrary: true,
     premiumLibrary: true,
@@ -83,9 +98,21 @@ export function getClientNutritionLimitsForPlan(plan = "free") {
   return CLIENT_NUTRITION_CAPABILITIES[normalizeClientPlan(plan)] || CLIENT_NUTRITION_CAPABILITIES.free;
 }
 
+function hasActiveProTrial(user = {}) {
+  const trial = user.personalTrial || user.trial || {};
+  const status = token(trial.status || "");
+  if (!["active", "trialing"].includes(status)) return false;
+  const endsAt = trial.endsAt ? new Date(trial.endsAt) : null;
+  return !!(endsAt && Number.isFinite(endsAt.getTime()) && endsAt.getTime() >= Date.now());
+}
+
 export function getClientNutritionCapabilities(user = {}, options = {}) {
   const role = normalizeClientRole(user?.role || user?.rol || "cliente");
-  const plan = normalizeClientPlan(user?.plan || user?.subscription?.planCode || "free");
+  const plan = normalizeClientPlan(
+    hasActiveProTrial(user)
+      ? "pro"
+      : (user?.personalPlan || user?.plan || user?.subscription?.planCode || "free")
+  );
   const config = getClientNutritionLimitsForPlan(plan);
   const hasCoach = clientHasCoach(user);
   const requestedActiveSource = token(options.activeMenuSource || user?.menu?.activeSource || "none") || "none";
@@ -111,6 +138,11 @@ export function getClientNutritionCapabilities(user = {}, options = {}) {
     limits: {
       ownMenus: config.ownMenusLimit,
       ownMeals: config.ownMealsLimit,
+      menuDays: config.menuDaysLimit,
+      favorites: config.favoritesLimit,
+      trackingHistoryDays: config.trackingHistoryDays,
+      manualObjectiveChangeDays: config.manualObjectiveChangeDays,
+      manualObjectiveChangesPerWindow: config.manualObjectiveChangesPerWindow,
     },
     activeMenuSource: ["own", "coach"].includes(activeSource) ? activeSource : "none",
   };

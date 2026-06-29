@@ -35,6 +35,11 @@ import {
   normalizeRole,
 } from "./comidasGuardadasPermisos.js";
 import { nextUniqueName } from "./clientOwnMenus.js";
+import {
+  getAccessLimit,
+  requireMenuDaysLimit,
+  requireQuota,
+} from "./accessGates.js";
 
 function cleanString(value = "", max = 500) {
   return String(value || "").trim().slice(0, max);
@@ -253,6 +258,41 @@ class ServicioNutritionLibrary {
     };
   }
 
+  async _ownMealCount(actor) {
+    return await this.comidasModel.count({
+      query: mergeAndQuery(activeQuery(), buildOwnerQuery(actor)),
+    });
+  }
+
+  async _ownMenuCount(actor) {
+    const data = await this.menusModel.listBase({
+      limit: 1,
+      skip: 0,
+      visibilityQuery: mergeAndQuery(activeQuery(), buildOwnerQuery(actor)),
+    });
+    return Number(data.total || 0);
+  }
+
+  async _favoriteCount(actor) {
+    const userId = libraryUserId(actor);
+    const [meals, menus] = await Promise.all([
+      this.comidasModel.count({
+        query: mergeAndQuery(activeQuery(), {
+          $or: [
+            { favoritaPara: { $in: idValues(userId) } },
+            mergeAndQuery(buildOwnerQuery(actor), { favorita: true }),
+          ],
+        }),
+      }),
+      this.menusModel.listBase({
+        limit: 1,
+        skip: 0,
+        visibilityQuery: mergeAndQuery(activeQuery(), { favoritoPara: { $in: idValues(userId) } }),
+      }),
+    ]);
+    return Number(meals || 0) + Number(menus?.total || 0);
+  }
+
   _mealQuery(actor, filters = {}) {
     const scope = normalizeScope(filters.scope);
     const active = activeQuery();
@@ -355,6 +395,9 @@ class ServicioNutritionLibrary {
     const current = await this.comidasModel.getById(id);
     if (!current) throw new Error("NOT_FOUND");
     if (!canCopyNutritionItem(actor, current, { assignmentField: "asignadaA" })) throw new Error("FORBIDDEN");
+    if (isClient(actor)) {
+      requireQuota(actor, "ownMeals", await this._ownMealCount(actor));
+    }
 
     const role = normalizeRole(actor);
     const ownerType = ownerTypeForUser(actor);
@@ -391,26 +434,12 @@ class ServicioNutritionLibrary {
     const current = await this.menusModel.getBaseById(id);
     if (!current) throw new Error("NOT_FOUND");
     if (!canCopyNutritionItem(actor, current, { assignmentField: "asignadoA" })) throw new Error("FORBIDDEN");
+    if (isClient(actor)) {
+      requireQuota(actor, "ownMenus", await this._ownMenuCount(actor));
+      requireMenuDaysLimit(actor, current);
+    }
 
     const ownerType = ownerTypeForUser(actor);
-    if (isClient(actor)) {
-      const limits = getNutritionLibraryLimits(actor);
-      const data = await this.menusModel.listBase({
-        limit: 1,
-        skip: 0,
-        visibilityQuery: mergeAndQuery(activeQuery(), buildOwnerQuery(actor)),
-      });
-      const currentCount = Number(data.total || 0);
-      const limit = Number(limits.maxMenusPropios);
-      if (Number.isFinite(limit) && currentCount >= limit) {
-        const error = new Error("PLAN_LIMIT_REACHED");
-        error.resource = "ownMenus";
-        error.current = currentCount;
-        error.limit = limit;
-        error.plan = actor?.plan || "free";
-        throw error;
-      }
-    }
 
     const ownMenus = ownerType === "cliente"
       ? await this.menusModel.listBase({
@@ -454,14 +483,13 @@ class ServicioNutritionLibrary {
 
     const created = await this.menusModel.createBase(copy);
     if (isClient(actor)) {
-      const limits = getNutritionLibraryLimits(actor);
       const data = await this.menusModel.listBase({
         limit: 1,
         skip: 0,
         visibilityQuery: mergeAndQuery(activeQuery(), buildOwnerQuery(actor)),
       });
       const currentCount = Number(data.total || 0);
-      const limit = Number(limits.maxMenusPropios);
+      const limit = getAccessLimit(actor, "ownMenus");
       if (Number.isFinite(limit) && currentCount > limit) {
         await this.menusModel.updateBaseById(created._id, {
           estado: "inactivo",
@@ -488,6 +516,9 @@ class ServicioNutritionLibrary {
     if (!current) throw new Error("NOT_FOUND");
     if (!canViewNutritionItem(actor, current, { assignmentField: "asignadaA" })) throw new Error("FORBIDDEN");
     const userId = libraryUserId(actor);
+    if (isClient(actor) && favorite && !isFavoriteForUser(actor, current, "favoritaPara")) {
+      requireQuota(actor, "favorites", await this._favoriteCount(actor));
+    }
     const next = favoriteArray(current.favoritaPara, userId, favorite);
     const _id = toObjectId(id);
     if (!_id) throw new Error("ID_INVALIDO");
@@ -503,6 +534,9 @@ class ServicioNutritionLibrary {
     const current = await this.menusModel.getBaseById(id);
     if (!current) throw new Error("NOT_FOUND");
     if (!canViewNutritionItem(actor, current, { assignmentField: "asignadoA" })) throw new Error("FORBIDDEN");
+    if (isClient(actor) && favorite && !isFavoriteForUser(actor, current, "favoritoPara")) {
+      requireQuota(actor, "favorites", await this._favoriteCount(actor));
+    }
     const next = favoriteArray(current.favoritoPara, libraryUserId(actor), favorite);
     const _id = toObjectId(id);
     if (!_id) throw new Error("ID_INVALIDO");

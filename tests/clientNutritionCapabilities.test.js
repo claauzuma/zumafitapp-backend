@@ -15,13 +15,15 @@ test("normaliza aliases de plan de cliente", () => {
   assert.equal(normalizeClientPlan("desconocido"), "free");
 });
 
-test("free autogestionado puede trackear y crear hasta 2 menus propios", () => {
+test("free autogestionado puede trackear y crear hasta 1 menu propio", () => {
   const capabilities = getClientNutritionCapabilities({ role: "cliente", plan: "free" });
 
   assert.equal(capabilities.clientType, "self_managed");
   assert.equal(capabilities.canTrack, true);
   assert.equal(capabilities.canCreateOwnMenu, true);
-  assert.equal(capabilities.limits.ownMenus, 2);
+  assert.equal(capabilities.limits.ownMenus, 1);
+  assert.equal(capabilities.limits.ownMeals, 5);
+  assert.equal(capabilities.limits.menuDays, 1);
   assert.equal(capabilities.canUseGlobalLibrary, false);
   assert.equal(capabilities.canUsePremiumLibrary, false);
 });
@@ -38,6 +40,21 @@ test("cliente con coach se detecta por coach.entrenadorId", () => {
   assert.equal(capabilities.clientType, "with_coach");
   assert.equal(capabilities.hasCoach, true);
   assert.equal(capabilities.activeMenuSource, "coach");
+});
+
+test("prueba Pro activa eleva capabilities sin cambiar plan legacy", () => {
+  const capabilities = getClientNutritionCapabilities({
+    role: "cliente",
+    personalPlan: "free",
+    plan: "free",
+    personalTrial: {
+      status: "active",
+      endsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    },
+  });
+
+  assert.equal(capabilities.plan, "pro");
+  assert.equal(capabilities.limits.ownMenus, 10);
 });
 
 test("VIP accede a biblioteca premium pero no declara PDF/generacion automatica como lista", () => {

@@ -145,7 +145,17 @@ export function normalizeVisibility(value = "") {
 
 export function planTier(user = {}) {
   if (isAdmin(user)) return "vip";
-  const plan = normalizePlan(user);
+  const trial = user?.personalTrial || user?.trial || {};
+  const trialEndsAt = trial?.endsAt ? new Date(trial.endsAt) : null;
+  const trialActive =
+    ["active", "trialing"].includes(String(trial?.status || "").trim().toLowerCase()) &&
+    trialEndsAt &&
+    Number.isFinite(trialEndsAt.getTime()) &&
+    trialEndsAt.getTime() >= Date.now();
+  const plan = trialActive ? "pro" : normalizePlan({
+    ...user,
+    plan: user?.personalPlan || user?.plan || user?.personalSubscription?.plan || user?.subscription?.planCode,
+  });
   if (plan === "vip") return "vip";
   if (plan === "pro") return "pro";
   if (["coach", "nutri", "trainernutri", "trainer_nutri", "gym", "admin"].includes(plan)) return "vip";
@@ -162,7 +172,7 @@ export function planAllows(user = {}, planMinimo = "free") {
 export function getNutritionLibraryLimits(user = {}) {
   if (isAdmin(user)) return NUTRITION_LIBRARY_LIMITS.admin.vip;
   if (isClient(user)) {
-    const limits = getClientNutritionLimitsForPlan(user?.plan || user?.subscription?.planCode);
+    const limits = getClientNutritionLimitsForPlan(planTier(user));
     return {
       maxComidasPropias: limits.ownMealsLimit,
       maxMenusPropios: limits.ownMenusLimit,

@@ -9,6 +9,8 @@ import {
   normalizePlanConfig,
   resolveEffectiveCoachCapabilities,
 } from "./coachPlans.js";
+import { accessError } from "./accessGates.js";
+import { requireCoachSubscriptionActive, requireProfessionalScope } from "./professionalAccessRules.js";
 
 const ROUTINE_OBJECTIVES = new Set([
   "hipertrofia",
@@ -398,15 +400,24 @@ class ServicioRutinas {
     if (this._isAdmin(actor)) return { admin: true, effectiveCapabilities: null };
     if (!this._isCoach(actor)) throw new Error("COACH_TRAINING_NOT_ALLOWED");
 
-    const specialties = actor?.coachProfile?.specialties || {};
-    if (!specialties.training) throw new Error("COACH_TRAINING_NOT_ALLOWED");
+    requireProfessionalScope(actor, "training");
+    requireCoachSubscriptionActive(actor, { action: "training" });
 
     const effectiveCapabilities = await this._effectiveCapabilities(actor);
     const routineFeatures = effectiveCapabilities?.features?.routines || {};
     if (effectiveCapabilities?.isTrialExpired) throw new Error("COACH_FEATURE_NOT_ALLOWED");
 
     if (feature && !routineFeatures?.[feature]) {
-      throw new Error("COACH_FEATURE_NOT_ALLOWED");
+      if (feature === "automaticGenerator") {
+        throw accessError("FEATURE_COMING_SOON", "El generador automatico de rutinas todavia no esta disponible", {
+          feature: "training.automaticRoutine",
+          status: "coming_soon",
+        });
+      }
+      throw accessError("PLAN_CAPABILITY_REQUIRED", "Tu plan profesional no permite esta accion", {
+        feature: `training.${feature}`,
+        requiredPlan: "coach_pro",
+      });
     }
 
     if (!feature && !anyTruthyFeature(routineFeatures)) {

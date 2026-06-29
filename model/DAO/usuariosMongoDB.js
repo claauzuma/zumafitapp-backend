@@ -67,6 +67,31 @@ const LIST_PROJECTION = {
   routine: 0,
 };
 
+const ACCESS_CONTEXT_PROJECTION = {
+  email: 1,
+  role: 1,
+  rol: 1,
+  tipo: 1,
+  estado: 1,
+  plan: 1,
+  personalPlan: 1,
+  subscription: 1,
+  personalSubscription: 1,
+  trial: 1,
+  personalTrial: 1,
+  coach: 1,
+  coachId: 1,
+  entrenadorId: 1,
+  profesionalId: 1,
+  coachAccess: 1,
+  clientCoachNotice: 1,
+  nutritionCapabilities: 1,
+  onboarding: 1,
+  profile: 1,
+  createdAt: 1,
+  updatedAt: 1,
+};
+
 class ModelMongoDBUsuarios {
   _col() {
     if (!CnxMongoDB.connection) {
@@ -84,6 +109,18 @@ class ModelMongoDBUsuarios {
     try {
       if (!id) return null;
       return await this._col().findOne({ _id: new ObjectId(id) });
+    } catch {
+      return null;
+    }
+  };
+
+  obtenerAccessContextPorId = async (id) => {
+    try {
+      if (!id) return null;
+      return await this._col().findOne(
+        { _id: new ObjectId(id) },
+        { projection: ACCESS_CONTEXT_PROJECTION }
+      );
     } catch {
       return null;
     }

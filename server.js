@@ -20,6 +20,7 @@ import RouterFoodLogs from "./router/foodLogs.js";
 import RouterAdmin from "./router/admin.js";
 import RouterComidasGuardadas from "./router/comidasGuardadas.js";
 import RouterNutritionLibrary from "./router/nutritionLibrary.js";
+import RouterProfessionalAccess from "./router/professionalAccess.js";
 
 import passport from "./auth/google.js";
 import { setupGoogleAuth } from "./auth/google.js";
@@ -35,6 +36,10 @@ import ModelMongoDBFoodLogs from "./model/DAO/foodLogsMongoDB.js";
 import ModelMongoDBClientMenuTracking from "./model/DAO/clientMenuTrackingMongoDB.js";
 import ModelMongoDBComidas from "./model/DAO/comidasMongoDB.js";
 import ModelMongoDBComidasGuardadas from "./model/DAO/comidasGuardadasMongoDB.js";
+import ModelMongoDBProfessionalApplications from "./model/DAO/professionalApplicationsMongoDB.js";
+import ModelMongoDBCoachSubscriptionRequests from "./model/DAO/coachSubscriptionRequestsMongoDB.js";
+import ModelMongoDBAccessAuditEvents from "./model/DAO/accessAuditEventsMongoDB.js";
+import ModelMongoDBCoachClientCapacity from "./model/DAO/coachClientCapacityMongoDB.js";
 
 function getLanIPv4s() {
   const nets = os.networkInterfaces();
@@ -89,7 +94,11 @@ class Server {
         await new ModelMongoDBClientMenuTracking().ensureIndexes();
         await new ModelMongoDBComidas().ensureIndexes();
         await new ModelMongoDBComidasGuardadas().ensureIndexes();
-        console.log("Indices asegurados (usuarios + pending + resets + rutinas + menus + tracking + comidas + comidasGuardadas)");
+        await new ModelMongoDBProfessionalApplications().ensureIndexes();
+        await new ModelMongoDBCoachSubscriptionRequests().ensureIndexes();
+        await new ModelMongoDBAccessAuditEvents().ensureIndexes();
+        await new ModelMongoDBCoachClientCapacity().ensureIndexes();
+        console.log("Indices asegurados (usuarios + pending + resets + rutinas + menus + tracking + comidas + comidasGuardadas + profesionales)");
       } catch (e) {
         console.log("⚠️ No se pudieron asegurar índices:", e?.message || e);
       }
@@ -151,6 +160,7 @@ class Server {
     this.app.use("/api/clientes", new RouterClienteMenus(this.persistencia).start());
     this.app.use("/api/tracking", new RouterFoodLogs(this.persistencia).start());
     this.app.use("/api/admin", new RouterAdmin().start());
+    this.app.use("/api", new RouterProfessionalAccess().start());
     this.app.use("/api", new RouterNutritionLibrary().start());
     this.app.use("/api", new RouterComidasGuardadas().start());
 
