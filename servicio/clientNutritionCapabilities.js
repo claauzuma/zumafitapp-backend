@@ -84,7 +84,28 @@ export function normalizeClientRole(role = "") {
   return normalized;
 }
 
+function isTerminalCoachAccess(access = {}) {
+  const status = token(access?.status || "");
+  return (
+    access?.active === false ||
+    Boolean(access?.endedAt) ||
+    ["ended", "finalized", "finished", "revoked", "unassigned", "inactive", "cancelled", "canceled"].includes(status)
+  );
+}
+
 export function clientHasCoach(user = {}) {
+  const access = user?.coachAccess || {};
+  if (isTerminalCoachAccess(access)) return false;
+
+  if (
+    access?.coachId &&
+    token(access?.status || "") === "active" &&
+    access?.active !== false &&
+    !access?.endedAt
+  ) {
+    return true;
+  }
+
   return Boolean(
     user?.coach?.entrenadorId ||
     user?.coach?.coachId ||

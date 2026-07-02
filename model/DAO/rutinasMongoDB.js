@@ -220,6 +220,27 @@ class ModelMongoDBRutinas {
     );
   };
 
+  pauseActiveForClientAndCoach = async (clienteId, coachId) => {
+    const clientValues = idValues(clienteId);
+    const coachValues = idValues(coachId);
+    if (!clientValues.length || !coachValues.length) return { matchedCount: 0, modifiedCount: 0 };
+
+    return await this._assigned().updateMany(
+      {
+        clienteId: { $in: clientValues },
+        coachId: { $in: coachValues },
+        estado: "activa",
+      },
+      {
+        $set: {
+          estado: "pausada",
+          pausedReason: "coach_service_ended",
+          updatedAt: new Date(),
+        },
+      }
+    );
+  };
+
   createAssigned = async (doc) => {
     const now = new Date();
     const payload = {

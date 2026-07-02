@@ -254,6 +254,19 @@ function suppressPersonalSubscriptionDuringCoach(subscription = {}, hasCoach = f
   };
 }
 
+function normalizePersonalSubscriptionAfterCoach(subscription = {}, hasCoach = false, personalPlan = "free") {
+  if (hasCoach) return suppressPersonalSubscriptionDuringCoach(subscription, hasCoach, personalPlan);
+  if (subscription.status !== "suppressed_by_coach" && subscription.suppressedByCoach !== true) return subscription;
+
+  return {
+    ...subscription,
+    status: personalPlan === "free" ? "free" : "active",
+    autoRenew: subscription.autoRenew === true && personalPlan !== "free",
+    suppressedByCoach: false,
+    suppressionReason: null,
+  };
+}
+
 function resolveTrial(user = {}, now = new Date()) {
   const trial = user.personalTrial || user.trial || {};
   const used = trial.used === true || Boolean(trial.startedAt || trial.endsAt);
@@ -294,22 +307,34 @@ function resolveTrial(user = {}, now = new Date()) {
 
 function resolveCoachAccess(user = {}) {
   const stored = user.coachAccess || {};
-  const legacyCoachId = user?.coach?.entrenadorId || user?.coach?.coachId || user?.coachId || user?.entrenadorId || user?.profesionalId || null;
+  const statusRaw = token(stored.status || "");
+  const terminalStatus = ["ended", "finalized", "finished", "revoked", "unassigned", "inactive", "cancelled", "canceled"].includes(statusRaw);
+  const explicitlyClosed = stored.active === false || Boolean(stored.endedAt) || terminalStatus;
+  const legacyCoachId = explicitlyClosed
+    ? null
+    : user?.coach?.entrenadorId || user?.coach?.coachId || user?.coachId || user?.entrenadorId || user?.profesionalId || null;
   const storedCoachId = stored.coachId || stored.profesionalId || null;
-  const resolvedCoachId = storedCoachId || legacyCoachId || null;
+  const resolvedCoachId = explicitlyClosed ? null : storedCoachId || legacyCoachId || null;
   const hasLegacyActiveCoach = clientHasCoach(user);
-  const status = token(stored.status || (hasLegacyActiveCoach ? "active" : "inactive"));
-  const active = Boolean(resolvedCoachId) && status === "active";
-  const visible = Boolean(resolvedCoachId) || ["accepted_pending_activation", "pending_activation", "invited"].includes(status);
+  const status = explicitlyClosed
+    ? (terminalStatus && statusRaw ? statusRaw : "ended")
+    : statusRaw || (hasLegacyActiveCoach ? "active" : "inactive");
+  const active = !explicitlyClosed && Boolean(resolvedCoachId) && status === "active";
+  const visible = !explicitlyClosed && (
+    Boolean(resolvedCoachId) ||
+    ["accepted_pending_activation", "pending_activation", "invited"].includes(status)
+  );
   const servicePackage = visible
     ? normalizeServicePackage(stored.servicePackage || stored.package || user?.coach?.servicePackage || "service_pro")
     : null;
   const serviceScopes = Array.isArray(stored.serviceScopes || stored.scopes) && (stored.serviceScopes || stored.scopes).length
     ? (stored.serviceScopes || stored.scopes).map(token).filter(Boolean)
-    : ["training", "nutrition"];
+    : visible
+      ? ["training", "nutrition"]
+      : [];
 
   return {
-    status: active ? "active" : (visible ? status : "inactive"),
+    status: active ? "active" : (statusRaw || visible ? status : "inactive"),
     active,
     coachId: idToString(resolvedCoachId) || null,
     servicePackage,
@@ -317,7 +342,7 @@ function resolveCoachAccess(user = {}) {
     label: servicePackage ? PROFESSIONAL_SERVICE_CATALOG[servicePackage]?.label || "Coach Pro" : null,
     serviceScopes,
     scopes: serviceScopes,
-    billingOwner: "coach",
+    billingOwner: active ? "coach" : "client",
     invitationId: idToString(stored.invitationId || user?.coach?.invitationId) || null,
     startedAt: stored.startedAt || user?.coach?.assignedAt || null,
     endsAt: stored.endsAt || null,
@@ -554,7 +579,7 @@ export function resolveClientAccessContext(user = {}, { now = new Date() } = {})
     goals: coachControlsNutrition ? "coach" : "client",
     autoCoach: hasCoach ? "coach_review" : "disabled",
   };
-  const personalSubscription = suppressPersonalSubscriptionDuringCoach(
+  const personalSubscription = normalizePersonalSubscriptionAfterCoach(
     activePersonalSubscription(user, personalPlan, dateNow),
     hasCoach,
     personalPlan
@@ -595,9 +620,23 @@ export function resolveClientAccessContext(user = {}, { now = new Date() } = {})
     personalPlan,
     legacyPlan,
     effectivePersonalPlan,
-    accessSource: trial.active ? "trial" : "subscription",
+    accessSource: trial.active ? "trial" : "personal",
     clientType: hasCoach ? "with_coach" : "self_managed",
     hasCoach,
+    managedByCoach: hasCoach,
+    activeCoach: hasCoach ? { id: coachAccess.coachId } : null,
+    coachService: hasCoach
+      ? {
+          id: coachAccess.servicePackage,
+          label: effectiveService?.label || "Coach Pro",
+          scopes: coachAccess.serviceScopes,
+        }
+      : null,
+    billingSource: billing.owner === "coach" ? "coach" : "personal",
+    coachScopes: {
+      nutrition: coachControlsNutrition,
+      training: coachControlsTraining,
+    },
     effectiveAccess,
     authority,
     primaryAccess,

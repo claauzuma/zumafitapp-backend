@@ -94,6 +94,68 @@ test("permisos heredados del coach no pueden seguir bloqueando tracking", () => 
   assert.equal(next.foodTracking.canTrackFood, true);
 });
 
+test("patch de desvinculacion cierra coachAccess y restaura acceso personal", () => {
+  const servicio = new ServicioUsuarios();
+  const now = new Date("2026-06-30T12:00:00.000Z");
+  const patch = servicio._disconnectClientPatch(
+    {
+      _id: "client-1",
+      role: "cliente",
+      plan: "premium",
+      personalPlan: "pro",
+      coachId: "coach-1",
+      entrenadorId: "coach-1",
+      profesionalId: "coach-1",
+      coach: {
+        entrenadorId: "coach-1",
+        assignedAt: "2026-06-20T00:00:00.000Z",
+        servicePackage: "service_pro",
+      },
+      coachAccess: {
+        status: "active",
+        active: true,
+        coachId: "coach-1",
+        servicePackage: "service_pro",
+        serviceScopes: ["nutrition", "training"],
+        billingOwner: "coach",
+        startedAt: "2026-06-20T00:00:00.000Z",
+      },
+      personalSubscription: {
+        plan: "pro",
+        status: "suppressed_by_coach",
+        billingOwner: "coach",
+        suppressedByCoach: true,
+        suppressedReason: "coach_access",
+        autoRenew: false,
+      },
+      clientPermissions: {
+        tracking: { canTrackFood: false },
+      },
+    },
+    {
+      coachId: "coach-1",
+      reason: "coach_service_ended",
+      actor: "coach-1",
+      now,
+    }
+  );
+
+  assert.equal(patch.coachId, null);
+  assert.equal(patch.entrenadorId, null);
+  assert.equal(patch.profesionalId, null);
+  assert.equal(patch.coach.entrenadorId, null);
+  assert.equal(patch.coachAccess.status, "ended");
+  assert.equal(patch.coachAccess.active, false);
+  assert.equal(patch.coachAccess.coachId, "coach-1");
+  assert.equal(patch.coachAccess.billingOwner, "client");
+  assert.equal(patch.coachAccess.endedReason, "coach_service_ended");
+  assert.equal(patch.personalSubscription.plan, "pro");
+  assert.equal(patch.personalSubscription.status, "active");
+  assert.equal(patch.personalSubscription.billingOwner, "client");
+  assert.equal(patch.personalSubscription.suppressedByCoach, false);
+  assert.equal(patch.clientPermissions.tracking.canTrackFood, true);
+});
+
 test("tracking solo usa menu asignado si coincide con el coach actual", () => {
   const actor = { coach: { entrenadorId: "coach-1" } };
 

@@ -21,6 +21,7 @@ import RouterAdmin from "./router/admin.js";
 import RouterComidasGuardadas from "./router/comidasGuardadas.js";
 import RouterNutritionLibrary from "./router/nutritionLibrary.js";
 import RouterProfessionalAccess from "./router/professionalAccess.js";
+import { errorHandler } from "./middleware/errorHandler.js";
 
 import passport from "./auth/google.js";
 import { setupGoogleAuth } from "./auth/google.js";
@@ -126,7 +127,7 @@ class Server {
     this.app.options(/.*/, cors(corsOptions));
 
     this.app.use(cookieParser());
-    this.app.use(express.json());
+    this.app.use(express.json({ limit: "1mb" }));
     this.app.use(morgan("dev"));
 
     // ✅ TRACE GLOBAL (con host) para debug de cookies / google auth
@@ -165,6 +166,7 @@ class Server {
     this.app.use("/api", new RouterComidasGuardadas().start());
 
     this.app.use((req, res) => res.status(404).json({ status: false, errors: "not found" }));
+    this.app.use(errorHandler);
 
     this.server = this.app.listen(this.port, "0.0.0.0", () => {
       console.log(`Servidor express escuchando en:`);

@@ -59,6 +59,31 @@ const INDEXES = [
     options: { name: "invited_users_email_status" },
   },
   {
+    collection: "invited_users",
+    keys: { clientId: 1, status: 1 },
+    options: { name: "invited_users_client_status" },
+  },
+  {
+    collection: "invited_users",
+    keys: { source: 1, assignedCoachId: 1, email: 1, status: 1 },
+    options: { name: "invited_users_coach_email_status" },
+  },
+  {
+    collection: "invited_users",
+    keys: { source: 1, assignedCoachId: 1, clientId: 1, status: 1 },
+    options: { name: "invited_users_coach_client_status" },
+  },
+  {
+    collection: "client_coach_blocks",
+    keys: { clientId: 1, coachId: 1 },
+    options: { name: "client_coach_blocks_client_coach_unique", unique: true },
+  },
+  {
+    collection: "client_coach_blocks",
+    keys: { clientId: 1, isActive: 1, blockedAt: -1 },
+    options: { name: "client_coach_blocks_client_active_blockedAt" },
+  },
+  {
     collection: "coach_client_capacity",
     keys: { coachId: 1 },
     options: { name: "coach_client_capacity_coach_unique", unique: true },

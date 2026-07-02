@@ -81,6 +81,24 @@ function adminError(res, error) {
   if (msg === "INVITACION_PENDIENTE_EXISTENTE") {
     return res.status(409).json({ error: "Ya existe una invitacion pendiente para ese email" });
   }
+  if (msg === "INVITEE_NOT_ELIGIBLE") {
+    return res.status(409).json({ code: msg, error: "Esta cuenta no puede ser invitada como cliente." });
+  }
+  if (msg === "CLIENT_ALREADY_ACTIVE_WITH_COACH") {
+    return res.status(409).json({ code: msg, error: "Este cliente ya forma parte de tu cartera." });
+  }
+  if (msg === "CLIENT_HAS_PENDING_INVITATION") {
+    return res.status(409).json({ code: msg, error: "Esta cuenta ya tiene una invitacion profesional pendiente." });
+  }
+  if (msg === "INVITATION_REJECTED_RECENTLY") {
+    return res.status(409).json({ code: msg, error: "Este cliente rechazo recientemente una invitacion. Vas a poder volver a invitarlo mas adelante." });
+  }
+  if (msg === "INVITATION_RATE_LIMITED") {
+    return res.status(429).json({ code: msg, error: "Alcanzaste temporalmente el limite de invitaciones. Intenta mas tarde." });
+  }
+  if (msg === "COACH_BLOCKED_BY_CLIENT") {
+    return res.status(409).json({ code: msg, error: "No es posible enviar una invitacion a esta cuenta." });
+  }
   if (msg === "COACH_INVITES_DISABLED") {
     return res.status(403).json({ error: "Tu cuenta profesional no tiene habilitada la invitacion de clientes" });
   }
@@ -103,8 +121,11 @@ function adminError(res, error) {
   if (msg === "CLIENT_NOT_ASSIGNED_TO_COACH") {
     return res.status(403).json({ error: "Este cliente no esta asignado a tu cuenta profesional" });
   }
+  if (msg === "COACH_CLIENT_RELATION_NOT_ACTIVE") {
+    return res.status(409).json({ code: msg, error: "La relacion profesional ya no esta activa." });
+  }
   if (msg === "CLIENT_ALREADY_HAS_COACH" || msg === "CLIENT_ALREADY_HAS_ACTIVE_COACH") {
-    return res.status(409).json({ error: "Ya tenes un coach activo asignado" });
+    return res.status(409).json({ code: msg, error: "La cuenta ya tiene un coach activo asignado" });
   }
   if (msg === "CLIENT_ALREADY_HAS_PENDING_COACH") {
     return res.status(409).json({ error: "Ya aceptaste una invitacion y estas esperando activacion del profesional" });
@@ -482,6 +503,49 @@ class ControladorUsuarios {
         invitation: data.invitation,
         user: mapUserPublic(data.user),
       });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  blockMyCoachInvitation = async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?._id || null;
+      const { invitationId } = req.params;
+      const body = req.body || {};
+      const data = await this.servicio.clientBlockCoachFromInvitation({
+        userId,
+        invitationId,
+        reportedAsSpam: !!body.reportedAsSpam,
+        reportReason: body.reportReason || "",
+        comment: body.comment || "",
+      });
+      return res.json({
+        ok: true,
+        status: data.status,
+        user: mapUserPublic(data.user),
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  listMyBlockedCoaches = async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?._id || null;
+      const data = await this.servicio.clientListBlockedCoaches({ userId });
+      return res.json(data);
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  unblockMyCoach = async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?._id || null;
+      const { coachId } = req.params;
+      const data = await this.servicio.clientUnblockCoach({ userId, coachId });
+      return res.json({ ok: true, ...data });
     } catch (error) {
       return adminError(res, error);
     }
@@ -1380,7 +1444,7 @@ class ControladorUsuarios {
         servicePackage: body.servicePackage || body.coachAccess?.servicePackage || "service_pro",
       });
 
-      return res.status(201).json({ ok: true, ...data });
+      return res.status(data?.alreadyExists ? 200 : 201).json({ ok: true, ...data });
     } catch (error) {
       return adminError(res, error);
     }
@@ -1461,6 +1525,34 @@ class ControladorUsuarios {
       return res.json({
         coach: mapUserPublic(data.coach),
         client: mapUserPublic(data.client),
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  coachEndClientService = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const { clientId } = req.params;
+      const { reason = "", reasonNote = "" } = req.body || {};
+      const data = await this.servicio.coachEndClientService({
+        coachId,
+        clientId,
+        reason,
+        reasonNote,
+      });
+
+      return res.json({
+        ok: true,
+        status: data.status || "unassigned",
+        coach: mapUserPublic(data.coach),
+        client: mapUserPublic(data.client),
+        releasedCapacity: data.releasedCapacity || null,
+        revokedMenus: data.revokedMenus || null,
+        revokedLibraryMenus: data.revokedLibraryMenus || null,
+        revokedLibraryMeals: data.revokedLibraryMeals || null,
+        revokedRoutines: data.revokedRoutines || null,
       });
     } catch (error) {
       return adminError(res, error);

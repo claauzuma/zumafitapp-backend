@@ -42,6 +42,27 @@ test("cliente con coach se detecta por coach.entrenadorId", () => {
   assert.equal(capabilities.activeMenuSource, "coach");
 });
 
+test("coachAccess finalizado no se detecta como coach activo en capabilities", () => {
+  const capabilities = getClientNutritionCapabilities({
+    role: "cliente",
+    personalPlan: "free",
+    plan: "free",
+    coach: { entrenadorId: "coach-1" },
+    coachAccess: {
+      status: "ended",
+      active: false,
+      coachId: "coach-1",
+      endedAt: "2026-06-30T00:00:00.000Z",
+    },
+    menu: { activeSource: "coach" },
+  });
+
+  assert.equal(capabilities.plan, "free");
+  assert.equal(capabilities.clientType, "self_managed");
+  assert.equal(capabilities.hasCoach, false);
+  assert.equal(capabilities.activeMenuSource, "none");
+});
+
 test("prueba Pro activa eleva capabilities sin cambiar plan legacy", () => {
   const capabilities = getClientNutritionCapabilities({
     role: "cliente",

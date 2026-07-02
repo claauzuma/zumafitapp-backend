@@ -120,6 +120,23 @@ class RouterUsuarios {
       this.controladorUsuarios.declineMyCoachInvitation
     );
     this.router.post(
+      "/me/invitations/:invitationId/block",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.blockMyCoachInvitation
+    );
+    this.router.get(
+      "/me/blocked-coaches",
+      authMiddleware,
+      this.controladorUsuarios.listMyBlockedCoaches
+    );
+    this.router.delete(
+      "/me/coaches/:coachId/block",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.unblockMyCoach
+    );
+    this.router.post(
       "/me/coach-notice/dismiss",
       authMiddleware,
       denyWriteWhenReadOnlyImpersonation,
@@ -216,6 +233,13 @@ class RouterUsuarios {
       authMiddleware,
       requireRole("coach"),
       this.controladorUsuarios.getMyCoachClientDetail
+    );
+    users.patch(
+      "/me/coach-clients/:clientId/end-service",
+      authMiddleware,
+      requireRole("coach"),
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.coachEndClientService
     );
     users.patch(
       "/me/coach-clients/:clientId/nutrition",

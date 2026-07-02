@@ -281,6 +281,91 @@ test("coachAccess suspendido o vencido no se trata como servicio activo", () => 
   }
 });
 
+test("coachAccess finalizado no deja Coach Pro como acceso principal", () => {
+  const context = resolveClientAccessContext({
+    role: "cliente",
+    personalPlan: "free",
+    plan: "free",
+    coachAccess: {
+      status: "ended",
+      active: false,
+      coachId: "coach-1",
+      servicePackage: "service_pro",
+      serviceScopes: ["nutrition", "training"],
+      startedAt: "2026-06-20T00:00:00.000Z",
+      endedAt: "2026-06-30T00:00:00.000Z",
+    },
+    coach: {
+      entrenadorId: null,
+      endedAt: "2026-06-30T00:00:00.000Z",
+    },
+  }, { now });
+
+  assert.equal(context.personalPlan, "free");
+  assert.equal(context.effectivePersonalPlan, "free");
+  assert.equal(context.accessSource, "personal");
+  assert.equal(context.hasCoach, false);
+  assert.equal(context.managedByCoach, false);
+  assert.equal(context.mode, "self_managed");
+  assert.equal(context.clientType, "self_managed");
+  assert.equal(context.activeCoach, null);
+  assert.equal(context.coachService, null);
+  assert.equal(context.billing.owner, "none");
+  assert.equal(context.billingSource, "personal");
+  assert.equal(context.coachScopes.nutrition, false);
+  assert.equal(context.coachScopes.training, false);
+  assert.equal(context.authority.nutrition, "client");
+  assert.equal(context.authority.training, "client");
+  assert.equal(context.primaryAccess.type, "personal");
+  assert.equal(context.primaryAccess.id, "free");
+  assert.equal(context.effectiveAccess.id, "free");
+  assert.equal(context.coachAccess.status, "ended");
+  assert.equal(context.coachAccess.active, false);
+  assert.equal(context.coachAccess.coachId, null);
+  assert.equal(context.coachAccess.servicePackage, null);
+});
+
+test("coachAccess finalizado prevalece sobre campos legacy de coach", () => {
+  const context = resolveClientAccessContext({
+    role: "cliente",
+    personalPlan: "pro",
+    plan: "premium",
+    coachId: "coach-legacy",
+    entrenadorId: "coach-legacy",
+    profesionalId: "coach-legacy",
+    coach: {
+      entrenadorId: "coach-legacy",
+      servicePackage: "service_pro",
+    },
+    coachAccess: {
+      status: "active",
+      active: false,
+      coachId: "coach-legacy",
+      servicePackage: "service_pro",
+      endedAt: "2026-06-30T00:00:00.000Z",
+    },
+    personalSubscription: {
+      plan: "pro",
+      status: "suppressed_by_coach",
+      suppressedByCoach: true,
+      billingOwner: "coach",
+    },
+  }, { now });
+
+  assert.equal(context.personalPlan, "pro");
+  assert.equal(context.effectivePersonalPlan, "pro");
+  assert.equal(context.hasCoach, false);
+  assert.equal(context.mode, "self_managed");
+  assert.equal(context.billing.owner, "client");
+  assert.equal(context.personalSubscription.status, "active");
+  assert.equal(context.personalSubscription.billingOwner, "client");
+  assert.equal(context.personalSubscription.suppressedByCoach, false);
+  assert.equal(context.primaryAccess.type, "personal");
+  assert.equal(context.primaryAccess.id, "pro");
+  assert.equal(context.effectiveAccess.id, "pro");
+  assert.equal(context.professionalService, null);
+});
+
 test("funciones no implementadas quedan coming_soon sin habilitarse", () => {
   const context = resolveClientAccessContext({
     role: "cliente",
