@@ -30,7 +30,7 @@ test("usa el plan efectivo del trial Pro para cuotas", () => {
     personalPlan: "free",
     personalTrial: {
       status: "active",
-      endsAt: "2026-07-10T00:00:00.000Z",
+      endsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
     },
   };
 

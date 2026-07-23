@@ -7,12 +7,164 @@ import {
   canViewNutritionItem,
 } from "../servicio/nutritionLibraryPermissions.js";
 import ServicioUsuarios, {
+  buildNutritionAssignmentImpact,
   buildSelfGoalsBackup,
+  moveInvalidatedAssignments,
   resolveClientNutritionWeek,
   resetCoachDerivedClientPermissions,
   restoreMetasAfterCoachDisconnect,
   shouldUseWeeklyNutritionPlan,
 } from "../servicio/usuarios.js";
+
+function assignedMenu(name) {
+  return {
+    menuId: `menu-${name}`,
+    menuSnapshot: {
+      id: `menu-${name}`,
+      name,
+      kcal: 1940,
+      protein: 150,
+      carbs: 200,
+      fat: 60,
+      meals: [],
+    },
+    source: "coach_owned",
+  };
+}
+
+function clientWithAssignedMenus() {
+  return {
+    coach: { entrenadorId: "coach-1" },
+    metasActuales: {
+      kcal: 1940,
+      macros: { p: 150, c: 200, g: 60 },
+      source: "coach",
+      sourceCoachId: "coach-1",
+    },
+    menu: {
+      activeSource: "coach",
+      mode: { source: "coach", updatedByCoachId: "coach-1" },
+      weeklyPlan: {
+        generatedBy: "coach",
+        sourceCoachId: "coach-1",
+        caloriesByDay: {},
+        macrosByDay: {},
+        assignedMenusByDay: {
+          monday: {
+            ...assignedMenu("Lunes"),
+            alternatives: [assignedMenu("Alternativa lunes")],
+          },
+          tuesday: assignedMenu("Martes"),
+        },
+      },
+    },
+  };
+}
+
+test("impacto nutricional incluye solo días asignados cuya meta efectiva cambió", () => {
+  const current = clientWithAssignedMenus();
+  const next = {
+    ...current,
+    metasActuales: {
+      ...current.metasActuales,
+      macros: { p: 160, c: 200, g: 60 },
+    },
+  };
+
+  const impact = buildNutritionAssignmentImpact(current, next);
+
+  assert.deepEqual(impact.affectedDayKeys, ["monday", "tuesday"]);
+  assert.equal(impact.assignedMenus, 3);
+  assert.equal(impact.affectedDays[0].previousTarget.p, 150);
+  assert.equal(impact.affectedDays[0].nextTarget.p, 160);
+});
+
+test("cambio diario selectivo no desasigna días cuya meta efectiva sigue igual", () => {
+  const current = clientWithAssignedMenus();
+  const next = {
+    ...current,
+    menu: {
+      ...current.menu,
+      weeklyPlan: {
+        ...current.menu.weeklyPlan,
+        caloriesByDay: { Lunes: 1940 },
+        macrosByDay: { Lunes: { p: 170, c: 180, g: 60, kcal: 1940 } },
+      },
+    },
+  };
+
+  const impact = buildNutritionAssignmentImpact(current, next);
+
+  assert.deepEqual(impact.affectedDayKeys, ["monday"]);
+  assert.equal(impact.assignedMenus, 2);
+});
+
+test("desasignación mueve snapshots afectados y conserva intactos los demás días", () => {
+  const assignments = clientWithAssignedMenus().menu.weeklyPlan.assignedMenusByDay;
+  const moved = moveInvalidatedAssignments(assignments, ["monday"]);
+
+  assert.equal(moved.remaining.tuesday.menuSnapshot.name, "Martes");
+  assert.equal(moved.remaining.monday, undefined);
+  assert.equal(moved.invalidated.monday.menuSnapshot.name, "Lunes");
+  assert.equal(moved.invalidated.monday.alternatives[0].menuSnapshot.name, "Alternativa lunes");
+});
+
+test("backend exige confirmación explícita antes de cambiar metas con menús afectados", async () => {
+  const service = new ServicioUsuarios();
+  const client = clientWithAssignedMenus();
+  const coach = {
+    _id: "coach-1",
+    role: "coach",
+    professionalProfile: { specialties: { nutrition: true } },
+  };
+  service._getCoachClientPair = async () => ({ coach, client });
+  service._assertNutritionEditAllowed = () => {};
+
+  await assert.rejects(
+    () => service.coachUpdateClientNutrition({
+      coachId: "coach-1",
+      clientId: "client-1",
+      payload: {
+        kcal: 1980,
+        macros: { p: 160, c: 200, g: 60 },
+        weeklyPlan: { caloriesByDay: {}, macrosByDay: {} },
+      },
+    }),
+    (error) => {
+      assert.equal(error.message, "NUTRITION_ASSIGNMENTS_CONFIRMATION_REQUIRED");
+      assert.deepEqual(error.impact.affectedDayKeys, ["monday", "tuesday"]);
+      return true;
+    }
+  );
+});
+
+test("backend reconcilia asignaciones legacy si la meta cambió antes de desplegar la protección", () => {
+  const current = clientWithAssignedMenus();
+  current.metasActuales.updatedAt = new Date("2026-07-23T20:59:46.389Z");
+  Object.values(current.menu.weeklyPlan.assignedMenusByDay).forEach((entry) => {
+    entry.assignedAt = new Date("2026-07-09T04:19:25.571Z");
+  });
+
+  const impact = buildNutritionAssignmentImpact(current, current);
+
+  assert.deepEqual(impact.affectedDayKeys, ["monday", "tuesday"]);
+  assert.equal(impact.changedDays, 0);
+  assert.equal(impact.staleDays, 2);
+});
+
+test("metadata completa de asignación evita falsos obsoletos tras editar una nota", () => {
+  const current = clientWithAssignedMenus();
+  current.metasActuales.updatedAt = new Date("2026-07-23T20:59:46.389Z");
+  Object.values(current.menu.weeklyPlan.assignedMenusByDay).forEach((entry) => {
+    entry.assignedAt = new Date("2026-07-09T04:19:25.571Z");
+    entry.targetCalories = 1940;
+    entry.targetMacros = { p: 150, c: 200, g: 60 };
+  });
+
+  const impact = buildNutritionAssignmentImpact(current, current);
+
+  assert.deepEqual(impact.affectedDayKeys, []);
+});
 
 test("backup de metas solo se crea para metas propias o de sistema", () => {
   const self = buildSelfGoalsBackup({
@@ -91,6 +243,8 @@ test("permisos heredados del coach no pueden seguir bloqueando tracking", () => 
   assert.deepEqual(next.customPreference, { keep: true });
   assert.equal(next.tracking.canTrackFood, true);
   assert.equal(next.tracking.canEditPastDays, true);
+  assert.equal(next.tracking.canAutoCompleteRemainingMeals, false);
+  assert.equal(next.tracking.canUseFlexibleMarginRecommendations, false);
   assert.equal(next.foodTracking.canTrackFood, true);
 });
 

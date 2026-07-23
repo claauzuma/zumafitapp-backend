@@ -1,15 +1,28 @@
 import Servicio from "../servicio/comidas.js";
+import { accessErrorPayload, isAccessGateError } from "../servicio/accessGates.js";
 
 function sendError(res, error) {
   const msg = String(error?.message || "");
 
   if (msg === "NO_AUTENTICADO") return res.status(401).json({ error: "No autenticado" });
+  if (isAccessGateError(error)) return res.status(403).json(accessErrorPayload(error));
   if (msg === "NOT_FOUND") return res.status(404).json({ error: "Comida no encontrada" });
   if (msg === "FORBIDDEN") return res.status(403).json({ error: "No tenes permisos para esta comida" });
   if (msg === "COACH_NUTRITION_NOT_ALLOWED") {
     return res.status(403).json({ error: "Tu perfil profesional no tiene acceso a comidas nutricionales" });
   }
   if (msg === "COACH_FEATURE_NOT_ALLOWED") return res.status(403).json({ error: "Tu plan no permite esta accion" });
+  if (msg === "COACH_MEAL_LIMIT_EXCEEDED") {
+    return res.status(409).json({
+      code: msg,
+      error: "Alcanzaste el limite de comidas propias de tu plan.",
+      current: Number(error?.current || 0),
+      limit: Number(error?.limit || 0),
+      plan: error?.plan || null,
+      overrideApplied: !!error?.overrideApplied,
+      upgradeTarget: error?.upgradeTarget || null,
+    });
+  }
   if (msg === "ITEMS_INVALIDOS") return res.status(400).json({ error: "La comida debe tener al menos un alimento" });
   if (msg === "ID_INVALIDO") return res.status(400).json({ error: "ID invalido" });
   if (msg === "DUPLICATE_IDENTICAL") return res.status(409).json({ error: "La copia es identica a una comida existente. Cambia nombre, alimentos o cantidades antes de guardar." });

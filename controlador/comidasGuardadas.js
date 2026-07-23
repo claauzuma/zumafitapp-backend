@@ -13,6 +13,18 @@ function sendError(res, error) {
     return res.status(409).json({ error: "Esta comida no se edita directo. Guardala como mi comida para crear una copia privada." });
   }
   if (msg === "SAVED_MEAL_LIMIT") return res.status(409).json({ error: "Alcanzaste el limite de comidas guardadas de tu plan" });
+  if (msg === "COACH_MEAL_LIMIT_EXCEEDED") {
+    return res.status(409).json({
+      code: msg,
+      error: "Alcanzaste el limite de comidas propias de tu plan profesional",
+      current: error.current,
+      limit: error.limit,
+      plan: error.plan,
+      overrideApplied: !!error.overrideApplied,
+      upgradeTarget: error.upgradeTarget || null,
+      resource: error.resource || "maxCoachOwnedMeals",
+    });
+  }
   if (msg === "ITEMS_INVALIDOS") return res.status(400).json({ error: "La comida debe tener al menos un alimento" });
   if (msg === "CANTIDAD_INVALIDA") return res.status(400).json({ error: "La cantidad debe ser mayor a 0" });
   if (msg === "ALIMENTO_NO_ENCONTRADO") return res.status(404).json({ error: "No encontramos uno de los alimentos" });

@@ -79,7 +79,7 @@ class ModelMongoDBCoachPlanConfigs {
     return normalizePlanConfig(doc || code);
   }
 
-  async updateByCode(planCode, patch = {}) {
+  async updateByCode(planCode, patch = {}, { updatedBy = null } = {}) {
     await this.ensureSeedDefaults();
     const code = normalizeCoachPlanCode(planCode);
     if (!code) return null;
@@ -117,14 +117,14 @@ class ModelMongoDBCoachPlanConfigs {
 
     await this._col().updateOne(
       { code },
-      { $set: { ...next, updatedAt: new Date() } },
+      { $set: { ...next, updatedAt: new Date(), updatedBy: updatedBy || null } },
       { upsert: true }
     );
 
     return await this.getByCode(code);
   }
 
-  async resetByCode(planCode) {
+  async resetByCode(planCode, { updatedBy = null } = {}) {
     await this.ensureSeedDefaults();
     const code = normalizeCoachPlanCode(planCode);
     if (!code) return null;
@@ -136,6 +136,7 @@ class ModelMongoDBCoachPlanConfigs {
         $set: {
           ...base,
           updatedAt: new Date(),
+          updatedBy: updatedBy || null,
         },
         $setOnInsert: {
           createdAt: new Date(),

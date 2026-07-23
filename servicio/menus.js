@@ -5,10 +5,21 @@ import ModelMongoDBUsuarios from "../model/DAO/usuariosMongoDB.js";
 import ModelMongoDBCoachPlanConfigs from "../model/DAO/coachPlanConfigsMongoDB.js";
 import ModelMongoDBAlimentos from "../model/DAO/alimentosMongoDB.js";
 import {
+  coachResourceLimitError,
   normalizeCoachPlanCode,
   normalizePlanConfig,
   resolveEffectiveCoachCapabilities,
 } from "./coachPlans.js";
+import {
+  canUseProfessionalTemplate,
+  normalizeProfessionalTemplateTier,
+  professionalTemplateSource,
+  professionalTemplateTier,
+} from "./professionalLibraryCapabilities.js";
+import {
+  requireCoachSubscriptionActive,
+  requireProfessionalScope,
+} from "./professionalAccessRules.js";
 
 const MENU_OBJECTIVES = new Set([
   "definicion",
@@ -280,6 +291,12 @@ function normalizeBasePayload(payload = {}, context = {}) {
     decimals: 1,
   });
   const rangoKcal = cleanString(payload.rangoKcal || payload.calorieRange, 80) || rangeFromKcal(kcalObjetivo);
+  const templateTier = ownerType === "admin"
+    ? normalizeProfessionalTemplateTier(
+        payload.templateTier || payload.libraryTier || payload.planMinimo || payload.visibilidad,
+        "global_basic"
+      )
+    : null;
 
   return {
     nombre: cleanText(payload.nombre || payload.name, "Menu sin nombre", 180),
@@ -296,6 +313,11 @@ function normalizeBasePayload(payload = {}, context = {}) {
         : enumValue(payload.visibilidad || payload.visibility, BASE_VISIBILITY, "publica"),
     ownerType,
     ownerId: ownerId ? toMongoIdOrString(ownerId) : null,
+    sourceType: ownerType === "coach" ? "coach_owned" : templateTier === "global_premium" ? "admin_premium" : "admin_global",
+    ...(templateTier ? { templateTier } : {}),
+    planMinimo: ownerType === "admin"
+      ? templateTier === "global_premium" ? "vip" : templateTier === "global_pro" ? "pro" : "free"
+      : "free",
     estado: enumValue(payload.estado || payload.status, BASE_STATUS, "activo"),
     comidas,
     createdBy: context.actorId ? toMongoIdOrString(context.actorId) : null,
@@ -346,6 +368,8 @@ function normalizeDoc(doc) {
     ...doc,
     id: idToString(doc._id || doc.id),
     _id: idToString(doc._id || doc.id),
+    sourceType: professionalTemplateSource(doc),
+    templateTier: doc.ownerType === "admin" ? professionalTemplateTier(doc) : null,
   };
 
   for (const key of ["ownerId", "createdBy", "clienteId", "coachId", "menuBaseId", "assignedBy", "updatedBy"]) {
@@ -534,14 +558,14 @@ class ServicioMenus {
 
   async _effectiveCapabilities(coach) {
     const currentClients = await this.usuariosModel.countClientsByCoachId(coach._id || coach.id);
-    const planCode = normalizeCoachPlanCode(coach?.plan) || "trial_pro";
+    const planCode = normalizeCoachPlanCode(coach?.coachSubscription?.plan || coach?.plan) || "trial_pro";
     const planConfig =
       typeof this.coachPlanModel?.getByCode === "function"
         ? await this.coachPlanModel.getByCode(planCode)
         : normalizePlanConfig(planCode);
 
     return resolveEffectiveCoachCapabilities({
-      coach,
+      coach: { ...coach, plan: planCode },
       planConfig,
       currentClients,
     });
@@ -550,9 +574,8 @@ class ServicioMenus {
   async _assertNutritionAccess(actor, { feature = null } = {}) {
     if (this._isAdmin(actor)) return { admin: true, effectiveCapabilities: null };
     if (!this._isCoach(actor)) throw new Error("COACH_NUTRITION_NOT_ALLOWED");
-
-    const specialties = actor?.coachProfile?.specialties || {};
-    if (!specialties.nutrition) throw new Error("COACH_NUTRITION_NOT_ALLOWED");
+    requireProfessionalScope(actor, "nutrition");
+    requireCoachSubscriptionActive(actor, { action: "menus" });
 
     const effectiveCapabilities = await this._effectiveCapabilities(actor);
     const menuFeatures = effectiveCapabilities?.features?.menus || {};
@@ -587,6 +610,27 @@ class ServicioMenus {
     }
   }
 
+  async _assertCoachOwnedMenuCapacity(actor, effectiveCapabilities = null) {
+    if (this._isAdmin(actor)) return { current: 0, limit: null };
+    const effective = effectiveCapabilities || await this._effectiveCapabilities(actor);
+    const current = typeof this.menusModel.countOwnedByCoach === "function"
+      ? await this.menusModel.countOwnedByCoach(this._actorId(actor))
+      : Number(effective?.usage?.currentCoachOwnedMenus || 0);
+    const limit = Number(effective?.limits?.maxCoachOwnedMenus);
+    if (Number.isFinite(limit) && limit >= 0 && current >= limit) {
+      const legacyPlan = effective?.planCode || "trial_pro";
+      throw coachResourceLimitError("COACH_MENU_LIMIT_EXCEEDED", {
+        current,
+        limit,
+        plan: legacyPlan === "vip" ? "coach_ai" : legacyPlan === "pro" ? "coach_pro" : "coach_initial",
+        overrideApplied: effective?.sources?.maxCoachOwnedMenus === "override",
+        upgradeTarget: legacyPlan === "trial_pro" ? "coach_pro" : legacyPlan === "pro" ? "coach_ai" : null,
+        resource: "maxCoachOwnedMenus",
+      });
+    }
+    return { current, limit };
+  }
+
   async _getClientForActor(actor, clienteId) {
     const client = await this.usuariosModel.obtenerPorId(clienteId);
     if (!client) throw new Error("CLIENT_NOT_FOUND");
@@ -612,22 +656,36 @@ class ServicioMenus {
     );
   }
 
-  _canAccessBase(actor, menu) {
+  _canAccessBase(actor, menu, effectiveCapabilities = null) {
     if (!menu) return false;
     if (this._isAdmin(actor)) return true;
     if (!this._isCoach(actor)) return false;
     if (menu.estado !== "activo" && !this._canEditOwnedBase(actor, menu)) return false;
-    if (["publica", "sistema"].includes(menu.visibilidad)) return true;
-    return this._canEditOwnedBase(actor, menu);
+    if (this._canEditOwnedBase(actor, menu)) return true;
+    return canUseProfessionalTemplate(
+      { ...actor, effectiveCapabilities },
+      menu,
+      "menu"
+    );
   }
 
   async listMenus(user, filters = {}) {
     const actor = await this._actor(user);
-    await this._assertNutritionAccess(actor);
-
-    const visibilityQuery = this._isAdmin(actor)
-      ? null
-      : this.menusModel.ownerVisibilityForCoach(this._actorId(actor));
+    const access = await this._assertNutritionAccess(actor);
+    const scope = normalizeToken(filters.scope, this._isAdmin(actor) ? "all" : "mine");
+    let visibilityQuery = null;
+    if (!this._isAdmin(actor)) {
+      if (["global", "admin", "zumafit", "biblioteca"].includes(scope)) {
+        if (access.effectiveCapabilities?.features?.menus?.canUseGlobalMenuTemplates !== true) {
+          throw new Error("COACH_FEATURE_NOT_ALLOWED");
+        }
+        visibilityQuery = this.menusModel.adminTemplatesForCoach({
+          premium: access.effectiveCapabilities?.features?.menus?.canUsePremiumMenuTemplates === true,
+        });
+      } else {
+        visibilityQuery = this.menusModel.ownerOnlyForCoach(this._actorId(actor));
+      }
+    }
 
     const data = await this.menusModel.listBase({
       ...filters,
@@ -637,21 +695,26 @@ class ServicioMenus {
     return {
       menus: (data.items || []).map(normalizeDoc),
       total: data.total || 0,
+      scope: this._isAdmin(actor) ? scope : ["global", "admin", "zumafit", "biblioteca"].includes(scope) ? "global" : "mine",
+      permissions: access.effectiveCapabilities?.features?.menus || null,
     };
   }
 
   async getMenu(user, id) {
     const actor = await this._actor(user);
-    await this._assertNutritionAccess(actor);
+    const access = await this._assertNutritionAccess(actor);
     const menu = await this.menusModel.getBaseById(id);
     if (!menu) throw new Error("NOT_FOUND");
-    if (!this._canAccessBase(actor, menu)) throw new Error("FORBIDDEN");
+    if (!this._canAccessBase(actor, menu, access.effectiveCapabilities)) throw new Error("FORBIDDEN");
     return normalizeDoc(menu);
   }
 
   async createMenu(user, payload = {}) {
     const actor = await this._actor(user);
-    if (!this._isAdmin(actor)) await this._assertTemplateCreationAccess(actor);
+    if (!this._isAdmin(actor)) {
+      const access = await this._assertNutritionAccess(actor, { feature: "canCreateCoachMenus" });
+      await this._assertCoachOwnedMenuCapacity(actor, access.effectiveCapabilities);
+    }
 
     const doc = normalizeBasePayload(payload, {
       actorId: this._actorId(actor),
@@ -701,15 +764,26 @@ class ServicioMenus {
 
   async duplicateMenu(user, id, payload = {}) {
     const actor = await this._actor(user);
+    let access;
     if (this._isAdmin(actor)) {
-      await this._assertNutritionAccess(actor);
+      access = await this._assertNutritionAccess(actor);
     } else {
-      await this._assertNutritionAccess(actor, { feature: "duplicatePlans" });
+      access = await this._assertNutritionAccess(actor, { feature: "duplicatePlans" });
     }
 
     const current = await this.menusModel.getBaseById(id);
     if (!current) throw new Error("NOT_FOUND");
-    if (!this._canAccessBase(actor, current)) throw new Error("FORBIDDEN");
+    if (!this._canAccessBase(actor, current, access.effectiveCapabilities)) throw new Error("FORBIDDEN");
+    if (
+      !this._isAdmin(actor) &&
+      ["admin_global", "admin_premium"].includes(professionalTemplateSource(current)) &&
+      access.effectiveCapabilities?.features?.menus?.canDuplicateGlobalTemplates !== true
+    ) {
+      throw new Error("COACH_FEATURE_NOT_ALLOWED");
+    }
+    if (!this._isAdmin(actor)) {
+      await this._assertCoachOwnedMenuCapacity(actor, access.effectiveCapabilities);
+    }
 
     const clone = {
       ...current,
@@ -720,6 +794,8 @@ class ServicioMenus {
         : "privada",
       ownerType: this._isAdmin(actor) ? "admin" : "coach",
       ownerId: this._isAdmin(actor) ? null : toMongoIdOrString(this._actorId(actor)),
+      sourceType: this._isAdmin(actor) ? professionalTemplateSource(current) : "coach_owned",
+      ...(this._isAdmin(actor) ? { templateTier: professionalTemplateTier(current) } : {}),
       createdBy: toMongoIdOrString(this._actorId(actor)),
       estado: "activo",
     };
@@ -727,6 +803,13 @@ class ServicioMenus {
     delete clone.id;
     delete clone.createdAt;
     delete clone.updatedAt;
+    clone.sourceOriginalId = current._id;
+    clone.sourceOriginalType = professionalTemplateSource(current);
+    if (!this._isAdmin(actor)) {
+      clone.sourceType = "coach_owned";
+      clone.planMinimo = "free";
+      delete clone.templateTier;
+    }
 
     if (menuBaseIdentity(current) === menuBaseIdentity(clone)) {
       throw new Error("DUPLICATE_IDENTICAL");
@@ -737,14 +820,21 @@ class ServicioMenus {
 
   async assignMenu(user, clienteId, payload = {}) {
     const actor = await this._actor(user);
-    await this._assertBuilderAccess(actor, "manual");
+    const access = await this._assertBuilderAccess(actor, "manual");
     const client = await this._getClientForActor(actor, clienteId);
 
     const baseId = payload.menuBaseId || payload.menuId;
     if (!baseId) throw new Error("MENU_BASE_REQUIRED");
     const base = await this.menusModel.getBaseById(baseId);
     if (!base) throw new Error("NOT_FOUND");
-    if (!this._canAccessBase(actor, base)) throw new Error("FORBIDDEN");
+    if (!this._canAccessBase(actor, base, access.effectiveCapabilities)) throw new Error("FORBIDDEN");
+    if (
+      !this._isAdmin(actor) &&
+      ["admin_global", "admin_premium"].includes(professionalTemplateSource(base)) &&
+      access.effectiveCapabilities?.features?.menus?.canAssignGlobalTemplates !== true
+    ) {
+      throw new Error("COACH_FEATURE_NOT_ALLOWED");
+    }
 
     const assignedCoachId = this._isCoach(actor)
       ? this._actorId(actor)
@@ -778,6 +868,13 @@ class ServicioMenus {
       historialCambios: [],
       assignedBy: toMongoIdOrString(this._actorId(actor)),
       assignedByRole: this._role(actor),
+      source: "assigned_snapshot",
+      sourceType: "assigned_snapshot",
+      sourceOriginalId: toMongoIdOrString(baseId),
+      sourceOriginalType: professionalTemplateSource(base),
+      sourceTemplateTier: professionalTemplateTier(base),
+      immutableSnapshot: true,
+      snapshotVersion: 1,
     };
 
     const created = await this.menusModel.createAssigned(assigned);
@@ -924,7 +1021,10 @@ class ServicioMenus {
 
   async saveClienteMenuAsTemplate(user, clienteId, menuAsignadoId, payload = {}) {
     const actor = await this._actor(user);
-    if (!this._isAdmin(actor)) await this._assertOwnTemplatesAccess(actor);
+    if (!this._isAdmin(actor)) {
+      const access = await this._assertOwnTemplatesAccess(actor);
+      await this._assertCoachOwnedMenuCapacity(actor, access.effectiveCapabilities);
+    }
     await this._getClientForActor(actor, clienteId);
 
     const assigned = await this.menusModel.getAssignedById(menuAsignadoId);

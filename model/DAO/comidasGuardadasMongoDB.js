@@ -101,6 +101,18 @@ class ModelMongoDBComidasGuardadas {
     return await this._col().countDocuments(addFilters(filters.query || {}, filters));
   };
 
+  countOwnedByCoach = async (coachId) => {
+    const values = idValues(coachId);
+    if (!values.length) return 0;
+    return await this._col().countDocuments({
+      ownerType: "coach",
+      ownerId: { $in: values },
+      sourceType: { $nin: ["assigned_snapshot", "client_owned_meal", "client_owned"] },
+      activo: { $ne: false },
+      activa: { $ne: false },
+    });
+  };
+
   getById = async (id) => {
     const _id = toObjectId(id);
     if (!_id) return null;

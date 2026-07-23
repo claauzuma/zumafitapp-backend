@@ -1,10 +1,12 @@
 import ServicioMenus from "../servicio/menus.js";
 import ServicioMenusExcelImport from "../servicio/menusExcelImport.js";
+import { accessErrorPayload, isAccessGateError } from "../servicio/accessGates.js";
 
 function sendError(res, error) {
   const msg = String(error?.message || "");
 
   if (msg === "NO_AUTENTICADO") return res.status(401).json({ error: "No autenticado" });
+  if (isAccessGateError(error)) return res.status(403).json(accessErrorPayload(error));
   if (msg === "NOT_FOUND") return res.status(404).json({ error: "Menu no encontrado" });
   if (msg === "CLIENT_NOT_FOUND") return res.status(404).json({ error: "Cliente no encontrado" });
   if (msg === "FORBIDDEN") return res.status(403).json({ error: "No tenes permisos para este menu" });
@@ -17,6 +19,17 @@ function sendError(res, error) {
   }
   if (msg === "COACH_FEATURE_NOT_ALLOWED") {
     return res.status(403).json({ error: "Tu plan no permite esta accion" });
+  }
+  if (msg === "COACH_MENU_LIMIT_EXCEEDED") {
+    return res.status(409).json({
+      code: msg,
+      error: "Alcanzaste el limite de menus propios de tu plan.",
+      current: Number(error?.current || 0),
+      limit: Number(error?.limit || 0),
+      plan: error?.plan || null,
+      overrideApplied: !!error?.overrideApplied,
+      upgradeTarget: error?.upgradeTarget || null,
+    });
   }
   if (msg === "MENU_BASE_REQUIRED") return res.status(400).json({ error: "Falta menuBaseId" });
   if (msg === "ID_INVALIDO") return res.status(400).json({ error: "ID invalido" });

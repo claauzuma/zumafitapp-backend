@@ -165,6 +165,16 @@ class ModelMongoDBMenus {
     return await this._base().deleteOne({ _id });
   };
 
+  countOwnedByCoach = async (coachId) => {
+    const values = idValues(coachId);
+    if (!values.length) return 0;
+    return await this._base().countDocuments({
+      ownerType: "coach",
+      ownerId: { $in: values },
+      sourceType: { $nin: ["assigned_snapshot", "client_owned"] },
+    });
+  };
+
   revokeBaseAssignmentsForClientAndCoach = async (clienteId, coachId) => {
     const clientValues = idValues(clienteId);
     const coachValues = idValues(coachId);
@@ -347,6 +357,43 @@ class ModelMongoDBMenus {
         {
           ownerType: "coach",
           ownerId: { $in: idValues(coachId) },
+        },
+      ],
+    };
+  }
+
+  ownerOnlyForCoach(coachId) {
+    return {
+      ownerType: "coach",
+      ownerId: { $in: idValues(coachId) },
+    };
+  }
+
+  adminTemplatesForCoach({ premium = false } = {}) {
+    const visibility = premium
+      ? ["publica", "sistema", "global", "solo_coaches", "premium"]
+      : ["publica", "sistema", "global", "solo_coaches"];
+    const tiers = premium
+      ? ["global_basic", "global_pro", "global_premium"]
+      : ["global_basic", "global_pro"];
+    const plans = premium ? ["free", "pro", "vip"] : ["free", "pro"];
+    return {
+      $and: [
+        { ownerType: "admin" },
+        { estado: "activo" },
+        { visibilidad: { $in: visibility } },
+        {
+          $or: [
+            { templateTier: { $in: tiers } },
+            {
+              templateTier: { $exists: false },
+              $or: [
+                { planMinimo: { $in: plans } },
+                { planMinimo: { $exists: false } },
+                { planMinimo: null },
+              ],
+            },
+          ],
         },
       ],
     };

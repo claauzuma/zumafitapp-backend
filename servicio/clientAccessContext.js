@@ -10,6 +10,7 @@ import {
 } from "./clientNutritionCapabilities.js";
 import { normalizeCoachPlanCode } from "./coachPlans.js";
 import { recordAccessAuditEvent } from "./accessAuditEvents.js";
+import { getRuntimeClientPlanSetting } from "./clientPlanSettings.js";
 
 const MS_DAY = 24 * 60 * 60 * 1000;
 
@@ -59,6 +60,8 @@ export const PERSONAL_PLAN_CATALOG = {
       automaticMeals: false,
       automaticMenus: false,
       mealTargets: false,
+      autoCompleteRemainingMeals: false,
+      flexibleMarginRecommendations: false,
       adaptiveSuggestions: false,
       autoCoach: "manual",
     },
@@ -92,6 +95,8 @@ export const PERSONAL_PLAN_CATALOG = {
       automaticMeals: "coming_soon",
       automaticMenus: "coming_soon",
       mealTargets: true,
+      autoCompleteRemainingMeals: true,
+      flexibleMarginRecommendations: true,
       adaptiveSuggestions: "suggestions",
       autoCoach: "suggestions",
     },
@@ -125,6 +130,8 @@ export const PERSONAL_PLAN_CATALOG = {
       automaticMeals: "coming_soon",
       automaticMenus: "coming_soon",
       mealTargets: true,
+      autoCompleteRemainingMeals: true,
+      flexibleMarginRecommendations: true,
       adaptiveSuggestions: "review_required",
       autoCoach: "adaptive_review_required",
     },
@@ -149,6 +156,8 @@ export const PROFESSIONAL_SERVICE_CATALOG = {
       coachAuthority: true,
       tracking: true,
       assignedMenus: true,
+      autoCompleteRemainingMeals: false,
+      flexibleMarginRecommendations: false,
       adaptiveSuggestions: "coach_supervised",
       autoCoach: "coach_supervised",
     },
@@ -168,6 +177,8 @@ export const PROFESSIONAL_SERVICE_CATALOG = {
       coachAuthority: true,
       tracking: true,
       assignedMenus: true,
+      autoCompleteRemainingMeals: true,
+      flexibleMarginRecommendations: true,
       adaptiveSuggestions: "ai_assisted_coach_review",
       autoCoach: "ai_assisted_coach_review",
     },
@@ -183,15 +194,15 @@ export const PROFESSIONAL_SUBSCRIPTION_CATALOG = {
   coach_initial: {
     id: "coach_initial",
     legacyCode: "trial_pro",
-    label: "Coach Inicial",
-    clientLimit: 5,
+    label: "Inicial",
+    clientLimit: 3,
     canOffer: ["service_pro"],
     price: { amount: 29900, currency: "ARS", interval: "month", paymentMode: "manual_request" },
   },
   coach_pro: {
     id: "coach_pro",
     legacyCode: "pro",
-    label: "Coach Pro",
+    label: "Pro",
     clientLimit: 25,
     canOffer: ["service_pro"],
     price: { amount: 69900, currency: "ARS", interval: "month", paymentMode: "manual_request" },
@@ -199,12 +210,38 @@ export const PROFESSIONAL_SUBSCRIPTION_CATALOG = {
   coach_ai: {
     id: "coach_ai",
     legacyCode: "vip",
-    label: "Coach IA",
-    clientLimit: 50,
+    label: "VIP",
+    clientLimit: 100,
     canOffer: ["service_pro", "service_vip"],
     price: { amount: 129900, currency: "ARS", interval: "month", paymentMode: "manual_request" },
   },
 };
+
+function personalPlanConfigFor(plan = "free") {
+  const code = normalizeClientPlan(plan);
+  const base = PERSONAL_PLAN_CATALOG[code] || PERSONAL_PLAN_CATALOG.free;
+  const setting = getRuntimeClientPlanSetting(code);
+  return {
+    ...base,
+    label: setting.label || base.label,
+    limits: {
+      trackingHistoryDays: setting.limits.trackingHistoryDays,
+      ownMenus: setting.limits.maxMenus,
+      menuDays: setting.limits.maxDaysPerMenu,
+      ownMeals: setting.limits.maxSavedMeals,
+      favorites: setting.limits.maxFavorites,
+      manualObjectiveChangeDays: setting.limits.goalChangesWindowDays,
+      manualObjectiveChangesPerWindow: setting.limits.goalChangesPerWindow,
+    },
+    library: setting.libraryAccess,
+  };
+}
+
+function runtimePersonalPlanCatalog() {
+  return Object.fromEntries(
+    Object.keys(PERSONAL_PLAN_CATALOG).map((code) => [code, personalPlanConfigFor(code)])
+  );
+}
 
 function normalizeProfessionalSubscriptionPlan(plan = "") {
   const normalized = token(plan);
@@ -446,6 +483,12 @@ function buildFeatureAvailability({ planConfig, effectivePersonalPlan, hasCoach,
     ? blockedFeature("disabled")
     : futureFeature(autoCoachMode);
   const automaticAvailability = isFree ? blockedFeature("plan_upgrade_required") : futureFeature("generation");
+  const canAutoCompleteRemainingMeals = hasCoach
+    ? effectiveService?.nutrition?.autoCompleteRemainingMeals === true
+    : planConfig?.nutrition?.autoCompleteRemainingMeals === true;
+  const canUseFlexibleMarginRecommendations = hasCoach
+    ? effectiveService?.nutrition?.flexibleMarginRecommendations === true
+    : planConfig?.nutrition?.flexibleMarginRecommendations === true;
 
   return {
     nutrition: {
@@ -454,6 +497,12 @@ function buildFeatureAvailability({ planConfig, effectivePersonalPlan, hasCoach,
       weeklyPlanning: planConfig?.nutrition?.weeklyPlanning ? includedFeature("manual") : blockedFeature("plan_upgrade_required"),
       equivalences: planConfig?.nutrition?.equivalences || hasCoach ? includedFeature("manual") : blockedFeature("plan_upgrade_required"),
       mealTargets: planConfig?.nutrition?.mealTargets || hasCoach ? includedFeature("manual") : blockedFeature("plan_upgrade_required"),
+      autoCompleteRemainingMeals: canAutoCompleteRemainingMeals
+        ? includedFeature("deterministic_distribution")
+        : blockedFeature("plan_upgrade_required"),
+      flexibleMarginRecommendations: canUseFlexibleMarginRecommendations
+        ? includedFeature("deterministic_recommendations")
+        : blockedFeature("plan_upgrade_required"),
       autoMeals: automaticAvailability,
       autoMenus: automaticAvailability,
       autoCoach: autoCoachAvailability,
@@ -500,6 +549,8 @@ function capabilityFromCatalog(planConfig = {}, baseCapabilities = {}) {
     automaticRoutineStatus: planConfig.training?.automaticRoutine === "coming_soon" ? "coming_soon" : "blocked",
     canUseEquivalences: planConfig.nutrition?.equivalences === true,
     canUseMealTargets: planConfig.nutrition?.mealTargets === true,
+    canAutoCompleteRemainingMeals: planConfig.nutrition?.autoCompleteRemainingMeals === true,
+    canUseFlexibleMarginRecommendations: planConfig.nutrition?.flexibleMarginRecommendations === true,
     autoCoachNutrition: nutritionAutoCoach && nutritionAutoCoach !== "manual" ? "coming_soon" : "manual",
     autoCoachNutritionMode: nutritionAutoCoach || "manual",
     autoCoachTraining: trainingAutoCoach && trainingAutoCoach !== "manual" ? "coming_soon" : "manual",
@@ -514,7 +565,7 @@ export function resolveClientAccessContext(user = {}, { now = new Date() } = {})
   const personalPlan = normalizeClientPlan(user.personalPlan || legacyPlan || "free");
   const trial = resolveTrial(user, dateNow);
   const effectivePersonalPlan = trial.active ? "pro" : personalPlan;
-  const personalPlanConfig = PERSONAL_PLAN_CATALOG[effectivePersonalPlan] || PERSONAL_PLAN_CATALOG.free;
+  const personalPlanConfig = personalPlanConfigFor(effectivePersonalPlan);
   const coachAccess = resolveCoachAccess(user);
   const hasCoach = coachAccess.active;
   const onboarding = resolveOnboarding(user);
@@ -649,6 +700,8 @@ export function resolveClientAccessContext(user = {}, { now = new Date() } = {})
     capabilities: hasCoach
       ? {
           ...personalCapabilities,
+          canAutoCompleteRemainingMeals: effectiveService?.nutrition?.autoCompleteRemainingMeals === true,
+          canUseFlexibleMarginRecommendations: effectiveService?.nutrition?.flexibleMarginRecommendations === true,
           primaryAuthority: "coach",
           canTrack: true,
           canUseAssignedCoachContent: true,
@@ -664,7 +717,7 @@ export function resolveClientAccessContext(user = {}, { now = new Date() } = {})
     usage: {},
     featureAvailability,
     catalogs: {
-      personalPlans: PERSONAL_PLAN_CATALOG,
+      personalPlans: runtimePersonalPlanCatalog(),
       professionalServices: PROFESSIONAL_SERVICE_CATALOG,
       professionalSubscriptions: PROFESSIONAL_SUBSCRIPTION_CATALOG,
     },

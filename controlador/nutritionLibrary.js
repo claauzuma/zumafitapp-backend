@@ -24,6 +24,20 @@ function sendError(res, error) {
       plan: error?.plan,
     });
   }
+  if (msg === "COACH_MENU_LIMIT_EXCEEDED" || msg === "COACH_MEAL_LIMIT_EXCEEDED") {
+    return res.status(409).json({
+      code: msg,
+      error: msg === "COACH_MENU_LIMIT_EXCEEDED"
+        ? "Alcanzaste el limite de menus propios de tu plan."
+        : "Alcanzaste el limite de comidas propias de tu plan.",
+      resource: error?.resource || null,
+      current: Number(error?.current || 0),
+      limit: Number(error?.limit || 0),
+      plan: error?.plan || null,
+      overrideApplied: !!error?.overrideApplied,
+      upgradeTarget: error?.upgradeTarget || null,
+    });
+  }
 
   console.error("Error nutritionLibrary:", error);
   return res.status(500).json({ error: "Error en el servidor" });

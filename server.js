@@ -41,6 +41,8 @@ import ModelMongoDBProfessionalApplications from "./model/DAO/professionalApplic
 import ModelMongoDBCoachSubscriptionRequests from "./model/DAO/coachSubscriptionRequestsMongoDB.js";
 import ModelMongoDBAccessAuditEvents from "./model/DAO/accessAuditEventsMongoDB.js";
 import ModelMongoDBCoachClientCapacity from "./model/DAO/coachClientCapacityMongoDB.js";
+import ModelMongoDBCoachPlanConfigs from "./model/DAO/coachPlanConfigsMongoDB.js";
+import ModelMongoDBClientPlanConfigs from "./model/DAO/clientPlanConfigsMongoDB.js";
 
 function getLanIPv4s() {
   const nets = os.networkInterfaces();
@@ -99,6 +101,8 @@ class Server {
         await new ModelMongoDBCoachSubscriptionRequests().ensureIndexes();
         await new ModelMongoDBAccessAuditEvents().ensureIndexes();
         await new ModelMongoDBCoachClientCapacity().ensureIndexes();
+        await new ModelMongoDBCoachPlanConfigs().ensureSeedDefaults();
+        await new ModelMongoDBClientPlanConfigs().ensureSeedDefaults();
         console.log("Indices asegurados (usuarios + pending + resets + rutinas + menus + tracking + comidas + comidasGuardadas + profesionales)");
       } catch (e) {
         console.log("⚠️ No se pudieron asegurar índices:", e?.message || e);

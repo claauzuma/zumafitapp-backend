@@ -10,9 +10,11 @@ import ModelMongoDBPendingUsers from "../model/DAO/pendingUsersMongoDB.js";
 import ModelMongoDBPasswordResets from "../model/DAO/passwordResetMongoDB.js";
 import ModelMongoDBInvitedUsers from "../model/DAO/invitedUsersMongoDB.js";
 import ModelMongoDBCoachPlanConfigs from "../model/DAO/coachPlanConfigsMongoDB.js";
+import ModelMongoDBClientPlanConfigs from "../model/DAO/clientPlanConfigsMongoDB.js";
 import ModelMongoDBImpersonationAudit from "../model/DAO/impersonationAuditMongoDB.js";
 import ModelMongoDBClientMenuTracking from "../model/DAO/clientMenuTrackingMongoDB.js";
 import ModelMongoDBMenus from "../model/DAO/menusMongoDB.js";
+import ModelMongoDBComidas from "../model/DAO/comidasMongoDB.js";
 import ModelMongoDBComidasGuardadas from "../model/DAO/comidasGuardadasMongoDB.js";
 import ModelMongoDBCoachClientCapacity from "../model/DAO/coachClientCapacityMongoDB.js";
 import ModelMongoDBClientCoachBlocks from "../model/DAO/clientCoachBlocksMongoDB.js";
@@ -26,24 +28,79 @@ import {
   requireTrackingHistoryRange,
 } from "./accessGates.js";
 import { recordAccessAuditEvent } from "./accessAuditEvents.js";
+import { resolveClientAccessContext } from "./clientAccessContext.js";
 import {
+  PROFESSIONAL_SUBSCRIPTION_PLANS,
   normalizeCoachSubscription,
+  normalizeProfessionalSubscriptionPlan,
+  professionalSubscriptionPatch,
   requireCoachCanOfferService,
   requireCoachSubscriptionActive,
   requireProfessionalScope,
 } from "./professionalAccessRules.js";
 import {
+  coachResourceLimitError,
   createEmptyCoachOverrides,
   createTrialSubscription,
   normalizeCoachOverrides,
   normalizeCoachPlanCode,
   normalizePlanConfig,
   resolveEffectiveCoachCapabilities,
+  validateCoachLimitValue,
 } from "./coachPlans.js";
+import {
+  normalizeClientPlanSettingCode,
+  validateClientPlanSettingPatch,
+} from "./clientPlanSettings.js";
+import {
+  canUseProfessionalTemplate,
+  professionalTemplateSource,
+  resolveProfessionalLibraryCapabilities,
+} from "./professionalLibraryCapabilities.js";
 
 const COACH_INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 const COACH_INVITATION_REJECT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const COACH_INVITATION_DAILY_LIMIT = 20;
+
+function coachLimitViolations(effective = {}) {
+  const limits = effective.limits || {};
+  const usage = effective.usage || {};
+  return [
+    ["maxActiveClients", "clientes activos", usage.currentActiveClients, limits.maxActiveClients],
+    ["maxCoachOwnedMenus", "menus propios", usage.currentCoachOwnedMenus, limits.maxCoachOwnedMenus],
+    ["maxCoachOwnedMeals", "comidas propias", usage.currentCoachOwnedMeals, limits.maxCoachOwnedMeals],
+  ]
+    .filter(([, , current, limit]) => Number.isFinite(Number(limit)) && Number(limit) >= 0 && Number(current) > Number(limit))
+    .map(([resource, label, current, limit]) => ({
+      resource,
+      label,
+      current: Number(current || 0),
+      limit: Number(limit || 0),
+    }));
+}
+
+function coachLimitConflict(code, plan, violations = []) {
+  const error = new Error(code);
+  error.plan = plan || null;
+  error.violations = violations;
+  const first = violations[0] || {};
+  error.resource = first.resource || null;
+  error.current = Number(first.current || 0);
+  error.limit = Number(first.limit || 0);
+  return error;
+}
+
+function coachClientCapacityError(effective = {}, current = null) {
+  const legacyPlan = effective?.planCode || "trial_pro";
+  return coachResourceLimitError("COACH_CLIENT_LIMIT_EXCEEDED", {
+    current: current ?? effective?.usage?.currentActiveClients ?? effective?.currentClients ?? 0,
+    limit: effective?.limits?.maxActiveClients ?? effective?.maxClients ?? 0,
+    plan: legacyPlan === "vip" ? "coach_ai" : legacyPlan === "pro" ? "coach_pro" : "coach_initial",
+    overrideApplied: effective?.sources?.maxClients === "override",
+    upgradeTarget: legacyPlan === "trial_pro" ? "coach_pro" : legacyPlan === "pro" ? "coach_ai" : null,
+    resource: "maxActiveClients",
+  });
+}
 
 // =========================
 // ✅ Defaults del usuario
@@ -845,6 +902,57 @@ function summarizeProgress(checkins = []) {
   };
 }
 
+function normalizeAssignedMenuPlanningMeta(entry = {}) {
+  const targetMacros = isPlainObject(entry?.targetMacros) ? entry.targetMacros : {};
+  const macroPending = isPlainObject(entry?.macroPending) ? entry.macroPending : {};
+  const compatibility = isPlainObject(entry?.compatibility)
+    ? {
+        key: cleanString(entry.compatibility.key, 40),
+        label: cleanString(entry.compatibility.label, 80),
+        tone: cleanString(entry.compatibility.tone, 40),
+        kcalDiff: numberOrNull(entry.compatibility.kcalDiff, { min: -20000, max: 20000 }),
+        proteinDiff: numberOrNull(entry.compatibility.proteinDiff, { min: -1000, max: 1000 }),
+        canAssign: entry.compatibility.canAssign === true,
+        flexibleCalories: numberOrNull(entry.compatibility.flexibleCalories, { min: 0, max: 20000 }),
+      }
+    : null;
+  return {
+    ...(entry?.assignmentType !== undefined ? { assignmentType: cleanString(entry.assignmentType, 40) } : {}),
+    ...(entry?.dayKey !== undefined ? { dayKey: getWeekDayMeta(entry.dayKey)?.key || cleanString(entry.dayKey, 24) } : {}),
+    ...(entry?.targetCalories !== undefined
+      ? { targetCalories: numberOrNull(entry.targetCalories, { min: 0, max: 20000 }) }
+      : {}),
+    ...(Object.keys(targetMacros).length
+      ? {
+          targetMacros: {
+            p: numberOrNull(targetMacros.p ?? targetMacros.protein ?? targetMacros.proteina, { min: 0, max: 500 }),
+            c: numberOrNull(targetMacros.c ?? targetMacros.carbs ?? targetMacros.carbohidratos, { min: 0, max: 900 }),
+            g: numberOrNull(targetMacros.g ?? targetMacros.fat ?? targetMacros.grasas, { min: 0, max: 400 }),
+          },
+        }
+      : {}),
+    ...(entry?.plannedCalories !== undefined
+      ? { plannedCalories: numberOrNull(entry.plannedCalories, { min: 0, max: 20000 }) }
+      : {}),
+    ...(entry?.flexibleCalories !== undefined
+      ? { flexibleCalories: numberOrNull(entry.flexibleCalories, { min: 0, max: 20000 }) }
+      : {}),
+    ...(entry?.flexibleMode !== undefined ? { flexibleMode: cleanString(entry.flexibleMode, 40) } : {}),
+    ...(entry?.flexibleLabel !== undefined ? { flexibleLabel: cleanString(entry.flexibleLabel, 80) } : {}),
+    ...(Object.keys(macroPending).length
+      ? {
+          macroPending: {
+            protein: numberOrNull(macroPending.protein ?? macroPending.proteina, { min: 0, max: 1000 }),
+            carbs: numberOrNull(macroPending.carbs ?? macroPending.carbohidratos, { min: 0, max: 2000 }),
+            fat: numberOrNull(macroPending.fat ?? macroPending.grasas, { min: 0, max: 1000 }),
+          },
+        }
+      : {}),
+    ...(entry?.proteinWarning !== undefined ? { proteinWarning: entry.proteinWarning === true } : {}),
+    ...(compatibility ? { compatibility } : {}),
+  };
+}
+
 function normalizeAssignedMenuEntry(entry = {}, fallbackSource = "base") {
   if (!isPlainObject(entry)) return null;
   const snapshotSource = isPlainObject(entry.menuSnapshot)
@@ -871,6 +979,7 @@ function normalizeAssignedMenuEntry(entry = {}, fallbackSource = "base") {
     menuId: cleanString(entry.menuId || entry.menuBaseId || snapshot.baseId || snapshot.id, 80) || null,
     menuSnapshot: snapshot,
     source: cleanString(entry.source || fallbackSource, 40) || fallbackSource,
+    ...normalizeAssignedMenuPlanningMeta(entry),
     assignedAt: entry.assignedAt ? new Date(entry.assignedAt) : new Date(),
   };
 }
@@ -1093,7 +1202,8 @@ function resetCoachDerivedClientPermissions(permissions = {}) {
     canTrackFood: true,
     canEditPastDays: true,
     canMarkMenuMealsCompleted: true,
-    canAutoCompleteRemainingMeals: true,
+    canAutoCompleteRemainingMeals: false,
+    canUseFlexibleMarginRecommendations: false,
     canUseMenuAlternatives: true,
   };
   next.foodTracking = {
@@ -1275,6 +1385,132 @@ function resolveClientNutritionWeek(user = {}) {
       adjustedGeneralDays: Object.values(targets).filter((target) => target.adjusted).length,
     },
   };
+}
+
+function nutritionTargetSignature(target = {}) {
+  return JSON.stringify({
+    kcal: comparableNumber(target?.kcal),
+    p: comparableNumber(target?.p),
+    c: comparableNumber(target?.c),
+    g: comparableNumber(target?.g),
+  });
+}
+
+function compactNutritionTarget(target = {}) {
+  return {
+    kcal: comparableNumber(target?.kcal),
+    p: comparableNumber(target?.p),
+    c: comparableNumber(target?.c),
+    g: comparableNumber(target?.g),
+  };
+}
+
+function assignedEntryForDay(assignments = {}, day = {}) {
+  if (!isPlainObject(assignments)) return null;
+  const matchingKey = Object.keys(assignments).find((key) => getWeekDayMeta(key)?.key === day.key);
+  if (matchingKey === undefined || !isPlainObject(assignments[matchingKey])) return null;
+  return { storageKey: matchingKey, value: assignments[matchingKey] };
+}
+
+function assignedMenuCount(entry = {}) {
+  if (!isPlainObject(entry)) return 0;
+  const normalized = normalizeAssignedMenusByDay({ monday: entry }).monday;
+  if (!normalized) return 0;
+  return 1 + (Array.isArray(normalized.alternatives) ? normalized.alternatives.length : 0);
+}
+
+function primaryAssignedEntry(entry = {}) {
+  return isPlainObject(entry?.primaryMenu) ? entry.primaryMenu : entry;
+}
+
+function assignmentCreatedForNutritionTarget(entry = {}, target = {}) {
+  const primary = primaryAssignedEntry(entry);
+  const targetMacros = primary?.targetMacros || {};
+  const hasCalories = hasNumber(primary?.targetCalories) && Number(primary.targetCalories) > 0;
+  const hasMacros = ["p", "c", "g"].every((key) => hasNumber(targetMacros?.[key]));
+  if (!hasCalories || !hasMacros) return null;
+  return (
+    comparableNumber(primary.targetCalories) === comparableNumber(target?.kcal) &&
+    comparableNumber(targetMacros.p) === comparableNumber(target?.p) &&
+    comparableNumber(targetMacros.c) === comparableNumber(target?.c) &&
+    comparableNumber(targetMacros.g) === comparableNumber(target?.g)
+  );
+}
+
+function assignmentPredatesNutritionTargets(client = {}, entry = {}) {
+  const primary = primaryAssignedEntry(entry);
+  const assignedAt = new Date(primary?.assignedAt || "").getTime();
+  const targetRevision = new Date(
+    client?.menu?.weeklyPlan?.targetsUpdatedAt ||
+    client?.metasActuales?.updatedAt ||
+    ""
+  ).getTime();
+  return Number.isFinite(assignedAt) && Number.isFinite(targetRevision) && assignedAt < targetRevision;
+}
+
+function isStaleNutritionAssignment(client = {}, entry = {}, target = {}) {
+  const createdForTarget = assignmentCreatedForNutritionTarget(entry, target);
+  if (createdForTarget !== null) return !createdForTarget;
+  return assignmentPredatesNutritionTargets(client, entry);
+}
+
+function buildNutritionAssignmentImpact(currentClient = {}, nextClient = {}) {
+  const assignments = currentClient?.menu?.weeklyPlan?.assignedMenusByDay || {};
+  const currentWeek = resolveClientNutritionWeek(currentClient);
+  const nextWeek = resolveClientNutritionWeek(nextClient);
+  const affectedDays = WEEKLY_MENU_DAY_META.reduce((days, day) => {
+    const assigned = assignedEntryForDay(assignments, day);
+    if (!assigned) return days;
+    const previousTarget = currentWeek.targets?.[day.key] || {};
+    const nextTarget = nextWeek.targets?.[day.key] || {};
+    const targetChanged = nutritionTargetSignature(previousTarget) !== nutritionTargetSignature(nextTarget);
+    const staleAssignment = isStaleNutritionAssignment(currentClient, assigned.value, nextTarget);
+    if (!targetChanged && !staleAssignment) return days;
+    days.push({
+      key: day.key,
+      label: day.label,
+      assignedMenus: assignedMenuCount(assigned.value),
+      previousTarget: compactNutritionTarget(previousTarget),
+      nextTarget: compactNutritionTarget(nextTarget),
+      reason: targetChanged ? "target_changed" : "stale_assignment",
+    });
+    return days;
+  }, []);
+
+  return {
+    affectedDays,
+    affectedDayKeys: affectedDays.map((day) => day.key),
+    assignedMenus: affectedDays.reduce((total, day) => total + day.assignedMenus, 0),
+    changedDays: affectedDays.filter((day) => day.reason === "target_changed").length,
+    staleDays: affectedDays.filter((day) => day.reason === "stale_assignment").length,
+    previousWeeklyKcal: comparableNumber(currentWeek?.summary?.currentWeeklyKcal),
+    nextWeeklyKcal: comparableNumber(nextWeek?.summary?.currentWeeklyKcal),
+  };
+}
+
+function normalizedExpectedInvalidationDays(value = []) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map((day) => getWeekDayMeta(day)?.key).filter(Boolean))].sort();
+}
+
+function sameStringArray(left = [], right = []) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function moveInvalidatedAssignments(assignments = {}, affectedDayKeys = []) {
+  const affected = new Set(affectedDayKeys);
+  return Object.entries(isPlainObject(assignments) ? assignments : {}).reduce(
+    (result, [storageKey, entry]) => {
+      const normalizedDay = getWeekDayMeta(storageKey)?.key;
+      if (normalizedDay && affected.has(normalizedDay)) {
+        result.invalidated[normalizedDay] = entry;
+      } else {
+        result.remaining[storageKey] = entry;
+      }
+      return result;
+    },
+    { remaining: {}, invalidated: {} }
+  );
 }
 
 function normalizeMenuTrackingDate(value = "") {
@@ -1558,12 +1794,15 @@ function clientMenuTrackingPermissions(user = {}) {
   const hasCoach = !!user?.coach?.entrenadorId;
   const activeSource = String(user?.menu?.activeSource || "none");
   const canViewAssignedMenus = activeSource === "own" ? true : hasCoach ? boolFrom(menu.canViewMenu, true) : true;
+  const accessCapabilities = resolveClientAccessContext(user)?.capabilities || {};
 
   return {
     canViewAssignedMenus,
     canMarkMenuMealsCompleted: canViewAssignedMenus && boolFrom(tracking.canMarkMenuMealsCompleted, true),
     canTrackFoods: canViewAssignedMenus && boolFrom(tracking.canTrackFoods, true),
-    canAutoCompleteRemainingMeals: canViewAssignedMenus && boolFrom(tracking.canAutoCompleteRemainingMeals, true),
+    canAutoCompleteRemainingMeals: canViewAssignedMenus && accessCapabilities.canAutoCompleteRemainingMeals === true,
+    canUseFlexibleMarginRecommendations:
+      canViewAssignedMenus && accessCapabilities.canUseFlexibleMarginRecommendations === true,
     canUseMenuAlternatives: canViewAssignedMenus && boolFrom(tracking.canUseMenuAlternatives, true),
   };
 }
@@ -1648,6 +1887,11 @@ class ServicioUsuarios {
       this.coachPlanModel.ensureSeedDefaults().catch(() => {});
     }
 
+    this.clientPlanModel = new ModelMongoDBClientPlanConfigs();
+    if (typeof this.clientPlanModel.ensureSeedDefaults === "function") {
+      this.clientPlanModel.ensureSeedDefaults().catch(() => {});
+    }
+
     this.impersonationAuditModel = new ModelMongoDBImpersonationAudit();
     if (typeof this.impersonationAuditModel.ensureIndexes === "function") {
       this.impersonationAuditModel.ensureIndexes().catch(() => {});
@@ -1658,6 +1902,7 @@ class ServicioUsuarios {
       this.menuTrackingModel.ensureIndexes().catch(() => {});
     }
     this.menusModel = new ModelMongoDBMenus();
+    this.comidasModel = new ModelMongoDBComidas();
     this.comidasGuardadasModel = new ModelMongoDBComidasGuardadas();
     this.coachCapacityModel = new ModelMongoDBCoachClientCapacity();
     if (typeof this.coachCapacityModel.ensureIndexes === "function") {
@@ -1934,7 +2179,7 @@ class ServicioUsuarios {
     }
 
     if (!effectiveCapabilities?.canReceiveClients) {
-      throw new Error("COACH_CLIENT_LIMIT_REACHED");
+      throw coachClientCapacityError(effectiveCapabilities, assignedClients);
     }
 
     const coachIdToStore = toMongoIdOrString(coachRealId);
@@ -2015,13 +2260,23 @@ class ServicioUsuarios {
         ? "entrenador"
         : "admin";
 
+    const invitedProfessionalPlan =
+      role === "coach" ? normalizeProfessionalSubscriptionPlan(invite.professionalPlan) : null;
     const subscription =
       role === "coach"
-        ? createTrialSubscription({
-            planCode: plan,
-            now,
-            durationDays: (await this._getCoachPlanConfig(plan))?.durationDays || 7,
-          })
+        ? invitedProfessionalPlan
+          ? {
+              status: "active",
+              trialStartedAt: null,
+              trialEndsAt: null,
+              paidUntil: null,
+              updatedAt: now,
+            }
+          : createTrialSubscription({
+              planCode: plan,
+              now,
+              durationDays: (await this._getCoachPlanConfig(plan))?.durationDays || 7,
+            })
         : undefined;
 
     const normalizedCoachProfile =
@@ -2063,6 +2318,14 @@ class ServicioUsuarios {
         apellido: invite?.profile?.apellido || profile?.apellido || "",
       },
       ...(subscription ? { subscription } : {}),
+      ...(invitedProfessionalPlan
+        ? {
+            coachSubscription: professionalSubscriptionPatch(invitedProfessionalPlan, {
+              status: "active",
+              now,
+            }),
+          }
+        : {}),
       coachProfile: normalizedCoachProfile,
       coachOverrides: role === "coach" ? createEmptyCoachOverrides() : null,
       coachWelcome,
@@ -2533,10 +2796,27 @@ class ServicioUsuarios {
 
   async _resolveEffectiveCapabilities(coach, options = {}) {
     if (!coach || !this._isCoachUser(coach)) return null;
-    const currentClients =
+    const coachId = coach._id || coach.id;
+    const [currentClients, currentCoachOwnedMenus, currentCoachOwnedMeals] = await Promise.all([
       options.currentClients !== undefined
         ? Number(options.currentClients || 0)
-        : await this._countClientsForCoach(coach._id || coach.id);
+        : this._countClientsForCoach(coachId),
+      options.currentCoachOwnedMenus !== undefined
+        ? Number(options.currentCoachOwnedMenus || 0)
+        : typeof this.menusModel?.countOwnedByCoach === "function"
+          ? this.menusModel.countOwnedByCoach(coachId)
+          : 0,
+      options.currentCoachOwnedMeals !== undefined
+        ? Number(options.currentCoachOwnedMeals || 0)
+        : Promise.all([
+            typeof this.comidasModel?.countOwnedByCoach === "function"
+              ? this.comidasModel.countOwnedByCoach(coachId)
+              : 0,
+            typeof this.comidasGuardadasModel?.countOwnedByCoach === "function"
+              ? this.comidasGuardadasModel.countOwnedByCoach(coachId)
+              : 0,
+          ]).then(([createdMeals, savedMeals]) => Number(createdMeals || 0) + Number(savedMeals || 0)),
+    ]);
     const professionalSubscription = normalizeCoachSubscription(coach);
     const legacyPlan = professionalSubscription?.plan === "coach_ai"
       ? "vip"
@@ -2552,15 +2832,14 @@ class ServicioUsuarios {
       },
       planConfig,
       currentClients,
+      currentCoachOwnedMenus,
+      currentCoachOwnedMeals,
     });
 
-    const subscriptionLimit = Number(professionalSubscription.clientLimit || 0);
-    if (subscriptionLimit > 0) {
-      resolved.maxClients = Math.min(Number(resolved.maxClients || subscriptionLimit), subscriptionLimit);
-      resolved.canReceiveClients = resolved.canReceiveClients && currentClients < resolved.maxClients;
-    }
-
-    resolved.professionalSubscription = professionalSubscription;
+    resolved.professionalSubscription = {
+      ...professionalSubscription,
+      clientLimit: resolved.maxClients,
+    };
 
     if (professionalSubscription.explicit && !professionalSubscription.canInviteOrActivate) {
       resolved.canReceiveClients = false;
@@ -2648,6 +2927,9 @@ class ServicioUsuarios {
 
       profile: u.profile || {},
       coachProfile: u.coachProfile || null,
+      professionalStatus: u.professionalStatus || u.coachProfile?.status || null,
+      professionalScopes: u.professionalScopes || u.approvedScopes || null,
+      coachSubscription: u.coachSubscription || null,
       coachCapabilities: u.coachCapabilities || null,
       coachOverrides: u.coachOverrides || null,
       effectiveCapabilities: u.effectiveCapabilities || null,
@@ -3194,6 +3476,15 @@ class ServicioUsuarios {
     const validRoles = ["admin", "coach", "cliente"];
     if (!validRoles.includes(role)) throw new Error("ROL_INVALIDO");
 
+    const requestedPlan = String(plan || "").trim().toLowerCase();
+    const professionalPlan = role === "coach"
+      ? normalizeProfessionalSubscriptionPlan(requestedPlan || "coach_initial")
+      : null;
+    const hasCanonicalProfessionalPlan = role === "coach" && (
+      !requestedPlan ||
+      requestedPlan === "free" ||
+      ["coach_initial", "coach_pro", "coach_ai", "coach_vip"].includes(requestedPlan)
+    );
     const dbPlan =
       role === "admin"
         ? null
@@ -3237,6 +3528,7 @@ class ServicioUsuarios {
       email,
       role,
       plan: dbPlan,
+      ...(role === "coach" && hasCanonicalProfessionalPlan ? { professionalPlan } : {}),
       status: "pending",
       profile: {
         nombre,
@@ -3512,28 +3804,19 @@ class ServicioUsuarios {
     }
 
     const coachRealId = coach._id || coach.id || coachId;
-    const assignedClients = Number(coach?.effectiveCapabilities?.currentClients || 0);
+    const assignedClients = await this._countClientsForCoach(coachRealId);
     const pendingInvitations = await this._countPendingClientInvitationsForCoach(coachRealId);
     const reservedClients = assignedClients;
-    const professionalSubscription = normalizeCoachSubscription(coach);
     const effectiveCapabilities = await this._resolveEffectiveCapabilities(coach, {
       currentClients: reservedClients,
     });
-    const subscriptionLimit = Number(professionalSubscription.clientLimit || 0);
-    if (subscriptionLimit > 0 && reservedClients >= subscriptionLimit) {
-      const error = new Error("COACH_CLIENT_LIMIT_REACHED");
-      error.code = "COACH_CLIENT_LIMIT_REACHED";
-      error.limit = subscriptionLimit;
-      error.current = reservedClients;
-      throw error;
-    }
 
     if (effectiveCapabilities?.isTrialExpired || !effectiveCapabilities?.features?.clients?.canAssign) {
       throw new Error("COACH_NOT_AVAILABLE");
     }
 
     if (!effectiveCapabilities?.canReceiveClients) {
-      throw new Error("COACH_CLIENT_LIMIT_REACHED");
+      throw coachClientCapacityError(effectiveCapabilities, reservedClients);
     }
 
     return {
@@ -4063,23 +4346,21 @@ class ServicioUsuarios {
       throw new Error("COACH_BLOCKED_BY_CLIENT");
     }
 
-    const subscription = normalizeCoachSubscription(coach);
     const currentActiveClients = await this.model.countClientsByCoachId(coach._id || coach.id || coachId);
+    const effectiveCapabilities = acceptance.effectiveCapabilities || await this._resolveEffectiveCapabilities(coach, {
+      currentClients: currentActiveClients,
+    });
     const capacity = await this.coachCapacityModel.reserveSlot({
       coachId: resolvedCoachId,
       invitationId: invitation._id,
       clientId: client._id || client.id,
-      limit: subscription.clientLimit,
+      limit: effectiveCapabilities.maxClients,
       activeCount: currentActiveClients,
       now: new Date(),
     });
 
     if (!capacity.reserved) {
-      const error = new Error("COACH_CLIENT_LIMIT_REACHED");
-      error.code = "COACH_CLIENT_LIMIT_REACHED";
-      error.limit = Number(subscription.clientLimit);
-      error.current = Number(capacity.used || currentActiveClients || 0);
-      throw error;
+      throw coachClientCapacityError(effectiveCapabilities, Number(capacity.used || currentActiveClients || 0));
     }
 
     const now = new Date();
@@ -4593,6 +4874,15 @@ class ServicioUsuarios {
     const validRoles = ["admin", "cliente", "coach"];
     if (!validRoles.includes(role)) throw new Error("ROL_INVALIDO");
 
+    const requestedPlan = String(plan || "").trim().toLowerCase();
+    const professionalPlan = role === "coach"
+      ? normalizeProfessionalSubscriptionPlan(requestedPlan || "coach_initial")
+      : null;
+    const hasCanonicalProfessionalPlan = role === "coach" && (
+      !requestedPlan ||
+      requestedPlan === "free" ||
+      ["coach_initial", "coach_pro", "coach_ai", "coach_vip"].includes(requestedPlan)
+    );
     const dbPlan = normalizePlanForRole(plan, role);
     if (!dbPlan) throw new Error("PLAN_INVALIDO");
 
@@ -4604,22 +4894,44 @@ class ServicioUsuarios {
     const passwordHash = await bcrypt.hash(password, 10);
     const resolvedTipo = tipo || inferTipoFromRole(role);
     const coachPlanConfig = role === "coach" ? await this._getCoachPlanConfig(dbPlan) : null;
+    const now = new Date();
+    const defaults = getUserDefaults({ role, plan: dbPlan, tipo: resolvedTipo });
 
     const userToCreate = {
       email,
       passwordHash,
 
-      ...getUserDefaults({ role, plan: dbPlan, tipo: resolvedTipo }),
+      ...defaults,
 
       estado,
       emailVerificado: false,
       ...(role === "coach"
         ? {
-            subscription: createTrialSubscription({
-              planCode: dbPlan,
-              now: new Date(),
-              durationDays: coachPlanConfig?.durationDays || 7,
-            }),
+            billing: {
+              ...(defaults.billing || {}),
+              status: hasCanonicalProfessionalPlan ? "active" : defaults.billing?.status,
+            },
+            subscription: hasCanonicalProfessionalPlan
+              ? {
+                  status: "active",
+                  trialStartedAt: null,
+                  trialEndsAt: null,
+                  paidUntil: null,
+                  updatedAt: now,
+                }
+              : createTrialSubscription({
+                  planCode: dbPlan,
+                  now,
+                  durationDays: coachPlanConfig?.durationDays || 7,
+                }),
+            ...(hasCanonicalProfessionalPlan
+              ? {
+                  coachSubscription: professionalSubscriptionPatch(professionalPlan, {
+                    status: "active",
+                    now,
+                  }),
+                }
+              : {}),
           }
         : {}),
       coachOverrides: role === "coach" ? createEmptyCoachOverrides() : null,
@@ -4627,7 +4939,7 @@ class ServicioUsuarios {
       profile: profile || {},
       settings: {},
 
-      createdAt: new Date(),
+      createdAt: now,
       updatedAt: null,
     };
 
@@ -4728,35 +5040,138 @@ class ServicioUsuarios {
     });
   };
 
+  async _buildAdminCoachPlanPreview(user, plan, options = {}) {
+    if (!user || !this._isCoachUser(user)) throw new Error("USER_NOT_COACH");
+
+    const professionalPlan = normalizeProfessionalSubscriptionPlan(plan);
+    const professionalConfig = PROFESSIONAL_SUBSCRIPTION_PLANS[professionalPlan];
+    const legacyPlan = professionalConfig?.legacyPlan;
+    if (!legacyPlan) throw new Error("PLAN_INVALIDO");
+
+    const [planConfig, currentClients] = await Promise.all([
+      this._getCoachPlanConfig(legacyPlan),
+      this._countClientsForCoach(user._id || user.id),
+    ]);
+    if (!planConfig) throw new Error("PLAN_NOT_FOUND");
+
+    const currentSubscription = normalizeCoachSubscription(user);
+    const candidate = {
+      ...user,
+      plan: legacyPlan,
+      coachSubscription: professionalSubscriptionPatch(professionalPlan, {
+        status: "active",
+        now: new Date(),
+        currentPeriodEnd: currentSubscription.currentPeriodEnd,
+      }),
+      coachOverrides: options?.resetOverrides
+        ? createEmptyCoachOverrides()
+        : normalizeCoachOverrides(user?.coachOverrides || {}),
+    };
+    const effectiveCapabilities = await this._resolveEffectiveCapabilities(candidate, {
+      currentClients,
+      planConfig,
+    });
+    const maxClients = Number(effectiveCapabilities?.maxClients || 0);
+    const violations = coachLimitViolations(effectiveCapabilities);
+    const limitExceeded = violations.length > 0;
+    const menus = effectiveCapabilities?.features?.menus || {};
+    const limits = effectiveCapabilities?.limits || {};
+    const usage = effectiveCapabilities?.usage || {};
+
+    return {
+      plan: professionalPlan,
+      legacyPlan,
+      currentClients,
+      maxClients,
+      currentCoachOwnedMenus: Number(usage.currentCoachOwnedMenus || 0),
+      currentCoachOwnedMeals: Number(usage.currentCoachOwnedMeals || 0),
+      maxCoachOwnedMenus: Number(limits.maxCoachOwnedMenus || 0),
+      maxCoachOwnedMeals: Number(limits.maxCoachOwnedMeals || 0),
+      planDefaults: {
+        maxActiveClients: Number(planConfig.maxClients || 0),
+        maxCoachOwnedMenus: Number(planConfig.maxCoachOwnedMenus || 0),
+        maxCoachOwnedMeals: Number(planConfig.maxCoachOwnedMeals || 0),
+      },
+      limitExceeded,
+      canSave: !limitExceeded,
+      violations,
+      resetOverrides: !!options?.resetOverrides,
+      usesOverrides: !!effectiveCapabilities?.usesOverrides,
+      isTrial: !!effectiveCapabilities?.isTrial,
+      isTrialExpired: !!effectiveCapabilities?.isTrialExpired,
+      subscriptionBlocked: !!effectiveCapabilities?.subscriptionBlocked,
+      libraryCapabilities: {
+        canCreateCoachMenus: menus.canCreateCoachMenus === true,
+        canCreateCoachMeals: menus.canCreateCoachMeals === true,
+        canUseGlobalMenuTemplates: menus.canUseGlobalMenuTemplates === true,
+        canUseGlobalMealTemplates: menus.canUseGlobalMealTemplates === true,
+        canUsePremiumMenuTemplates: menus.canUsePremiumMenuTemplates === true,
+        canUsePremiumMealTemplates: menus.canUsePremiumMealTemplates === true,
+        canDuplicateGlobalTemplates: menus.canDuplicateGlobalTemplates === true,
+        canAssignGlobalTemplates: menus.canAssignGlobalTemplates === true,
+      },
+      effectiveCapabilities,
+    };
+  }
+
+  adminPreviewCoachPlan = async (id, payload = {}) => {
+    const user = await this.getById(id);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isCoachUser(user)) throw new Error("USER_NOT_COACH");
+
+    return await this._buildAdminCoachPlanPreview(user, payload?.plan, {
+      resetOverrides: !!payload?.resetOverrides,
+    });
+  };
+
   adminUpdatePlan = async (id, plan, options = {}) => {
     const user = await this.getById(id);
     if (!user) throw new Error("NOT_FOUND");
 
     const isCoach = this._isCoachUser(user);
-    const dbPlan = normalizePlanForRole(plan, user.role);
+    const professionalPlan = isCoach ? normalizeProfessionalSubscriptionPlan(plan) : null;
+    const dbPlan = isCoach
+      ? PROFESSIONAL_SUBSCRIPTION_PLANS[professionalPlan]?.legacyPlan
+      : normalizePlanForRole(plan, user.role);
     if (!dbPlan) throw new Error("PLAN_INVALIDO");
+    if (isCoach) {
+      const preview = await this._buildAdminCoachPlanPreview(user, professionalPlan, options);
+      if (preview.limitExceeded) {
+        throw coachLimitConflict("COACH_PLAN_LIMIT_EXCEEDED", preview.plan, preview.violations);
+      }
+    }
+    const now = new Date();
+    const legacySubscriptionStatus = String(user?.subscription?.status || "").trim().toLowerCase();
+    const hasTrialBenefit = isCoach && ["trial", "trialing"].includes(legacySubscriptionStatus);
 
     const billing = {
       ...(user?.billing || {}),
       status: isCoach
-        ? (dbPlan === "trial_pro" ? "trial" : "active")
+        ? (hasTrialBenefit ? "trial" : "active")
         : (dbPlan === "free" ? "free" : (user?.billing?.status || "inactive")),
     };
 
     const patch = {
       plan: dbPlan,
       billing,
-      updatedAt: new Date(),
+      updatedAt: now,
     };
 
     if (isCoach) {
-      const coachPlanConfig = await this._getCoachPlanConfig(dbPlan);
-      patch.subscription = createTrialSubscription({
-        planCode: dbPlan,
-        now: new Date(),
-        existing: user?.subscription || {},
-        durationDays: coachPlanConfig?.durationDays || 7,
+      const currentSubscription = normalizeCoachSubscription(user);
+      patch.coachSubscription = professionalSubscriptionPatch(professionalPlan, {
+        status: "active",
+        now,
+        currentPeriodEnd: currentSubscription.currentPeriodEnd,
       });
+      patch.subscription = {
+        ...(user?.subscription || {}),
+        status: hasTrialBenefit ? "trial" : "active",
+        trialStartedAt: hasTrialBenefit ? user?.subscription?.trialStartedAt || null : null,
+        trialEndsAt: hasTrialBenefit ? user?.subscription?.trialEndsAt || null : null,
+        paidUntil: currentSubscription.currentPeriodEnd,
+        updatedAt: now,
+      };
 
       if (options?.resetOverrides) {
         patch.coachOverrides = createEmptyCoachOverrides();
@@ -4783,7 +5198,7 @@ class ServicioUsuarios {
     return plan;
   };
 
-  adminUpdateCoachPlanConfig = async (planCode, payload = {}) => {
+  adminUpdateCoachPlanConfig = async (planCode, payload = {}, options = {}) => {
     const code = normalizeCoachPlanCode(planCode);
     if (!code) throw new Error("PLAN_NOT_FOUND");
     if (typeof this.coachPlanModel?.updateByCode !== "function") {
@@ -4794,18 +5209,64 @@ class ServicioUsuarios {
     delete patch._id;
     delete patch.id;
     delete patch.code;
+    if (patch.maxClients !== undefined) {
+      patch.maxClients = validateCoachLimitValue("maxClients", patch.maxClients);
+    }
+    if (patch.maxCoachOwnedMenus !== undefined) {
+      patch.maxCoachOwnedMenus = validateCoachLimitValue("maxCoachOwnedMenus", patch.maxCoachOwnedMenus);
+    }
+    if (patch.maxCoachOwnedMeals !== undefined) {
+      patch.maxCoachOwnedMeals = validateCoachLimitValue("maxCoachOwnedMeals", patch.maxCoachOwnedMeals);
+    }
 
-    return await this.coachPlanModel.updateByCode(code, patch);
+    return await this.coachPlanModel.updateByCode(code, patch, { updatedBy: options.updatedBy || null });
   };
 
-  adminResetCoachPlanConfig = async (planCode) => {
+  adminResetCoachPlanConfig = async (planCode, options = {}) => {
     const code = normalizeCoachPlanCode(planCode);
     if (!code) throw new Error("PLAN_NOT_FOUND");
     if (typeof this.coachPlanModel?.resetByCode !== "function") {
       throw new Error("PLAN_CONFIG_MODEL_UNAVAILABLE");
     }
 
-    return await this.coachPlanModel.resetByCode(code);
+    return await this.coachPlanModel.resetByCode(code, { updatedBy: options.updatedBy || null });
+  };
+
+  adminListClientPlans = async () => {
+    if (typeof this.clientPlanModel?.list !== "function") {
+      throw new Error("PLAN_CONFIG_MODEL_UNAVAILABLE");
+    }
+    return await this.clientPlanModel.list();
+  };
+
+  adminGetClientPlan = async (planCode) => {
+    const code = normalizeClientPlanSettingCode(planCode);
+    if (!code) throw new Error("PLAN_NOT_FOUND");
+    const plan = await this.clientPlanModel.getByCode(code);
+    if (!plan) throw new Error("PLAN_NOT_FOUND");
+    return plan;
+  };
+
+  adminUpdateClientPlanConfig = async (planCode, payload = {}, options = {}) => {
+    const code = normalizeClientPlanSettingCode(planCode);
+    if (!code) throw new Error("PLAN_NOT_FOUND");
+    if (typeof this.clientPlanModel?.updateByCode !== "function") {
+      throw new Error("PLAN_CONFIG_MODEL_UNAVAILABLE");
+    }
+    const patch = validateClientPlanSettingPatch(payload);
+    delete patch._id;
+    delete patch.id;
+    delete patch.code;
+    return await this.clientPlanModel.updateByCode(code, patch, { updatedBy: options.updatedBy || null });
+  };
+
+  adminResetClientPlanConfig = async (planCode, options = {}) => {
+    const code = normalizeClientPlanSettingCode(planCode);
+    if (!code) throw new Error("PLAN_NOT_FOUND");
+    if (typeof this.clientPlanModel?.resetByCode !== "function") {
+      throw new Error("PLAN_CONFIG_MODEL_UNAVAILABLE");
+    }
+    return await this.clientPlanModel.resetByCode(code, { updatedBy: options.updatedBy || null });
   };
 
   adminUpdateCoachPlan = async (id, payload = {}) => {
@@ -4818,51 +5279,95 @@ class ServicioUsuarios {
     });
   };
 
-  adminUpdateCoachOverrides = async (id, payload = {}) => {
+  adminUpdateCoachOverrides = async (id, payload = {}, options = {}) => {
     const user = await this.getById(id);
     if (!user) throw new Error("NOT_FOUND");
     if (!this._isCoachUser(user)) throw new Error("USER_NOT_COACH");
 
+    const sanitizedPayload = { ...payload };
+    if (Object.prototype.hasOwnProperty.call(payload, "maxClients")) {
+      sanitizedPayload.maxClients = validateCoachLimitValue("maxClients", payload.maxClients, { allowNull: true });
+    }
+    if (Object.prototype.hasOwnProperty.call(payload, "maxCoachOwnedMenus")) {
+      sanitizedPayload.maxCoachOwnedMenus = validateCoachLimitValue(
+        "maxCoachOwnedMenus",
+        payload.maxCoachOwnedMenus,
+        { allowNull: true }
+      );
+    }
+    if (Object.prototype.hasOwnProperty.call(payload, "maxCoachOwnedMeals")) {
+      sanitizedPayload.maxCoachOwnedMeals = validateCoachLimitValue(
+        "maxCoachOwnedMeals",
+        payload.maxCoachOwnedMeals,
+        { allowNull: true }
+      );
+    }
+
     const nextOverrides = normalizeCoachOverrides({
       ...(user?.coachOverrides || {}),
-      ...payload,
+      ...sanitizedPayload,
       features: {
         ...(user?.coachOverrides?.features || {}),
-        ...(payload?.features || {}),
+        ...(sanitizedPayload?.features || {}),
         routines: {
           ...(user?.coachOverrides?.features?.routines || {}),
-          ...(payload?.features?.routines || {}),
+          ...(sanitizedPayload?.features?.routines || {}),
         },
         menus: {
           ...(user?.coachOverrides?.features?.menus || {}),
-          ...(payload?.features?.menus || {}),
+          ...(sanitizedPayload?.features?.menus || {}),
         },
         metrics: {
           ...(user?.coachOverrides?.features?.metrics || {}),
-          ...(payload?.features?.metrics || {}),
+          ...(sanitizedPayload?.features?.metrics || {}),
         },
         exports: {
           ...(user?.coachOverrides?.features?.exports || {}),
-          ...(payload?.features?.exports || {}),
+          ...(sanitizedPayload?.features?.exports || {}),
         },
       },
     });
 
+    const candidate = await this._resolveEffectiveCapabilities({
+      ...user,
+      coachOverrides: nextOverrides,
+    });
+    const violations = coachLimitViolations(candidate);
+    if (violations.length) {
+      const plan = normalizeProfessionalSubscriptionPlan(user?.coachSubscription?.plan || user?.plan);
+      throw coachLimitConflict("COACH_OVERRIDE_BELOW_USAGE", plan, violations);
+    }
+
     const updated = await this.updateById(id, {
       coachOverrides: nextOverrides,
+      coachOverridesUpdatedAt: new Date(),
+      coachOverridesUpdatedBy: options.updatedBy || null,
       updatedAt: new Date(),
     });
 
     return await this._withEffectiveCapabilities(updated);
   };
 
-  adminDeleteCoachOverrides = async (id) => {
+  adminDeleteCoachOverrides = async (id, options = {}) => {
     const user = await this.getById(id);
     if (!user) throw new Error("NOT_FOUND");
     if (!this._isCoachUser(user)) throw new Error("USER_NOT_COACH");
 
+    const emptyOverrides = createEmptyCoachOverrides();
+    const candidate = await this._resolveEffectiveCapabilities({
+      ...user,
+      coachOverrides: emptyOverrides,
+    });
+    const violations = coachLimitViolations(candidate);
+    if (violations.length) {
+      const plan = normalizeProfessionalSubscriptionPlan(user?.coachSubscription?.plan || user?.plan);
+      throw coachLimitConflict("COACH_OVERRIDE_BELOW_USAGE", plan, violations);
+    }
+
     const updated = await this.updateById(id, {
-      coachOverrides: createEmptyCoachOverrides(),
+      coachOverrides: emptyOverrides,
+      coachOverridesUpdatedAt: new Date(),
+      coachOverridesUpdatedBy: options.updatedBy || null,
       updatedAt: new Date(),
     });
 
@@ -5269,7 +5774,7 @@ class ServicioUsuarios {
       }
 
       if (!effectiveCapabilities?.canReceiveClients) {
-        throw new Error("COACH_CLIENT_LIMIT_REACHED");
+        throw coachClientCapacityError(effectiveCapabilities);
       }
     }
 
@@ -5411,6 +5916,80 @@ class ServicioUsuarios {
     ) {
       throw new Error("COACH_FEATURE_NOT_ALLOWED");
     }
+  }
+
+  async _validatedCoachAssignedMenusByDay(coach, value = {}) {
+    const normalized = normalizeAssignedMenusByDay(value);
+    const coachId = idToString(coach?._id || coach?.id);
+    const capabilities = resolveProfessionalLibraryCapabilities(coach);
+    const baseCache = new Map();
+
+    const validateEntry = async (entry, fallbackSource = "base") => {
+      if (!entry) return null;
+      const baseId = idToString(
+        entry.menuId ||
+        entry.menuBaseId ||
+        entry.menuSnapshot?.baseId ||
+        entry.menuSnapshot?.id
+      );
+      if (!baseId) throw new Error("MENU_BASE_REQUERIDO");
+
+      let base = baseCache.get(baseId);
+      if (base === undefined) {
+        base = await this.menusModel.getBaseById(baseId);
+        baseCache.set(baseId, base || null);
+      }
+      if (!base) throw new Error("MENU_NO_ENCONTRADO");
+
+      const sourceType = professionalTemplateSource(base);
+      if (sourceType === "coach_owned") {
+        if (idToString(base.ownerId) !== coachId) throw new Error("FORBIDDEN");
+      } else if (["admin_global", "admin_premium"].includes(sourceType)) {
+        if (
+          capabilities.canAssignGlobalTemplates !== true ||
+          !canUseProfessionalTemplate(coach, base, "menu")
+        ) {
+          throw new Error("FORBIDDEN");
+        }
+      } else {
+        throw new Error("FORBIDDEN");
+      }
+
+      const menuSnapshot = normalizeWeeklyMenuSnapshot(base);
+      return {
+        menuId: baseId,
+        menuSnapshot,
+        source: sourceType || fallbackSource,
+        ...normalizeAssignedMenuPlanningMeta(entry),
+        assignedAt: entry.assignedAt ? new Date(entry.assignedAt) : new Date(),
+      };
+    };
+
+    const validated = {};
+    for (const day of WEEKLY_MENU_DAYS) {
+      const dayEntry = normalized[day];
+      if (!dayEntry) continue;
+      const primaryMenu = await validateEntry(dayEntry.primaryMenu || dayEntry, "base");
+      const alternatives = [];
+      for (const alternative of dayEntry.alternatives || []) {
+        const checked = await validateEntry(alternative, "alternative");
+        if (!checked || sameAssignedMenu(checked, primaryMenu)) continue;
+        alternatives.push({
+          ...checked,
+          reason: cleanString(alternative.reason, 240),
+          compatibility: isPlainObject(alternative.compatibility)
+            ? { ...alternative.compatibility }
+            : null,
+        });
+      }
+      validated[day] = {
+        ...primaryMenu,
+        primaryMenu,
+        alternatives: alternatives.slice(0, 10),
+      };
+    }
+
+    return validated;
   }
 
   _getCoachClientPair = async ({ coachId, clientId }) => {
@@ -5565,6 +6144,92 @@ class ServicioUsuarios {
       };
     }
 
+    const currentWeeklyPlan = client?.menu?.weeklyPlan || {};
+    const candidateWeeklyPlan = patch?.menu?.weeklyPlan || currentWeeklyPlan;
+    const nutritionTargetsChanged =
+      goalsSignature({}, currentMetas) !== goalsSignature({}, nextMetas) ||
+      weeklyGoalsSignature(currentWeeklyPlan) !== weeklyGoalsSignature(candidateWeeklyPlan);
+    if (nutritionTargetsChanged || !currentWeeklyPlan?.targetsUpdatedAt) {
+      const currentMenu = patch.menu || client?.menu || {};
+      const coachObjectId = toMongoIdOrString(coach._id || coach.id || coachId);
+      patch.menu = {
+        ...currentMenu,
+        weeklyPlan: {
+          ...(currentMenu?.weeklyPlan || {}),
+          targetsUpdatedAt:
+            nutritionTargetsChanged
+              ? now
+              : currentMetas?.updatedAt || now,
+        },
+        updatedAt: now,
+        updatedByCoachId: coachObjectId,
+      };
+    }
+
+    const nextClientForImpact = {
+      ...client,
+      metasActuales: nextMetas,
+      goal: nextGoal,
+      menu: patch.menu || client?.menu || {},
+    };
+    const assignmentImpact = buildNutritionAssignmentImpact(client, nextClientForImpact);
+    let assignmentInvalidation = null;
+
+    if (assignmentImpact.affectedDayKeys.length) {
+      const invalidationRequest = isPlainObject(incoming?.assignmentInvalidation)
+        ? incoming.assignmentInvalidation
+        : {};
+      const actualDays = [...assignmentImpact.affectedDayKeys].sort();
+      const expectedDays = normalizedExpectedInvalidationDays(invalidationRequest?.affectedDays);
+      const confirmed = invalidationRequest?.confirmed === true && sameStringArray(actualDays, expectedDays);
+
+      if (!confirmed) {
+        const error = new Error("NUTRITION_ASSIGNMENTS_CONFIRMATION_REQUIRED");
+        error.impact = assignmentImpact;
+        throw error;
+      }
+
+      const currentMenu = patch.menu || client?.menu || {};
+      const currentWeeklyPlan = currentMenu?.weeklyPlan || {};
+      const movedAssignments = moveInvalidatedAssignments(
+        client?.menu?.weeklyPlan?.assignedMenusByDay || {},
+        actualDays
+      );
+      const coachObjectId = toMongoIdOrString(coach._id || coach.id || coachId);
+      const previousTargetsByDay = {};
+      const nextTargetsByDay = {};
+      assignmentImpact.affectedDays.forEach((day) => {
+        previousTargetsByDay[day.key] = day.previousTarget;
+        nextTargetsByDay[day.key] = day.nextTarget;
+      });
+
+      patch.menu = {
+        ...currentMenu,
+        weeklyPlan: {
+          ...currentWeeklyPlan,
+          assignedMenusByDay: movedAssignments.remaining,
+          lastInvalidatedAssignments: {
+            reason: "nutrition_targets_changed",
+            invalidatedAt: now,
+            invalidatedByCoachId: coachObjectId,
+            affectedDays: actualDays,
+            assignmentsByDay: movedAssignments.invalidated,
+            previousTargetsByDay,
+            nextTargetsByDay,
+          },
+          updatedAt: now,
+        },
+        activeSource: hasAssignedMenuEntries(movedAssignments.remaining) ? "coach" : "none",
+        updatedAt: now,
+        updatedByCoachId: coachObjectId,
+      };
+      assignmentInvalidation = {
+        ...assignmentImpact,
+        confirmed: true,
+        preservedSnapshots: true,
+      };
+    }
+
     const updated = await this.updateById(clientId, patch);
 
     await recordAccessAuditEvent({
@@ -5576,10 +6241,19 @@ class ServicioUsuarios {
       previousValue: { goal: client?.goal || {}, metasActuales: client?.metasActuales || {} },
       nextValue: { goal: nextGoal, metasActuales: nextMetas },
       reason: "coach_update_client_nutrition",
-      metadata: { servicePackage: client?.coachAccess?.servicePackage || client?.coach?.servicePackage || null },
+      metadata: {
+        servicePackage: client?.coachAccess?.servicePackage || client?.coach?.servicePackage || null,
+        assignmentInvalidation: assignmentInvalidation
+          ? {
+              affectedDays: assignmentInvalidation.affectedDayKeys,
+              assignedMenus: assignmentInvalidation.assignedMenus,
+              preservedSnapshots: true,
+            }
+          : null,
+      },
     });
 
-    return { coach, client: updated };
+    return { coach, client: updated, assignmentInvalidation };
   };
 
   coachUpdateClientMenu = async ({ coachId, clientId, payload = {} }) => {
@@ -5594,6 +6268,9 @@ class ServicioUsuarios {
     const mealConfig = isPlainObject(incoming?.mealConfig) ? incoming.mealConfig : {};
     const restrictions = isPlainObject(incoming?.restrictions) ? incoming.restrictions : {};
     const weeklyPlan = isPlainObject(incoming?.weeklyPlan) ? incoming.weeklyPlan : {};
+    const assignedMenusByDay = isPlainObject(weeklyPlan?.assignedMenusByDay)
+      ? await this._validatedCoachAssignedMenusByDay(coach, weeklyPlan.assignedMenusByDay)
+      : null;
 
     const nextMenu = {
       ...current,
@@ -5637,8 +6314,8 @@ class ServicioUsuarios {
         ...(isPlainObject(weeklyPlan?.caloriesByDay) ? { caloriesByDay: weeklyPlan.caloriesByDay } : {}),
         ...(isPlainObject(weeklyPlan?.macrosByDay) ? { macrosByDay: weeklyPlan.macrosByDay } : {}),
         ...(isPlainObject(weeklyPlan?.mealsByDay) ? { mealsByDay: weeklyPlan.mealsByDay } : {}),
-        ...(isPlainObject(weeklyPlan?.assignedMenusByDay)
-          ? { assignedMenusByDay: normalizeAssignedMenusByDay(weeklyPlan.assignedMenusByDay) }
+        ...(assignedMenusByDay
+          ? { assignedMenusByDay }
           : {}),
         generatedBy: "coach",
         generatorMode: modeType,
@@ -6415,7 +7092,9 @@ class ServicioUsuarios {
 }
 
 export {
+  buildNutritionAssignmentImpact,
   buildSelfGoalsBackup,
+  moveInvalidatedAssignments,
   resolveClientNutritionWeek,
   resetCoachDerivedClientPermissions,
   restoreMetasAfterCoachDisconnect,

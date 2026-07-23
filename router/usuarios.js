@@ -384,6 +384,35 @@ class RouterUsuarios {
       this.controladorUsuarios.adminResetCoachPlanConfig
     );
 
+    // -------- Planes personales de cliente --------
+    admin.get(
+      "/client-plans",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminListClientPlans
+    );
+
+    admin.get(
+      "/client-plans/:planCode",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminGetClientPlan
+    );
+
+    admin.patch(
+      "/client-plans/:planCode",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminUpdateClientPlanConfig
+    );
+
+    admin.post(
+      "/client-plans/:planCode/reset",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminResetClientPlanConfig
+    );
+
     // -------- CRUD users --------
     admin.get(
       "/users",
@@ -447,6 +476,13 @@ class RouterUsuarios {
       authMiddleware,
       requireRole("admin"),
       this.controladorUsuarios.adminUpdateCoachPlan
+    );
+
+    admin.get(
+      "/users/:id/coach-plan-preview",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminPreviewCoachPlan
     );
 
     admin.patch(

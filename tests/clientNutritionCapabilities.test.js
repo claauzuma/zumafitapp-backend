@@ -26,6 +26,8 @@ test("free autogestionado puede trackear y crear hasta 1 menu propio", () => {
   assert.equal(capabilities.limits.menuDays, 1);
   assert.equal(capabilities.canUseGlobalLibrary, false);
   assert.equal(capabilities.canUsePremiumLibrary, false);
+  assert.equal(capabilities.canAutoCompleteRemainingMeals, false);
+  assert.equal(capabilities.canUseFlexibleMarginRecommendations, false);
 });
 
 test("cliente con coach se detecta por coach.entrenadorId", () => {
@@ -76,6 +78,8 @@ test("prueba Pro activa eleva capabilities sin cambiar plan legacy", () => {
 
   assert.equal(capabilities.plan, "pro");
   assert.equal(capabilities.limits.ownMenus, 10);
+  assert.equal(capabilities.canAutoCompleteRemainingMeals, true);
+  assert.equal(capabilities.canUseFlexibleMarginRecommendations, true);
 });
 
 test("VIP accede a biblioteca premium pero no declara PDF/generacion automatica como lista", () => {
@@ -85,6 +89,8 @@ test("VIP accede a biblioteca premium pero no declara PDF/generacion automatica 
   assert.equal(capabilities.canUseGlobalLibrary, true);
   assert.equal(capabilities.canUsePremiumLibrary, true);
   assert.equal(capabilities.canGenerateAutomaticMenu, false);
+  assert.equal(capabilities.canAutoCompleteRemainingMeals, true);
+  assert.equal(capabilities.canUseFlexibleMarginRecommendations, true);
   assert.equal(capabilities.canExportMenuPdf, false);
 });
 

@@ -1,11 +1,19 @@
 export const COACH_PLAN_CODES = ["trial_pro", "pro", "vip"];
 
+export const COACH_LIMIT_MAXIMUMS = Object.freeze({
+  maxActiveClients: 10000,
+  maxCoachOwnedMenus: 100000,
+  maxCoachOwnedMeals: 250000,
+});
+
 export const BASE_COACH_PLAN_CONFIGS = {
   trial_pro: {
     code: "trial_pro",
-    name: "Prueba Pro",
+    name: "Inicial",
     durationDays: 7,
     maxClients: 3,
+    maxCoachOwnedMenus: 10,
+    maxCoachOwnedMeals: 30,
     features: {
       clients: {
         canAssign: true,
@@ -27,6 +35,14 @@ export const BASE_COACH_PLAN_CONFIGS = {
         ownTemplates: true,
         ownTemplatesLimit: 3,
         duplicatePlans: true,
+        canCreateCoachMenus: true,
+        canCreateCoachMeals: true,
+        canUseGlobalMenuTemplates: false,
+        canUseGlobalMealTemplates: false,
+        canUsePremiumMenuTemplates: false,
+        canUsePremiumMealTemplates: false,
+        canDuplicateGlobalTemplates: false,
+        canAssignGlobalTemplates: false,
         semiAutomaticBuilder: true,
         automaticGenerator: false,
       },
@@ -44,6 +60,8 @@ export const BASE_COACH_PLAN_CONFIGS = {
     name: "Pro",
     durationDays: null,
     maxClients: 25,
+    maxCoachOwnedMenus: 100,
+    maxCoachOwnedMeals: 300,
     features: {
       clients: {
         canAssign: true,
@@ -65,6 +83,14 @@ export const BASE_COACH_PLAN_CONFIGS = {
         ownTemplates: true,
         ownTemplatesLimit: null,
         duplicatePlans: true,
+        canCreateCoachMenus: true,
+        canCreateCoachMeals: true,
+        canUseGlobalMenuTemplates: true,
+        canUseGlobalMealTemplates: true,
+        canUsePremiumMenuTemplates: false,
+        canUsePremiumMealTemplates: false,
+        canDuplicateGlobalTemplates: true,
+        canAssignGlobalTemplates: true,
         semiAutomaticBuilder: true,
         automaticGenerator: false,
       },
@@ -82,6 +108,8 @@ export const BASE_COACH_PLAN_CONFIGS = {
     name: "VIP",
     durationDays: null,
     maxClients: 100,
+    maxCoachOwnedMenus: 500,
+    maxCoachOwnedMeals: 1000,
     features: {
       clients: {
         canAssign: true,
@@ -103,6 +131,14 @@ export const BASE_COACH_PLAN_CONFIGS = {
         ownTemplates: true,
         ownTemplatesLimit: null,
         duplicatePlans: true,
+        canCreateCoachMenus: true,
+        canCreateCoachMeals: true,
+        canUseGlobalMenuTemplates: true,
+        canUseGlobalMealTemplates: true,
+        canUsePremiumMenuTemplates: true,
+        canUsePremiumMealTemplates: true,
+        canDuplicateGlobalTemplates: true,
+        canAssignGlobalTemplates: true,
         semiAutomaticBuilder: true,
         automaticGenerator: true,
       },
@@ -121,12 +157,51 @@ export function clonePlanConfig(config) {
   return JSON.parse(JSON.stringify(config));
 }
 
+export function validateCoachLimitValue(key, value, { allowNull = false } = {}) {
+  if (allowNull && (value === null || value === undefined || value === "")) return null;
+  const number = Number(value);
+  const minimum = key === "maxActiveClients" || key === "maxClients" ? 1 : 0;
+  const maximum = COACH_LIMIT_MAXIMUMS[key === "maxClients" ? "maxActiveClients" : key];
+  if (!Number.isInteger(number) || number < minimum) {
+    const error = new Error("COACH_LIMIT_INVALID");
+    error.resource = key;
+    error.minimum = minimum;
+    throw error;
+  }
+  if (Number.isFinite(maximum) && number > maximum) {
+    const error = new Error("COACH_LIMIT_TOO_HIGH");
+    error.resource = key;
+    error.maximum = maximum;
+    throw error;
+  }
+  return number;
+}
+
+export function coachResourceLimitError(code, {
+  current = 0,
+  limit = 0,
+  plan = "coach_initial",
+  overrideApplied = false,
+  upgradeTarget = "coach_pro",
+  resource = null,
+} = {}) {
+  const error = new Error(code);
+  error.code = code;
+  error.current = Number(current || 0);
+  error.limit = Number(limit || 0);
+  error.plan = plan;
+  error.overrideApplied = !!overrideApplied;
+  error.upgradeTarget = upgradeTarget;
+  error.resource = resource;
+  return error;
+}
+
 export function normalizeCoachPlanCode(plan) {
   const p = String(plan || "").trim().toLowerCase();
 
-  if (!p || p === "free" || p === "trial" || p === "trialpro") return "trial_pro";
-  if (p === "premium" || p === "plus") return "pro";
-  if (p === "premium2") return "vip";
+  if (!p || p === "free" || p === "trial" || p === "trialpro" || p === "coach_initial" || p === "initial") return "trial_pro";
+  if (p === "premium" || p === "plus" || p === "coach_pro") return "pro";
+  if (p === "premium2" || p === "coach_ai" || p === "coach_vip") return "vip";
   if (COACH_PLAN_CODES.includes(p)) return p;
 
   return null;
@@ -134,12 +209,14 @@ export function normalizeCoachPlanCode(plan) {
 
 export function coachPlanName(planCode) {
   const code = normalizeCoachPlanCode(planCode);
-  return BASE_COACH_PLAN_CONFIGS[code]?.name || "Prueba Pro";
+  return BASE_COACH_PLAN_CONFIGS[code]?.name || "Inicial";
 }
 
 export function createEmptyCoachOverrides() {
   return {
     maxClients: null,
+    maxCoachOwnedMenus: null,
+    maxCoachOwnedMeals: null,
     trialEndsAt: null,
     features: {
       routines: {
@@ -158,6 +235,14 @@ export function createEmptyCoachOverrides() {
         ownTemplates: null,
         ownTemplatesLimit: null,
         duplicatePlans: null,
+        canCreateCoachMenus: null,
+        canCreateCoachMeals: null,
+        canUseGlobalMenuTemplates: null,
+        canUseGlobalMealTemplates: null,
+        canUsePremiumMenuTemplates: null,
+        canUsePremiumMealTemplates: null,
+        canDuplicateGlobalTemplates: null,
+        canAssignGlobalTemplates: null,
         semiAutomaticBuilder: null,
         automaticGenerator: null,
       },
@@ -185,6 +270,12 @@ function mergeConfig(base, patch) {
     out.durationDays = patch.durationDays === null ? null : Math.max(0, Number(patch.durationDays) || 0);
   }
   if (patch.maxClients !== undefined) out.maxClients = Math.max(0, Number(patch.maxClients) || 0);
+  if (patch.maxCoachOwnedMenus !== undefined) {
+    out.maxCoachOwnedMenus = Math.max(0, Number(patch.maxCoachOwnedMenus) || 0);
+  }
+  if (patch.maxCoachOwnedMeals !== undefined) {
+    out.maxCoachOwnedMeals = Math.max(0, Number(patch.maxCoachOwnedMeals) || 0);
+  }
 
   for (const section of Object.keys(out.features || {})) {
     if (!isPlainObject(patch.features?.[section])) continue;
@@ -211,7 +302,13 @@ export function normalizeCoachOverrides(raw = {}) {
 
   if (out.maxClients !== null && out.maxClients !== undefined) {
     const max = Number(out.maxClients);
-    out.maxClients = Number.isFinite(max) && max >= 0 ? max : null;
+    out.maxClients = Number.isInteger(max) && max >= 1 ? max : null;
+  }
+
+  for (const key of ["maxCoachOwnedMenus", "maxCoachOwnedMeals"]) {
+    if (out[key] === null || out[key] === undefined) continue;
+    const max = Number(out[key]);
+    out[key] = Number.isInteger(max) && max >= 0 ? max : null;
   }
 
   if (out.trialEndsAt !== null && out.trialEndsAt !== undefined) {
@@ -275,6 +372,8 @@ export function resolveEffectiveCoachCapabilities({
   coach,
   planConfig,
   currentClients = 0,
+  currentCoachOwnedMenus = 0,
+  currentCoachOwnedMeals = 0,
 }) {
   const planCode = normalizeCoachPlanCode(coach?.plan);
   const safePlanCode = planCode || "trial_pro";
@@ -283,6 +382,10 @@ export function resolveEffectiveCoachCapabilities({
 
   const sources = {
     maxClients: overrides.maxClients !== null && overrides.maxClients !== undefined ? "override" : "plan",
+    maxCoachOwnedMenus:
+      overrides.maxCoachOwnedMenus !== null && overrides.maxCoachOwnedMenus !== undefined ? "override" : "plan",
+    maxCoachOwnedMeals:
+      overrides.maxCoachOwnedMeals !== null && overrides.maxCoachOwnedMeals !== undefined ? "override" : "plan",
     trialEndsAt: overrides.trialEndsAt ? "override" : "subscription",
     features: {},
   };
@@ -291,6 +394,14 @@ export function resolveEffectiveCoachCapabilities({
     overrides.maxClients !== null && overrides.maxClients !== undefined
       ? Number(overrides.maxClients)
       : Number(base.maxClients || 0);
+  const maxCoachOwnedMenus =
+    overrides.maxCoachOwnedMenus !== null && overrides.maxCoachOwnedMenus !== undefined
+      ? Number(overrides.maxCoachOwnedMenus)
+      : Number(base.maxCoachOwnedMenus || 0);
+  const maxCoachOwnedMeals =
+    overrides.maxCoachOwnedMeals !== null && overrides.maxCoachOwnedMeals !== undefined
+      ? Number(overrides.maxCoachOwnedMeals)
+      : Number(base.maxCoachOwnedMeals || 0);
 
   let features = applyOverridesToFeatures(base.features || {}, overrides, sources);
 
@@ -312,6 +423,10 @@ export function resolveEffectiveCoachCapabilities({
   }
 
   const subscription = coach?.subscription || {};
+  const subscriptionStatus = String(subscription.status || coach?.coachSubscription?.status || "")
+    .trim()
+    .toLowerCase();
+  const isTrial = subscriptionStatus === "trial" || subscriptionStatus === "trialing";
   const trialEndsAt =
     overrides.trialEndsAt ||
     subscription.trialEndsAt ||
@@ -320,7 +435,7 @@ export function resolveEffectiveCoachCapabilities({
 
   const trialEndDate = trialEndsAt ? new Date(trialEndsAt) : null;
   const isTrialExpired =
-    safePlanCode === "trial_pro" &&
+    isTrial &&
     trialEndDate &&
     Number.isFinite(trialEndDate.getTime()) &&
     trialEndDate.getTime() < Date.now();
@@ -350,13 +465,28 @@ export function resolveEffectiveCoachCapabilities({
     planName: base.name,
     maxClients,
     currentClients,
+    limits: {
+      maxActiveClients: maxClients,
+      maxCoachOwnedMenus,
+      maxCoachOwnedMeals,
+    },
+    usage: {
+      currentActiveClients: Number(currentClients || 0),
+      currentCoachOwnedMenus: Number(currentCoachOwnedMenus || 0),
+      currentCoachOwnedMeals: Number(currentCoachOwnedMeals || 0),
+    },
     canReceiveClients:
       !isTrialExpired &&
       !!features?.clients?.canAssign &&
       (maxClients <= 0 || Number(currentClients || 0) < maxClients),
     trialEndsAt: trialEndDate && Number.isFinite(trialEndDate.getTime()) ? trialEndDate : null,
+    isTrial,
     isTrialExpired: !!isTrialExpired,
-    usesOverrides: sources.maxClients === "override" || hasFeatureOverrides(overrides),
+    usesOverrides:
+      sources.maxClients === "override" ||
+      sources.maxCoachOwnedMenus === "override" ||
+      sources.maxCoachOwnedMeals === "override" ||
+      hasFeatureOverrides(overrides),
     sources,
     disabledBySpecialty,
     features,

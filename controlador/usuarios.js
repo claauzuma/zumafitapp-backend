@@ -59,6 +59,14 @@ function appendQuery(url, params = {}) {
 function adminError(res, error) {
   const msg = String(error?.message || "");
 
+  if (msg === "NUTRITION_ASSIGNMENTS_CONFIRMATION_REQUIRED") {
+    return res.status(409).json({
+      code: msg,
+      error: "Confirmá la desasignación de los menús afectados antes de guardar las nuevas metas.",
+      impact: error?.impact || null,
+    });
+  }
+
   if (isAccessGateError(error)) {
     const code = error?.code || msg;
     const conflictCodes = new Set([
@@ -66,6 +74,7 @@ function adminError(res, error) {
       "GOALS_CHANGE_COOLDOWN",
       "GOALS_CHANGE_LIMIT_REACHED",
       "COACH_CLIENT_LIMIT_REACHED",
+      "COACH_CLIENT_LIMIT_EXCEEDED",
     ]);
     return res.status(conflictCodes.has(code) ? 409 : 403).json(accessErrorPayload(error));
   }
@@ -148,6 +157,15 @@ function adminError(res, error) {
   if (msg === "COACH_FEATURE_NOT_ALLOWED") {
     return res.status(403).json({ error: "Tu plan no permite esta accion" });
   }
+  if (msg === "FORBIDDEN") {
+    return res.status(403).json({ error: "No tenes permisos para asignar esta plantilla" });
+  }
+  if (msg === "MENU_NO_ENCONTRADO") {
+    return res.status(404).json({ error: "El menu seleccionado ya no esta disponible" });
+  }
+  if (msg === "MENU_BASE_REQUERIDO") {
+    return res.status(400).json({ error: "Falta identificar el menu base" });
+  }
   if (msg === "COACH_SERVICE_PACKAGE_NOT_ALLOWED" || msg === "COACH_PACKAGE_NOT_ALLOWED") {
     return res.status(403).json({ error: "Tu plan profesional no permite ofrecer ese paquete de servicio" });
   }
@@ -165,12 +183,60 @@ function adminError(res, error) {
   if (msg === "SPECIALTIES_INVALIDAS") return res.status(400).json({ error: "Especialidades inválidas" });
   if (msg === "PLAN_NOT_FOUND") return res.status(404).json({ error: "Plan no encontrado" });
   if (msg === "PLAN_CONFIG_MODEL_UNAVAILABLE") return res.status(500).json({ error: "Configuracion de planes no disponible" });
+  if (msg === "COACH_LIMIT_INVALID" || msg === "CLIENT_PLAN_LIMIT_INVALID") {
+    return res.status(400).json({
+      code: msg,
+      error: "El limite debe ser un numero entero valido.",
+      resource: error?.resource || null,
+      minimum: error?.minimum ?? null,
+    });
+  }
+  if (msg === "COACH_LIMIT_TOO_HIGH" || msg === "CLIENT_PLAN_LIMIT_TOO_HIGH") {
+    return res.status(400).json({
+      code: msg,
+      error: "El limite supera el maximo administrativo permitido.",
+      resource: error?.resource || null,
+      maximum: error?.maximum ?? null,
+    });
+  }
+  if (msg === "CLIENT_LIBRARY_ACCESS_INVALID") {
+    return res.status(400).json({ code: msg, error: "El acceso de biblioteca no es valido." });
+  }
+  if (msg === "COACH_PLAN_LIMIT_EXCEEDED" || msg === "COACH_OVERRIDE_BELOW_USAGE") {
+    const violation = error?.violations?.[0] || {};
+    return res.status(409).json({
+      code: msg,
+      error: `No se puede guardar: el coach tiene ${Number(violation.current || error?.current || 0)} ${violation.label || "elementos en uso"} y el limite seleccionado es ${Number(violation.limit ?? error?.limit ?? 0)}.`,
+      plan: error?.plan || null,
+      resource: violation.resource || error?.resource || null,
+      current: Number(violation.current || error?.current || 0),
+      limit: Number(violation.limit ?? error?.limit ?? 0),
+      violations: error?.violations || [],
+    });
+  }
+  if (msg === "COACH_PLAN_CLIENT_LIMIT_EXCEEDED") {
+    return res.status(409).json({
+      code: msg,
+      error: `Este coach tiene ${Number(error?.currentClients || 0)} clientes activos y el plan seleccionado permite ${Number(error?.maxClients || 0)}. Reducí clientes activos o elegí un plan superior.`,
+      plan: error?.plan || null,
+      currentClients: Number(error?.currentClients || 0),
+      maxClients: Number(error?.maxClients || 0),
+    });
+  }
   if (msg === "PASSWORD_CORTA") {
     return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
   }
 
-  if (msg === "COACH_CLIENT_LIMIT_REACHED") {
-    return res.status(409).json({ error: "El coach alcanzó el límite de clientes" });
+  if (msg === "COACH_CLIENT_LIMIT_REACHED" || msg === "COACH_CLIENT_LIMIT_EXCEEDED") {
+    return res.status(409).json({
+      code: "COACH_CLIENT_LIMIT_EXCEEDED",
+      error: "El coach alcanzo el limite de clientes activos.",
+      current: Number(error?.current || 0),
+      limit: Number(error?.limit || 0),
+      plan: error?.plan || null,
+      overrideApplied: !!error?.overrideApplied,
+      upgradeTarget: error?.upgradeTarget || null,
+    });
   }
 
   if (msg === "INVITATION_ALREADY_FINALIZED") {
@@ -674,8 +740,13 @@ class ControladorUsuarios {
       if (msg === "COACH_NOT_ACTIVE" || msg === "COACH_NOT_AVAILABLE" || msg === "COACH_INVITES_DISABLED") {
         return res.status(409).json({ error: "El coach ya no puede recibir este cliente" });
       }
-      if (msg === "COACH_CLIENT_LIMIT_REACHED") {
-        return res.status(409).json({ error: "El coach alcanzo el limite de clientes" });
+      if (msg === "COACH_CLIENT_LIMIT_REACHED" || msg === "COACH_CLIENT_LIMIT_EXCEEDED") {
+        return res.status(409).json({
+          code: "COACH_CLIENT_LIMIT_EXCEEDED",
+          error: "El coach alcanzo el limite de clientes activos.",
+          current: Number(error?.current || 0),
+          limit: Number(error?.limit || 0),
+        });
       }
 
       console.error("Error verifyEmail:", error);
@@ -1268,7 +1339,9 @@ class ControladorUsuarios {
 
   adminUpdateCoachPlanConfig = async (req, res) => {
     try {
-      const plan = await this.servicio.adminUpdateCoachPlanConfig(req.params.planCode, req.body || {});
+      const plan = await this.servicio.adminUpdateCoachPlanConfig(req.params.planCode, req.body || {}, {
+        updatedBy: req.user?.id || req.user?._id || null,
+      });
       return res.json({ ok: true, plan });
     } catch (error) {
       return adminError(res, error);
@@ -1277,7 +1350,49 @@ class ControladorUsuarios {
 
   adminResetCoachPlanConfig = async (req, res) => {
     try {
-      const plan = await this.servicio.adminResetCoachPlanConfig(req.params.planCode);
+      const plan = await this.servicio.adminResetCoachPlanConfig(req.params.planCode, {
+        updatedBy: req.user?.id || req.user?._id || null,
+      });
+      return res.json({ ok: true, plan });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminListClientPlans = async (req, res) => {
+    try {
+      const plans = await this.servicio.adminListClientPlans();
+      return res.json({ plans });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminGetClientPlan = async (req, res) => {
+    try {
+      const plan = await this.servicio.adminGetClientPlan(req.params.planCode);
+      return res.json({ plan });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminUpdateClientPlanConfig = async (req, res) => {
+    try {
+      const plan = await this.servicio.adminUpdateClientPlanConfig(req.params.planCode, req.body || {}, {
+        updatedBy: req.user?.id || req.user?._id || null,
+      });
+      return res.json({ ok: true, plan });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminResetClientPlanConfig = async (req, res) => {
+    try {
+      const plan = await this.servicio.adminResetClientPlanConfig(req.params.planCode, {
+        updatedBy: req.user?.id || req.user?._id || null,
+      });
       return res.json({ ok: true, plan });
     } catch (error) {
       return adminError(res, error);
@@ -1573,6 +1688,7 @@ class ControladorUsuarios {
         ok: true,
         coach: mapUserPublic(data.coach),
         client: mapUserPublic(data.client),
+        assignmentInvalidation: data.assignmentInvalidation || null,
       });
     } catch (error) {
       return adminError(res, error);
@@ -1662,10 +1778,25 @@ class ControladorUsuarios {
     }
   };
 
+  adminPreviewCoachPlan = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const preview = await this.servicio.adminPreviewCoachPlan(id, {
+        plan: req.query?.plan,
+        resetOverrides: String(req.query?.resetOverrides || "").toLowerCase() === "true",
+      });
+      return res.json({ ok: true, preview });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
   adminUpdateCoachOverrides = async (req, res) => {
     try {
       const { id } = req.params;
-      const user = await this.servicio.adminUpdateCoachOverrides(id, req.body || {});
+      const user = await this.servicio.adminUpdateCoachOverrides(id, req.body || {}, {
+        updatedBy: req.user?.id || req.user?._id || null,
+      });
       return res.json({ ok: true, user: mapUserPublic(user) });
     } catch (error) {
       return adminError(res, error);
@@ -1675,7 +1806,9 @@ class ControladorUsuarios {
   adminDeleteCoachOverrides = async (req, res) => {
     try {
       const { id } = req.params;
-      const user = await this.servicio.adminDeleteCoachOverrides(id);
+      const user = await this.servicio.adminDeleteCoachOverrides(id, {
+        updatedBy: req.user?.id || req.user?._id || null,
+      });
       return res.json({ ok: true, user: mapUserPublic(user) });
     } catch (error) {
       return adminError(res, error);

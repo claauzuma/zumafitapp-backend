@@ -3,11 +3,23 @@ import { ObjectId } from "mongodb";
 import ModelFactory from "../model/DAO/comidasFactory.js";
 import ModelMongoDBUsuarios from "../model/DAO/usuariosMongoDB.js";
 import ModelMongoDBCoachPlanConfigs from "../model/DAO/coachPlanConfigsMongoDB.js";
+import ModelMongoDBComidasGuardadas from "../model/DAO/comidasGuardadasMongoDB.js";
 import {
+  coachResourceLimitError,
   normalizeCoachPlanCode,
   normalizePlanConfig,
   resolveEffectiveCoachCapabilities,
 } from "./coachPlans.js";
+import {
+  canUseProfessionalTemplate,
+  normalizeProfessionalTemplateTier,
+  professionalTemplateSource,
+  professionalTemplateTier,
+} from "./professionalLibraryCapabilities.js";
+import {
+  requireCoachSubscriptionActive,
+  requireProfessionalScope,
+} from "./professionalAccessRules.js";
 
 const MEAL_TYPES = new Set(["desayuno", "almuerzo", "merienda", "cena", "snack", "otro"]);
 const MEAL_GROUPS = new Set(["desayuno_merienda", "almuerzo_cena", "snack", "otro"]);
@@ -183,6 +195,12 @@ function normalizePayload(payload = {}, context = {}) {
     ownerType === "coach"
       ? "privada"
       : enumValue(payload.visibilidad || payload.visibility, VISIBILITY, "publica");
+  const templateTier = ownerType === "admin"
+    ? normalizeProfessionalTemplateTier(
+        payload.templateTier || payload.libraryTier || payload.planMinimo || payload.visibilidad,
+        "global_basic"
+      )
+    : null;
 
   if (!items.length) throw new Error("ITEMS_INVALIDOS");
 
@@ -198,6 +216,11 @@ function normalizePayload(payload = {}, context = {}) {
     visibilidad,
     ownerType,
     ownerId: ownerId ? toMongoIdOrString(ownerId) : null,
+    sourceType: ownerType === "coach" ? "coach_owned" : templateTier === "global_premium" ? "admin_premium" : "admin_global",
+    ...(templateTier ? { templateTier } : {}),
+    planMinimo: ownerType === "admin"
+      ? templateTier === "global_premium" ? "vip" : templateTier === "global_pro" ? "pro" : "free"
+      : "free",
     estado: enumValue(payload.estado || payload.status, STATUS, "activo"),
     createdBy: context.actorId ? toMongoIdOrString(context.actorId) : null,
   };
@@ -241,6 +264,8 @@ function normalizeDoc(doc = null) {
     userId: doc.userId ? idToString(doc.userId) : null,
     ownerId: doc.ownerId ? idToString(doc.ownerId) : doc.userId ? idToString(doc.userId) : null,
     ownerType: doc.ownerType || "cliente",
+    sourceType: professionalTemplateSource(doc),
+    templateTier: doc.ownerType === "admin" ? professionalTemplateTier(doc) : null,
     nombre: doc.nombre || "Comida sin nombre",
     descripcion: doc.descripcion || "",
     tipoComida,
@@ -288,6 +313,7 @@ function anyTruthyFeature(features = {}) {
 class ServicioComidas {
   constructor(persistencia) {
     this.model = ModelFactory.get(persistencia);
+    this.comidasGuardadasModel = new ModelMongoDBComidasGuardadas();
     this.usuariosModel = new ModelMongoDBUsuarios();
     this.coachPlanModel = new ModelMongoDBCoachPlanConfigs();
   }
@@ -318,21 +344,20 @@ class ServicioComidas {
 
   async _effectiveCapabilities(coach) {
     const currentClients = await this.usuariosModel.countClientsByCoachId(coach._id || coach.id);
-    const planCode = normalizeCoachPlanCode(coach?.plan) || "trial_pro";
+    const planCode = normalizeCoachPlanCode(coach?.coachSubscription?.plan || coach?.plan) || "trial_pro";
     const planConfig =
       typeof this.coachPlanModel?.getByCode === "function"
         ? await this.coachPlanModel.getByCode(planCode)
         : normalizePlanConfig(planCode);
 
-    return resolveEffectiveCoachCapabilities({ coach, planConfig, currentClients });
+    return resolveEffectiveCoachCapabilities({ coach: { ...coach, plan: planCode }, planConfig, currentClients });
   }
 
   async _assertNutritionAccess(actor, { anyOf = null } = {}) {
     if (this._isAdmin(actor)) return { admin: true, effectiveCapabilities: null };
     if (!this._isCoach(actor)) throw new Error("COACH_NUTRITION_NOT_ALLOWED");
-
-    const specialties = actor?.coachProfile?.specialties || {};
-    if (!specialties.nutrition) throw new Error("COACH_NUTRITION_NOT_ALLOWED");
+    requireProfessionalScope(actor, "nutrition");
+    requireCoachSubscriptionActive(actor, { action: "meals" });
 
     const effectiveCapabilities = await this._effectiveCapabilities(actor);
     if (effectiveCapabilities?.isTrialExpired) throw new Error("COACH_FEATURE_NOT_ALLOWED");
@@ -348,6 +373,34 @@ class ServicioComidas {
     return { admin: false, effectiveCapabilities };
   }
 
+  async _assertCoachOwnedMealCapacity(actor, effectiveCapabilities = null) {
+    if (this._isAdmin(actor)) return { current: 0, limit: null };
+    const effective = effectiveCapabilities || await this._effectiveCapabilities(actor);
+    const coachId = this._actorId(actor);
+    const [createdMeals, savedMeals] = await Promise.all([
+      typeof this.model.countOwnedByCoach === "function"
+        ? this.model.countOwnedByCoach(coachId)
+        : this.model.contarComidas({ ownerId: coachId, ownerType: "coach" }),
+      typeof this.comidasGuardadasModel?.countOwnedByCoach === "function"
+        ? this.comidasGuardadasModel.countOwnedByCoach(coachId)
+        : 0,
+    ]);
+    const current = Number(createdMeals || 0) + Number(savedMeals || 0);
+    const limit = Number(effective?.limits?.maxCoachOwnedMeals);
+    if (Number.isFinite(limit) && limit >= 0 && current >= limit) {
+      const legacyPlan = effective?.planCode || "trial_pro";
+      throw coachResourceLimitError("COACH_MEAL_LIMIT_EXCEEDED", {
+        current,
+        limit,
+        plan: legacyPlan === "vip" ? "coach_ai" : legacyPlan === "pro" ? "coach_pro" : "coach_initial",
+        overrideApplied: effective?.sources?.maxCoachOwnedMeals === "override",
+        upgradeTarget: legacyPlan === "trial_pro" ? "coach_pro" : legacyPlan === "pro" ? "coach_ai" : null,
+        resource: "maxCoachOwnedMeals",
+      });
+    }
+    return { current, limit };
+  }
+
   _canEdit(actor, comida) {
     if (this._isAdmin(actor)) return true;
     return (
@@ -357,21 +410,37 @@ class ServicioComidas {
     );
   }
 
-  _canAccess(actor, comida) {
+  _canAccess(actor, comida, effectiveCapabilities = null) {
     if (!comida) return false;
     if (this._isAdmin(actor)) return true;
     if (!this._isCoach(actor)) return false;
     if (this._canEdit(actor, comida)) return true;
-    return comida.estado === "activo" && ["sistema", "publica"].includes(comida.visibilidad);
+    return comida.estado === "activo" && canUseProfessionalTemplate(
+      { ...actor, effectiveCapabilities },
+      comida,
+      "meal"
+    );
   }
 
   async listarComidas(user, filters = {}) {
     const actor = await this._actor(user);
-    await this._assertNutritionAccess(actor, {
+    const access = await this._assertNutritionAccess(actor, {
       anyOf: ["foodLibrarySearch", "menuLibrarySearch", "manualBuilder", "ownTemplates"],
     });
-
-    const query = this._isAdmin(actor) ? {} : this.model.ownerVisibilityForCoach(this._actorId(actor));
+    const scope = normalizeToken(filters.scope, this._isAdmin(actor) ? "all" : "mine");
+    let query = {};
+    if (!this._isAdmin(actor)) {
+      if (["global", "admin", "zumafit", "biblioteca"].includes(scope)) {
+        if (access.effectiveCapabilities?.features?.menus?.canUseGlobalMealTemplates !== true) {
+          throw new Error("COACH_FEATURE_NOT_ALLOWED");
+        }
+        query = this.model.adminTemplatesForCoach({
+          premium: access.effectiveCapabilities?.features?.menus?.canUsePremiumMealTemplates === true,
+        });
+      } else {
+        query = this.model.ownerOnlyForCoach(this._actorId(actor));
+      }
+    }
     const comidas = await this.model.listarComidas({
       ...filters,
       query,
@@ -389,22 +458,23 @@ class ServicioComidas {
 
   async obtenerPorId(user, id) {
     const actor = await this._actor(user);
-    await this._assertNutritionAccess(actor, {
+    const access = await this._assertNutritionAccess(actor, {
       anyOf: ["foodLibrarySearch", "menuLibrarySearch", "manualBuilder", "ownTemplates"],
     });
 
     const comida = normalizeDoc(await this.model.obtenerPorId(id));
     if (!comida) return null;
-    if (!this._canAccess(actor, comida)) throw new Error("FORBIDDEN");
+    if (!this._canAccess(actor, comida, access.effectiveCapabilities)) throw new Error("FORBIDDEN");
     return comida;
   }
 
   async crearComida(user, payload = {}) {
     const actor = await this._actor(user);
     if (!this._isAdmin(actor)) {
-      await this._assertNutritionAccess(actor, {
-        anyOf: ["ownTemplates", "manualBuilder", "foodLibrarySearch"],
+      const access = await this._assertNutritionAccess(actor, {
+        anyOf: ["canCreateCoachMeals"],
       });
+      await this._assertCoachOwnedMealCapacity(actor, access.effectiveCapabilities);
     }
 
     const doc = normalizePayload(payload, {
@@ -453,15 +523,26 @@ class ServicioComidas {
 
   async duplicarComida(user, id, payload = {}) {
     const actor = await this._actor(user);
+    let access;
     if (this._isAdmin(actor)) {
-      await this._assertNutritionAccess(actor);
+      access = await this._assertNutritionAccess(actor);
     } else {
-      await this._assertNutritionAccess(actor, { anyOf: ["duplicatePlans", "ownTemplates"] });
+      access = await this._assertNutritionAccess(actor, { anyOf: ["duplicatePlans", "ownTemplates"] });
     }
 
     const current = normalizeDoc(await this.model.obtenerPorId(id));
     if (!current) throw new Error("NOT_FOUND");
-    if (!this._canAccess(actor, current)) throw new Error("FORBIDDEN");
+    if (!this._canAccess(actor, current, access.effectiveCapabilities)) throw new Error("FORBIDDEN");
+    if (
+      !this._isAdmin(actor) &&
+      ["admin_global", "admin_premium"].includes(professionalTemplateSource(current)) &&
+      access.effectiveCapabilities?.features?.menus?.canDuplicateGlobalTemplates !== true
+    ) {
+      throw new Error("COACH_FEATURE_NOT_ALLOWED");
+    }
+    if (!this._isAdmin(actor)) {
+      await this._assertCoachOwnedMealCapacity(actor, access.effectiveCapabilities);
+    }
 
     const clone = normalizePayload(
       {
@@ -474,6 +555,8 @@ class ServicioComidas {
         grupoComida: current.grupoComida,
         visibilidad: this._isAdmin(actor) ? payload.visibilidad || current.visibilidad || "privada" : "privada",
         estado: "activo",
+        sourceOriginalId: current._id,
+        sourceOriginalType: professionalTemplateSource(current),
       },
       {
         ownerType: this._isAdmin(actor) ? "admin" : "coach",
@@ -481,6 +564,14 @@ class ServicioComidas {
         actorId: this._actorId(actor),
       }
     );
+
+    if (!this._isAdmin(actor)) {
+      clone.sourceType = "coach_owned";
+      clone.planMinimo = "free";
+      delete clone.templateTier;
+    }
+    clone.sourceOriginalId = current._id;
+    clone.sourceOriginalType = professionalTemplateSource(current);
 
     if (mealIdentity(current) === mealIdentity(clone)) {
       throw new Error("DUPLICATE_IDENTICAL");

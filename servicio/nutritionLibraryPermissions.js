@@ -9,6 +9,12 @@ import {
   normalizeRole,
 } from "./comidasGuardadasPermisos.js";
 import { getClientNutritionLimitsForPlan } from "./clientNutritionCapabilities.js";
+import {
+  canUseProfessionalTemplate,
+  normalizeProfessionalLibraryPlan,
+  professionalTemplateSource,
+  resolveProfessionalLibraryCapabilities,
+} from "./professionalLibraryCapabilities.js";
 
 export const NUTRITION_LIBRARY_LIMITS = {
   cliente: {
@@ -21,8 +27,8 @@ export const NUTRITION_LIBRARY_LIMITS = {
       canAssignToClients: false,
     },
     pro: {
-      maxComidasPropias: 50,
-      maxMenusPropios: 15,
+      maxComidasPropias: 100,
+      maxMenusPropios: 10,
       adminLibrary: "global",
       premiumLibrary: false,
       canImportExcel: false,
@@ -39,8 +45,8 @@ export const NUTRITION_LIBRARY_LIMITS = {
   },
   coach: {
     free: {
-      maxComidasPropias: 20,
-      maxMenusPropios: 5,
+      maxComidasPropias: 30,
+      maxMenusPropios: 10,
       adminLibrary: "basic",
       premiumLibrary: false,
       canImportExcel: false,
@@ -56,7 +62,7 @@ export const NUTRITION_LIBRARY_LIMITS = {
     },
     vip: {
       maxComidasPropias: 1000,
-      maxMenusPropios: 300,
+      maxMenusPropios: 500,
       adminLibrary: "full",
       premiumLibrary: true,
       canImportExcel: true,
@@ -145,6 +151,17 @@ export function normalizeVisibility(value = "") {
 
 export function planTier(user = {}) {
   if (isAdmin(user)) return "vip";
+  if (isCoach(user)) {
+    const professionalPlan = normalizeProfessionalLibraryPlan(
+      user?.effectiveCapabilities?.professionalSubscription?.plan ||
+      user?.coachSubscription?.plan ||
+      user?.professionalPlan ||
+      user?.plan
+    );
+    if (professionalPlan === "coach_ai") return "vip";
+    if (professionalPlan === "coach_pro") return "pro";
+    return "free";
+  }
   const trial = user?.personalTrial || user?.trial || {};
   const trialEndsAt = trial?.endsAt ? new Date(trial.endsAt) : null;
   const trialActive =
@@ -184,7 +201,17 @@ export function getNutritionLibraryLimits(user = {}) {
   }
   const role = "coach";
   const plan = planTier(user);
-  return NUTRITION_LIBRARY_LIMITS[role]?.[plan] || NUTRITION_LIBRARY_LIMITS[role]?.free;
+  const effectiveLimits = user?.effectiveCapabilities?.limits || {};
+  return {
+    ...(NUTRITION_LIBRARY_LIMITS[role]?.[plan] || NUTRITION_LIBRARY_LIMITS[role]?.free),
+    ...(Number.isFinite(Number(effectiveLimits.maxCoachOwnedMeals))
+      ? { maxComidasPropias: Number(effectiveLimits.maxCoachOwnedMeals) }
+      : {}),
+    ...(Number.isFinite(Number(effectiveLimits.maxCoachOwnedMenus))
+      ? { maxMenusPropios: Number(effectiveLimits.maxCoachOwnedMenus) }
+      : {}),
+    ...resolveProfessionalLibraryCapabilities(user),
+  };
 }
 
 export function isOwner(user = {}, item = {}) {
@@ -250,9 +277,14 @@ export function isFavoriteForUser(user = {}, item = {}, field = "favoritaPara") 
   return list.some((entry) => idToString(entry) === userId);
 }
 
-export function canUseAdminNutritionLibrary(user = {}, item = {}) {
+export function canUseAdminNutritionLibrary(user = {}, item = {}, { kind = "" } = {}) {
   if (!isAdminOwned(item)) return false;
   if (isAdmin(user)) return true;
+
+  if (isCoach(user)) {
+    const itemKind = kind || (Array.isArray(item?.comidas) || item?.kcalObjetivo !== undefined ? "menu" : "meal");
+    if (!canUseProfessionalTemplate(user, item, itemKind)) return false;
+  }
 
   const rawVisibility = String(item.visibilidad || item.visibility || "");
   const normalizedRaw = rawVisibility
@@ -273,14 +305,14 @@ export function canUseAdminNutritionLibrary(user = {}, item = {}) {
   return false;
 }
 
-export function canViewNutritionItem(user = {}, item = {}, { assignmentField = "asignadaA" } = {}) {
+export function canViewNutritionItem(user = {}, item = {}, { assignmentField = "asignadaA", kind = "" } = {}) {
   if (!item) return false;
   if (isAdmin(user)) return true;
   if (item.activo === false || item.activa === false || item.estado === "inactivo") return false;
   if (isOwner(user, item)) return true;
   if (isClient(user) && isAssignedToClient(user, item, assignmentField)) return true;
   if (isCoach(user) && isAssignedByCoach(user, item, assignmentField)) return true;
-  return canUseAdminNutritionLibrary(user, item);
+  return canUseAdminNutritionLibrary(user, item, { kind });
 }
 
 export function canEditNutritionItem(user = {}, item = {}) {
@@ -290,7 +322,11 @@ export function canEditNutritionItem(user = {}, item = {}) {
 }
 
 export function canCopyNutritionItem(user = {}, item = {}, options = {}) {
-  return canViewNutritionItem(user, item, options) && !isOwner(user, item);
+  if (!canViewNutritionItem(user, item, options) || isOwner(user, item)) return false;
+  if (isCoach(user) && isAdminOwned(item)) {
+    return resolveProfessionalLibraryCapabilities(user).canDuplicateGlobalTemplates === true;
+  }
+  return true;
 }
 
 export function canAssignNutritionItem(user = {}, item = {}, options = {}) {
@@ -298,7 +334,14 @@ export function canAssignNutritionItem(user = {}, item = {}, options = {}) {
   if (isAdmin(user)) return true;
   if (!isCoach(user)) return false;
   if (!getNutritionLibraryLimits(user)?.canAssignToClients) return false;
-  return isOwner(user, item) || canUseAdminNutritionLibrary(user, item) || canViewNutritionItem(user, item, options);
+  if (isOwner(user, item)) return true;
+  if (isAdminOwned(item)) {
+    return (
+      resolveProfessionalLibraryCapabilities(user).canAssignGlobalTemplates === true &&
+      canUseAdminNutritionLibrary(user, item, options)
+    );
+  }
+  return professionalTemplateSource(item) === "assigned_snapshot" && canViewNutritionItem(user, item, options);
 }
 
 export function buildOwnerQuery(user = {}) {
@@ -355,8 +398,17 @@ export function buildAssignedQuery(user = {}, field = "asignadaA") {
   };
 }
 
-export function buildAdminLibraryQuery(user = {}) {
+export function buildAdminLibraryQuery(user = {}, { kind = "" } = {}) {
   if (isAdmin(user)) return buildOwnerQuery(user);
+
+  if (isCoach(user)) {
+    const capabilities = resolveProfessionalLibraryCapabilities(user);
+    const meal = String(kind || "").toLowerCase().startsWith("meal") || String(kind || "").toLowerCase().startsWith("comida");
+    const canUseGlobal = meal
+      ? capabilities.canUseGlobalMealTemplates === true
+      : capabilities.canUseGlobalMenuTemplates === true;
+    if (!canUseGlobal) return { _id: null };
+  }
 
   const allowedVisibility = ["global"];
   if (planTier(user) === "vip") allowedVisibility.push("premium");
@@ -367,16 +419,29 @@ export function buildAdminLibraryQuery(user = {}) {
   const allowedPlans = ["free"];
   if (planTier(user) !== "free") allowedPlans.push("pro");
   if (planTier(user) === "vip") allowedPlans.push("vip");
+  const allowedTemplateTiers = ["global_basic"];
+  if (planTier(user) !== "free") allowedTemplateTiers.push("global_pro");
+  if (planTier(user) === "vip") allowedTemplateTiers.push("global_premium");
 
   return {
     $and: [
       buildOwnerQuery({ role: "admin", id: libraryUserId(user) }),
+      { visibilidad: { $in: allowedVisibility } },
       {
-        visibilidad: { $in: allowedVisibility },
         $or: [
-          { planMinimo: { $in: allowedPlans } },
-          { planMinimo: { $exists: false } },
-          { planMinimo: null },
+          { templateTier: { $in: allowedTemplateTiers } },
+          {
+            $and: [
+              { $or: [{ templateTier: { $exists: false } }, { templateTier: null }] },
+              {
+                $or: [
+                  { planMinimo: { $in: allowedPlans } },
+                  { planMinimo: { $exists: false } },
+                  { planMinimo: null },
+                ],
+              },
+            ],
+          },
         ],
       },
     ],

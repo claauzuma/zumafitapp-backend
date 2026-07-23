@@ -1,3 +1,5 @@
+import { getRuntimeClientPlanSetting } from "./clientPlanSettings.js";
+
 function token(value = "") {
   return String(value || "")
     .trim()
@@ -26,6 +28,8 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     globalLibrary: false,
     premiumLibrary: false,
     automaticMenu: false,
+    autoCompleteRemainingMeals: false,
+    flexibleMarginRecommendations: false,
     exportPdf: false,
   },
   pro: {
@@ -46,6 +50,8 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     globalLibrary: true,
     premiumLibrary: false,
     automaticMenu: false,
+    autoCompleteRemainingMeals: true,
+    flexibleMarginRecommendations: true,
     exportPdf: false,
   },
   vip: {
@@ -66,6 +72,8 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     globalLibrary: true,
     premiumLibrary: true,
     automaticMenu: false,
+    autoCompleteRemainingMeals: true,
+    flexibleMarginRecommendations: true,
     exportPdf: false,
   },
 };
@@ -116,7 +124,22 @@ export function clientHasCoach(user = {}) {
 }
 
 export function getClientNutritionLimitsForPlan(plan = "free") {
-  return CLIENT_NUTRITION_CAPABILITIES[normalizeClientPlan(plan)] || CLIENT_NUTRITION_CAPABILITIES.free;
+  const code = normalizeClientPlan(plan);
+  const base = CLIENT_NUTRITION_CAPABILITIES[code] || CLIENT_NUTRITION_CAPABILITIES.free;
+  const setting = getRuntimeClientPlanSetting(code);
+  return {
+    ...base,
+    ownMenusLimit: setting.limits.maxMenus,
+    ownMealsLimit: setting.limits.maxSavedMeals,
+    menuDaysLimit: setting.limits.maxDaysPerMenu,
+    favoritesLimit: setting.limits.maxFavorites,
+    trackingHistoryDays: setting.limits.trackingHistoryDays,
+    manualObjectiveChangeDays: setting.limits.goalChangesWindowDays,
+    manualObjectiveChangesPerWindow: setting.limits.goalChangesPerWindow,
+    basicLibrary: ["basic", "global", "premium"].includes(setting.libraryAccess),
+    globalLibrary: ["global", "premium"].includes(setting.libraryAccess),
+    premiumLibrary: setting.libraryAccess === "premium",
+  };
 }
 
 function hasActiveProTrial(user = {}) {
@@ -155,6 +178,8 @@ export function getClientNutritionCapabilities(user = {}, options = {}) {
     canUseGlobalLibrary: !!config.globalLibrary,
     canUsePremiumLibrary: !!config.premiumLibrary,
     canGenerateAutomaticMenu: !!config.automaticMenu,
+    canAutoCompleteRemainingMeals: config.autoCompleteRemainingMeals === true,
+    canUseFlexibleMarginRecommendations: config.flexibleMarginRecommendations === true,
     canExportMenuPdf: !!config.exportPdf,
     limits: {
       ownMenus: config.ownMenusLimit,

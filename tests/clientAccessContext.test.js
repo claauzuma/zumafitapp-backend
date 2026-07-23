@@ -24,12 +24,22 @@ test("cliente free autogestionado queda en Free Lite con limites bajos", () => {
   assert.equal(context.capabilities.limits.ownMenus, 1);
   assert.equal(context.capabilities.limits.ownMeals, 5);
   assert.equal(context.capabilities.canUseGlobalLibrary, false);
+  assert.equal(context.capabilities.canAutoCompleteRemainingMeals, false);
+  assert.equal(context.capabilities.canUseFlexibleMarginRecommendations, false);
   assert.equal(context.featureAvailability.nutrition.autoMenus.status, "blocked");
+  assert.equal(context.featureAvailability.nutrition.autoCompleteRemainingMeals.status, "blocked");
 });
 
 test("premium y premium2 se normalizan como pro/vip", () => {
-  assert.equal(resolveClientAccessContext({ role: "cliente", plan: "premium" }, { now }).personalPlan, "pro");
-  assert.equal(resolveClientAccessContext({ role: "cliente", plan: "premium2" }, { now }).personalPlan, "vip");
+  const pro = resolveClientAccessContext({ role: "cliente", plan: "premium" }, { now });
+  const vip = resolveClientAccessContext({ role: "cliente", plan: "premium2" }, { now });
+
+  assert.equal(pro.personalPlan, "pro");
+  assert.equal(vip.personalPlan, "vip");
+  assert.equal(pro.capabilities.canAutoCompleteRemainingMeals, true);
+  assert.equal(pro.capabilities.canUseFlexibleMarginRecommendations, true);
+  assert.equal(vip.capabilities.canAutoCompleteRemainingMeals, true);
+  assert.equal(vip.capabilities.canUseFlexibleMarginRecommendations, true);
 });
 
 test("trial Pro activo modifica solo el plan efectivo", () => {
@@ -191,6 +201,8 @@ test("cliente Pro con Coach Pro usa servicio profesional y suprime renovacion pe
   assert.equal(context.authority.nutrition, "coach");
   assert.equal(context.authority.training, "coach");
   assert.equal(context.authority.goals, "coach");
+  assert.equal(context.capabilities.canAutoCompleteRemainingMeals, false);
+  assert.equal(context.capabilities.canUseFlexibleMarginRecommendations, false);
 });
 
 test("cliente VIP con Coach VIP usa acceso profesional como acceso principal", () => {
@@ -213,11 +225,41 @@ test("cliente VIP con Coach VIP usa acceso profesional como acceso principal", (
   assert.equal(context.primaryAccess.id, "service_vip");
   assert.equal(context.primaryAccess.billingOwner, "coach");
   assert.equal(context.capabilities.primaryAuthority, "coach");
+  assert.equal(context.capabilities.canAutoCompleteRemainingMeals, true);
+  assert.equal(context.capabilities.canUseFlexibleMarginRecommendations, true);
   assert.equal(context.authority.nutrition, "coach");
   assert.equal(context.featureAvailability.nutrition.autoCoach.status, "coming_soon");
   assert.equal(context.personalSubscription.status, "suppressed_by_coach");
   assert.equal(context.personalSubscription.autoRenew, false);
   assert.equal(context.statusWarnings.length, 1);
+});
+
+test("cliente Free con coach recibe automatismos solo del servicio profesional explicito", () => {
+  const coachPro = resolveClientAccessContext({
+    role: "cliente",
+    personalPlan: "free",
+    coachAccess: {
+      status: "active",
+      coachId: "coach-pro",
+      servicePackage: "service_pro",
+      startedAt: "2026-06-20T00:00:00.000Z",
+    },
+  }, { now });
+  const coachVip = resolveClientAccessContext({
+    role: "cliente",
+    personalPlan: "free",
+    coachAccess: {
+      status: "active",
+      coachId: "coach-vip",
+      servicePackage: "service_vip",
+      startedAt: "2026-06-20T00:00:00.000Z",
+    },
+  }, { now });
+
+  assert.equal(coachPro.capabilities.canAutoCompleteRemainingMeals, false);
+  assert.equal(coachPro.capabilities.canUseFlexibleMarginRecommendations, false);
+  assert.equal(coachVip.capabilities.canAutoCompleteRemainingMeals, true);
+  assert.equal(coachVip.capabilities.canUseFlexibleMarginRecommendations, true);
 });
 
 test("cancel_at_period_end personal se conserva al entrar con coach", () => {

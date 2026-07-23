@@ -1,5 +1,23 @@
 import { MongoClient } from "mongodb"
+import dns from "node:dns"
 import config from '../config.js'
+
+// Algunas instalaciones de Windows dejan a Node apuntando a 127.0.0.1 como
+// DNS aunque no haya un resolvedor local activo. Eso impide resolver las URI
+// mongodb+srv (ECONNREFUSED), aun cuando el DNS de Windows funciona bien.
+const asegurarDnsParaMongoSrv = () => {
+    if (!config.STRCNX.startsWith("mongodb+srv://")) return
+
+    const servidores = dns.getServers()
+    const soloLocales = servidores.length > 0 && servidores.every(servidor =>
+        servidor === "127.0.0.1" || servidor === "::1"
+    )
+
+    if (soloLocales) {
+        dns.setServers(["1.1.1.1", "8.8.8.8"])
+        console.log("DNS local no disponible; usando DNS público para resolver MongoDB.")
+    }
+}
 
 class CnxMongoDB {
     static client = null
@@ -9,6 +27,7 @@ class CnxMongoDB {
     static conectar = async _ => {
         try {
             console.log('Conectando a la base de datos...')
+            asegurarDnsParaMongoSrv()
             CnxMongoDB.client = new MongoClient(config.STRCNX)
             await CnxMongoDB.client.connect()
             console.log('Base de datos conectada!')

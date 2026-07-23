@@ -115,6 +115,7 @@ class ModelMongoDBInvitedUsers {
       inviteeEmailNormalized: email,
       role: doc.role || null,
       plan: doc.plan ?? null,
+      professionalPlan: doc.professionalPlan || null,
       status: doc.status || "pending",
       profile: {
         nombre: String(doc?.profile?.nombre || "").trim(),

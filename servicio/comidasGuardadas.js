@@ -1,10 +1,18 @@
 import { ObjectId } from "mongodb";
 
 import ModelMongoDBComidasGuardadas, { idValues } from "../model/DAO/comidasGuardadasMongoDB.js";
+import ModelMongoDBComidas from "../model/DAO/comidasMongoDB.js";
 import ModelMongoDBAlimentos from "../model/DAO/alimentosMongoDB.js";
 import ModelMongoDBUsuarios from "../model/DAO/usuariosMongoDB.js";
+import ModelMongoDBCoachPlanConfigs from "../model/DAO/coachPlanConfigsMongoDB.js";
 import ServicioFoodLogs from "./foodLogs.js";
 import { requireQuota } from "./accessGates.js";
+import {
+  coachResourceLimitError,
+  normalizeCoachPlanCode,
+  normalizePlanConfig,
+  resolveEffectiveCoachCapabilities,
+} from "./coachPlans.js";
 import {
   canAccessSavedMeal,
   canAssignSavedMeal,
@@ -19,6 +27,11 @@ import {
   normalizePlan,
   normalizeRole,
 } from "./comidasGuardadasPermisos.js";
+import {
+  canUseProfessionalTemplate,
+  normalizeProfessionalTemplateTier,
+  professionalTemplateSource,
+} from "./professionalLibraryCapabilities.js";
 
 const MEAL_TYPES = new Set(["desayuno", "almuerzo", "merienda", "cena", "snack", "preEntreno", "postEntreno", "otro"]);
 const VISIBILITIES = new Set(["privada", "asignada", "clientesAsignados", "gimnasio", "global", "premium"]);
@@ -293,8 +306,10 @@ function normalizeDoc(doc = null) {
 class ServicioComidasGuardadas {
   constructor() {
     this.model = new ModelMongoDBComidasGuardadas();
+    this.coachComidasModel = new ModelMongoDBComidas();
     this.alimentosModel = new ModelMongoDBAlimentos();
     this.usuariosModel = new ModelMongoDBUsuarios();
+    this.coachPlanModel = new ModelMongoDBCoachPlanConfigs();
     this.foodLogs = new ServicioFoodLogs();
   }
 
@@ -308,6 +323,44 @@ class ServicioComidasGuardadas {
 
   _actorId(actor) {
     return idToString(actor?._id || actor?.id);
+  }
+
+  async _effectiveCoachCapabilities(actor, currentCoachOwnedMeals = 0) {
+    const planCode = normalizeCoachPlanCode(actor?.coachSubscription?.plan || actor?.plan) || "trial_pro";
+    const planConfig = typeof this.coachPlanModel?.getByCode === "function"
+      ? await this.coachPlanModel.getByCode(planCode)
+      : normalizePlanConfig(planCode);
+    return resolveEffectiveCoachCapabilities({
+      coach: { ...actor, plan: planCode },
+      planConfig,
+      currentCoachOwnedMeals,
+    });
+  }
+
+  async _assertCoachOwnedMealCapacity(actor, savedMealCount = null) {
+    if (!isCoach(actor)) return;
+    const coachId = this._actorId(actor);
+    const planCode = normalizeCoachPlanCode(actor?.coachSubscription?.plan || actor?.plan) || "trial_pro";
+    const [savedMeals, createdMeals] = await Promise.all([
+      savedMealCount === null
+        ? this.model.countOwnedByCoach(coachId)
+        : Number(savedMealCount || 0),
+      typeof this.coachComidasModel?.countOwnedByCoach === "function"
+        ? this.coachComidasModel.countOwnedByCoach(coachId)
+        : 0,
+    ]);
+    const current = Number(savedMeals || 0) + Number(createdMeals || 0);
+    const effective = await this._effectiveCoachCapabilities(actor, current);
+    const limit = Number(effective?.limits?.maxCoachOwnedMeals);
+    if (!Number.isFinite(limit) || limit < 0 || current < limit) return;
+    throw coachResourceLimitError("COACH_MEAL_LIMIT_EXCEEDED", {
+      current,
+      limit,
+      plan: planCode === "vip" ? "coach_ai" : planCode === "pro" ? "coach_pro" : "coach_initial",
+      overrideApplied: effective?.sources?.maxCoachOwnedMeals === "override",
+      upgradeTarget: planCode === "trial_pro" ? "coach_pro" : planCode === "pro" ? "coach_ai" : null,
+      resource: "maxCoachOwnedMeals",
+    });
   }
 
   async _findFood(raw = {}) {
@@ -373,6 +426,12 @@ class ServicioComidasGuardadas {
     const forcedVisibility = role === "cliente" ? "privada" : null;
     const visibilidad = forcedVisibility || normalizeVisibility(payload.visibilidad || payload.visibility, defaultVisibility);
     const origen = normalizeOrigin(payload.origen || payload.origin, context.origen || "creadaManual");
+    const templateTier = ownerType === "admin"
+      ? normalizeProfessionalTemplateTier(
+          payload.templateTier || payload.libraryTier || payload.planMinimo || visibilidad,
+          "global_basic"
+        )
+      : null;
 
     return {
       nombre: cleanString(payload.nombre || payload.name, 180) || "Comida sin nombre",
@@ -385,6 +444,11 @@ class ServicioComidasGuardadas {
       ownerId: context.ownerId || this._actorId(actor),
       ownerRole: role,
       ownerType,
+      sourceType:
+        ownerType === "admin"
+          ? templateTier === "global_premium" ? "admin_premium" : "admin_global"
+          : ownerType === "coach" ? "coach_owned" : "client_owned",
+      ...(templateTier ? { templateTier } : {}),
       creadaPorId: context.creadaPorId || this._actorId(actor),
       creadaPorRol: role,
       visibilidad,
@@ -392,7 +456,9 @@ class ServicioComidasGuardadas {
       gimnasioId: payload.gimnasioId || context.gimnasioId || null,
       profesionalId: payload.profesionalId || (role === "coach" ? this._actorId(actor) : null),
       origen,
-      planMinimo: cleanString(payload.planMinimo || (visibilidad === "premium" ? "pro" : "free"), 40),
+      planMinimo: ownerType === "admin"
+        ? templateTier === "global_premium" ? "vip" : templateTier === "global_pro" ? "pro" : "free"
+        : cleanString(payload.planMinimo || "free", 40),
       activo: payload.activo !== false,
     };
   }
@@ -475,14 +541,18 @@ class ServicioComidasGuardadas {
 
   async create(user, payload = {}, context = {}) {
     const actor = await this._actor(user);
-    const ownCount = await this.model.count({
-      query: {
-        ownerId: { $in: idValues(this._actorId(actor)) },
-        activo: { $ne: false },
-      },
-    });
+    const ownCount = isCoach(actor) && typeof this.model.countOwnedByCoach === "function"
+      ? await this.model.countOwnedByCoach(this._actorId(actor))
+      : await this.model.count({
+          query: {
+            ownerId: { $in: idValues(this._actorId(actor)) },
+            activo: { $ne: false },
+          },
+        });
     if (isClient(actor)) {
       requireQuota(actor, "ownMeals", ownCount);
+    } else if (isCoach(actor)) {
+      await this._assertCoachOwnedMealCapacity(actor, ownCount);
     } else if (!canCreateSavedMeal(actor, ownCount)) {
       throw new Error("SAVED_MEAL_LIMIT");
     }
@@ -541,6 +611,15 @@ class ServicioComidasGuardadas {
     const current = normalizeDoc(await this.model.getById(id));
     if (!current) throw new Error("NOT_FOUND");
     if (!canAccessSavedMeal(actor, current)) throw new Error("FORBIDDEN");
+    if (isCoach(actor) && ["admin_global", "admin_premium"].includes(professionalTemplateSource(current))) {
+      const effectiveCapabilities = await this._effectiveCoachCapabilities(actor);
+      if (
+        !canUseProfessionalTemplate({ ...actor, effectiveCapabilities }, current, "meal") ||
+        effectiveCapabilities?.features?.menus?.canDuplicateGlobalTemplates !== true
+      ) {
+        throw new Error("FORBIDDEN");
+      }
+    }
     const role = normalizeRole(actor);
     return await this.create({ id: this._actorId(actor) }, {
       ...current,

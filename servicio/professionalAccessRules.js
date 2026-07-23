@@ -20,15 +20,15 @@ export const PROFESSIONAL_SUBSCRIPTION_PLANS = {
   coach_initial: {
     id: "coach_initial",
     legacyPlan: "trial_pro",
-    label: "Coach Inicial",
-    clientLimit: 5,
+    label: "Inicial",
+    clientLimit: 3,
     canOffer: ["service_pro"],
     graceDays: 7,
   },
   coach_pro: {
     id: "coach_pro",
     legacyPlan: "pro",
-    label: "Coach Pro",
+    label: "Pro",
     clientLimit: 25,
     canOffer: ["service_pro"],
     graceDays: 7,
@@ -36,8 +36,8 @@ export const PROFESSIONAL_SUBSCRIPTION_PLANS = {
   coach_ai: {
     id: "coach_ai",
     legacyPlan: "vip",
-    label: "Coach IA",
-    clientLimit: 50,
+    label: "VIP",
+    clientLimit: 100,
     canOffer: ["service_pro", "service_vip"],
     graceDays: 7,
   },
@@ -117,8 +117,9 @@ export function normalizeCoachSubscription(user = {}, { now = new Date() } = {})
       ? new Date(currentPeriodEnd.getTime() + Number(config.graceDays || 7) * MS_DAY)
       : null);
   const rawStatus = token(stored.status || user.subscription?.status || (hasExplicit ? "pending" : "active"));
+  const isTrial = rawStatus === "trial" || rawStatus === "trialing";
   let status = rawStatus || "pending";
-  if (status === "trialing") status = "active";
+  if (isTrial) status = "active";
   if (status === "cancel_at_period_end" && currentPeriodEnd && currentPeriodEnd.getTime() < now.getTime()) status = "expired";
   if (status === "past_due" && graceEndsAt && graceEndsAt.getTime() < now.getTime()) status = "expired";
 
@@ -126,6 +127,7 @@ export function normalizeCoachSubscription(user = {}, { now = new Date() } = {})
     plan,
     label: config.label,
     status,
+    isTrial,
     active: ["active", "cancel_at_period_end"].includes(status),
     canInviteOrActivate: ["active", "cancel_at_period_end"].includes(status),
     inGrace: status === "past_due" && graceEndsAt && graceEndsAt.getTime() >= now.getTime(),

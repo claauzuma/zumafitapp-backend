@@ -1,8 +1,10 @@
 import { ObjectId } from "mongodb";
 
 import ModelMongoDBComidasGuardadas from "../model/DAO/comidasGuardadasMongoDB.js";
+import ModelMongoDBComidas from "../model/DAO/comidasMongoDB.js";
 import ModelMongoDBMenus from "../model/DAO/menusMongoDB.js";
 import ModelMongoDBUsuarios from "../model/DAO/usuariosMongoDB.js";
+import ModelMongoDBCoachPlanConfigs from "../model/DAO/coachPlanConfigsMongoDB.js";
 import {
   canAssignNutritionItem,
   canCopyNutritionItem,
@@ -28,6 +30,11 @@ import {
   buildOwnerQuery,
 } from "./nutritionLibraryPermissions.js";
 import {
+  professionalTemplateSource,
+  professionalTemplateTier,
+  resolveProfessionalLibraryCapabilities,
+} from "./professionalLibraryCapabilities.js";
+import {
   idToString,
   isAdmin,
   isCoach,
@@ -40,6 +47,16 @@ import {
   requireMenuDaysLimit,
   requireQuota,
 } from "./accessGates.js";
+import {
+  coachResourceLimitError,
+  normalizeCoachPlanCode,
+  normalizePlanConfig,
+  resolveEffectiveCoachCapabilities,
+} from "./coachPlans.js";
+import {
+  requireCoachSubscriptionActive,
+  requireProfessionalScope,
+} from "./professionalAccessRules.js";
 
 function cleanString(value = "", max = 500) {
   return String(value || "").trim().slice(0, max);
@@ -105,11 +122,13 @@ function normalizeMealItems(doc = {}) {
 
 function normalizeBadges(item = {}, user = {}, { assignmentField = "asignadaA", favoriteField = "favoritaPara" } = {}) {
   const badges = [];
+  const sourceType = professionalTemplateSource(item);
   const visibility = normalizeVisibility(item.visibilidad || item.visibility);
   const ownerType = normalizeOwnerType(item.ownerType || item.ownerRole || item.creadaPorRol);
-  if (isOwner(user, item)) badges.push("Propia");
-  if (ownerType === "admin") badges.push("ZumaFit");
-  if (ownerType === "coach") badges.push("Coach");
+  if (isOwner(user, item)) badges.push("Creado por vos");
+  if (["admin_global", "admin_premium"].includes(sourceType) || ownerType === "admin") badges.push("Plantilla ZumaFit");
+  if (sourceType === "assigned_snapshot") badges.push("Asignado a cliente");
+  if (ownerType === "coach" && !isOwner(user, item)) badges.push("Coach");
   if (visibility === "premium") badges.push("Premium");
   if (visibility === "solo_coaches") badges.push("Solo coaches");
   if (visibility === "solo_clientes") badges.push("Solo clientes");
@@ -126,6 +145,7 @@ function normalizeMealForLibrary(doc = {}, user = {}) {
   const totals = totalsFromMealDoc(doc);
   const assignmentField = "asignadaA";
   const favoriteField = "favoritaPara";
+  const sourceType = professionalTemplateSource(doc);
   return {
     ...doc,
     id: idToString(doc._id || doc.id),
@@ -136,6 +156,8 @@ function normalizeMealForLibrary(doc = {}, user = {}) {
     ownerId: idToString(doc.ownerId),
     visibilidad: normalizeVisibility(doc.visibilidad || doc.visibility),
     planMinimo: doc.planMinimo || "free",
+    sourceType,
+    templateTier: ["admin_global", "admin_premium"].includes(sourceType) ? professionalTemplateTier(doc) : null,
     items,
     alimentos: items,
     totales: totals,
@@ -144,12 +166,12 @@ function normalizeMealForLibrary(doc = {}, user = {}) {
     assigned: isClient(user) ? isAssignedToClient(user, doc, assignmentField) : isAssignedByCoach(user, doc, assignmentField),
     badges: normalizeBadges(doc, user, { assignmentField, favoriteField }),
     permissions: {
-      canView: canViewNutritionItem(user, doc, { assignmentField }),
+      canView: canViewNutritionItem(user, doc, { assignmentField, kind: "meal" }),
       canEdit: canEditNutritionItem(user, doc),
-      canCopy: canCopyNutritionItem(user, doc, { assignmentField }),
-      canAssign: canAssignNutritionItem(user, doc, { assignmentField }),
-      canFavorite: canViewNutritionItem(user, doc, { assignmentField }),
-      canUseInTracking: isClient(user) && canViewNutritionItem(user, doc, { assignmentField }),
+      canCopy: canCopyNutritionItem(user, doc, { assignmentField, kind: "meal" }),
+      canAssign: canAssignNutritionItem(user, doc, { assignmentField, kind: "meal" }),
+      canFavorite: sourceType !== "assigned_snapshot" && canViewNutritionItem(user, doc, { assignmentField, kind: "meal" }),
+      canUseInTracking: isClient(user) && canViewNutritionItem(user, doc, { assignmentField, kind: "meal" }),
     },
   };
 }
@@ -159,6 +181,7 @@ function normalizeMenuForLibrary(doc = {}, user = {}) {
   const totals = totalsFromMenuDoc(doc);
   const assignmentField = "asignadoA";
   const favoriteField = "favoritoPara";
+  const sourceType = professionalTemplateSource(doc);
   return {
     ...doc,
     id: idToString(doc._id || doc.id),
@@ -168,6 +191,8 @@ function normalizeMenuForLibrary(doc = {}, user = {}) {
     ownerId: idToString(doc.ownerId),
     visibilidad: normalizeVisibility(doc.visibilidad || doc.visibility),
     planMinimo: doc.planMinimo || "free",
+    sourceType,
+    templateTier: ["admin_global", "admin_premium"].includes(sourceType) ? professionalTemplateTier(doc) : null,
     comidas,
     cantidadComidas: number(doc.cantidadComidas || comidas.length),
     macrosTotales: totals,
@@ -176,12 +201,26 @@ function normalizeMenuForLibrary(doc = {}, user = {}) {
     assigned: isClient(user) ? isAssignedToClient(user, doc, assignmentField) : isAssignedByCoach(user, doc, assignmentField),
     badges: normalizeBadges(doc, user, { assignmentField, favoriteField }),
     permissions: {
-      canView: canViewNutritionItem(user, doc, { assignmentField }),
+      canView: canViewNutritionItem(user, doc, { assignmentField, kind: "menu" }),
       canEdit: canEditNutritionItem(user, doc),
-      canCopy: canCopyNutritionItem(user, doc, { assignmentField }),
-      canAssign: canAssignNutritionItem(user, doc, { assignmentField }),
-      canFavorite: canViewNutritionItem(user, doc, { assignmentField }),
+      canCopy: canCopyNutritionItem(user, doc, { assignmentField, kind: "menu" }),
+      canAssign: canAssignNutritionItem(user, doc, { assignmentField, kind: "menu" }),
+      canFavorite: sourceType !== "assigned_snapshot" && canViewNutritionItem(user, doc, { assignmentField, kind: "menu" }),
     },
+  };
+}
+
+function assignedMenuAsLibraryDoc(doc = {}) {
+  return {
+    ...doc,
+    ownerType: "assigned_snapshot",
+    ownerId: null,
+    source: "assigned_snapshot",
+    sourceType: "assigned_snapshot",
+    visibilidad: "asignada",
+    asignadoA: [assignmentEntry(doc.clienteId, doc.coachId || doc.assignedBy)],
+    cantidadComidas: doc.cantidadComidas || (Array.isArray(doc.comidas) ? doc.comidas.length : 0),
+    activa: doc.activa !== false && doc.estado !== "revocado",
   };
 }
 
@@ -198,15 +237,6 @@ function assignmentEntry(clienteId, coachId) {
     coachId: toMongoIdOrString(coachId),
     assignedAt: new Date(),
   };
-}
-
-function hasAssignment(list = [], clienteId = "", coachId = "") {
-  return (Array.isArray(list) ? list : []).some((entry) => {
-    if (entry && typeof entry === "object" && !Array.isArray(entry)) {
-      return idToString(entry.clienteId) === idToString(clienteId) && idToString(entry.coachId) === idToString(coachId);
-    }
-    return idToString(entry) === idToString(clienteId);
-  });
 }
 
 function isClientAssignedToCoach(client = {}, coachId = "") {
@@ -240,15 +270,17 @@ function paging(filters = {}) {
 class ServicioNutritionLibrary {
   constructor() {
     this.comidasModel = new ModelMongoDBComidasGuardadas();
+    this.coachComidasModel = new ModelMongoDBComidas();
     this.menusModel = new ModelMongoDBMenus();
     this.usuariosModel = new ModelMongoDBUsuarios();
+    this.coachPlanModel = new ModelMongoDBCoachPlanConfigs();
   }
 
   async _actor(user = {}) {
     const userId = libraryUserId(user);
     if (!userId) throw new Error("NO_AUTENTICADO");
     const dbUser = await this.usuariosModel.obtenerPorId(userId).catch(() => null);
-    return {
+    const actor = {
       ...(dbUser || {}),
       ...user,
       _id: dbUser?._id || user.id || user._id,
@@ -256,11 +288,62 @@ class ServicioNutritionLibrary {
       role: user.role || dbUser?.role || dbUser?.rol,
       rol: user.role || dbUser?.rol || dbUser?.role,
     };
+    if (isCoach(actor)) {
+      requireProfessionalScope(actor, "nutrition");
+      requireCoachSubscriptionActive(actor, { action: "nutrition_library" });
+      const planCode = normalizeCoachPlanCode(actor?.coachSubscription?.plan || actor?.plan) || "trial_pro";
+      const planConfig = typeof this.coachPlanModel?.getByCode === "function"
+        ? await this.coachPlanModel.getByCode(planCode)
+        : normalizePlanConfig(planCode);
+      const [currentClients, currentCoachOwnedMenus, currentCoachOwnedMeals] = await Promise.all([
+        typeof this.usuariosModel?.countClientsByCoachId === "function"
+          ? this.usuariosModel.countClientsByCoachId(actor._id || actor.id)
+          : 0,
+        this._ownMenuCount(actor),
+        this._coachOwnedMealCount(actor),
+      ]);
+      actor.effectiveCapabilities = resolveEffectiveCoachCapabilities({
+        coach: { ...actor, plan: planCode },
+        planConfig,
+        currentClients,
+        currentCoachOwnedMenus,
+        currentCoachOwnedMeals,
+      });
+    }
+    return actor;
   }
 
   async _ownMealCount(actor) {
     return await this.comidasModel.count({
       query: mergeAndQuery(activeQuery(), buildOwnerQuery(actor)),
+    });
+  }
+
+  async _coachOwnedMealCount(actor) {
+    const [saved, created] = await Promise.all([
+      this._ownMealCount(actor),
+      typeof this.coachComidasModel?.countOwnedByCoach === "function"
+        ? this.coachComidasModel.countOwnedByCoach(libraryUserId(actor))
+        : 0,
+    ]);
+    return Number(saved || 0) + Number(created || 0);
+  }
+
+  _assertCoachLibraryCapacity(actor, kind, current) {
+    if (!isCoach(actor)) return;
+    const meal = kind === "meal";
+    const key = meal ? "maxCoachOwnedMeals" : "maxCoachOwnedMenus";
+    const code = meal ? "COACH_MEAL_LIMIT_EXCEEDED" : "COACH_MENU_LIMIT_EXCEEDED";
+    const limit = Number(actor?.effectiveCapabilities?.limits?.[key]);
+    if (!Number.isFinite(limit) || limit < 0 || Number(current || 0) < limit) return;
+    const legacyPlan = actor?.effectiveCapabilities?.planCode || "trial_pro";
+    throw coachResourceLimitError(code, {
+      current,
+      limit,
+      plan: legacyPlan === "vip" ? "coach_ai" : legacyPlan === "pro" ? "coach_pro" : "coach_initial",
+      overrideApplied: actor?.effectiveCapabilities?.sources?.[key] === "override",
+      upgradeTarget: legacyPlan === "trial_pro" ? "coach_pro" : legacyPlan === "pro" ? "coach_ai" : null,
+      resource: key,
     });
   }
 
@@ -293,12 +376,23 @@ class ServicioNutritionLibrary {
     return Number(meals || 0) + Number(menus?.total || 0);
   }
 
+  _assertLibraryScope(actor, filters = {}, kind = "menu") {
+    const scope = normalizeScope(filters.scope);
+    if (!isCoach(actor) || scope !== "admin") return;
+    const capabilities = resolveProfessionalLibraryCapabilities(actor);
+    const allowed = kind === "meal"
+      ? capabilities.canUseGlobalMealTemplates === true
+      : capabilities.canUseGlobalMenuTemplates === true;
+    if (!allowed) throw new Error("FORBIDDEN");
+  }
+
   _mealQuery(actor, filters = {}) {
     const scope = normalizeScope(filters.scope);
     const active = activeQuery();
     if (isAdmin(actor) && scope === "all") return active;
+    if (isCoach(actor) && scope === "all") return mergeAndQuery(active, buildOwnerQuery(actor));
     if (scope === "mine") return mergeAndQuery(active, buildOwnerQuery(actor));
-    if (scope === "admin") return mergeAndQuery(active, buildAdminLibraryQuery(actor));
+    if (scope === "admin") return mergeAndQuery(active, buildAdminLibraryQuery(actor, { kind: "meal" }));
     if (scope === "assigned") return mergeAndQuery(active, buildAssignedQuery(actor, "asignadaA"));
     if (scope === "favorites") {
       const userId = libraryUserId(actor);
@@ -314,7 +408,7 @@ class ServicioNutritionLibrary {
       mergeOrQuery(
         buildOwnerQuery(actor),
         buildAssignedQuery(actor, "asignadaA"),
-        buildAdminLibraryQuery(actor)
+        buildAdminLibraryQuery(actor, { kind: "meal" })
       )
     );
   }
@@ -323,8 +417,9 @@ class ServicioNutritionLibrary {
     const scope = normalizeScope(filters.scope);
     const active = activeQuery();
     if (isAdmin(actor) && scope === "all") return active;
+    if (isCoach(actor) && scope === "all") return mergeAndQuery(active, buildOwnerQuery(actor));
     if (scope === "mine") return mergeAndQuery(active, buildOwnerQuery(actor));
-    if (scope === "admin") return mergeAndQuery(active, buildAdminLibraryQuery(actor));
+    if (scope === "admin") return mergeAndQuery(active, buildAdminLibraryQuery(actor, { kind: "menu" }));
     if (scope === "assigned") return mergeAndQuery(active, buildAssignedQuery(actor, "asignadoA"));
     if (scope === "favorites") {
       return mergeAndQuery(active, { favoritoPara: { $in: idValues(libraryUserId(actor)) } });
@@ -334,13 +429,14 @@ class ServicioNutritionLibrary {
       mergeOrQuery(
         buildOwnerQuery(actor),
         buildAssignedQuery(actor, "asignadoA"),
-        buildAdminLibraryQuery(actor)
+        buildAdminLibraryQuery(actor, { kind: "menu" })
       )
     );
   }
 
   async listMeals(user, filters = {}) {
     const actor = await this._actor(user);
+    this._assertLibraryScope(actor, filters, "meal");
     const { limit, skip, page } = paging(filters);
     const data = await this.comidasModel.list({
       ...filters,
@@ -350,7 +446,7 @@ class ServicioNutritionLibrary {
     });
 
     const comidas = (data.items || [])
-      .filter((doc) => canViewNutritionItem(actor, doc, { assignmentField: "asignadaA" }))
+      .filter((doc) => canViewNutritionItem(actor, doc, { assignmentField: "asignadaA", kind: "meal" }))
       .map((doc) => normalizeMealForLibrary(doc, actor));
 
     return {
@@ -359,14 +455,45 @@ class ServicioNutritionLibrary {
       limit,
       skip,
       page,
-      scope: normalizeScope(filters.scope),
+      scope: isCoach(actor) && normalizeScope(filters.scope) === "all" ? "mine" : normalizeScope(filters.scope),
       permissions: getNutritionLibraryLimits(actor),
     };
   }
 
   async listMenus(user, filters = {}) {
     const actor = await this._actor(user);
+    this._assertLibraryScope(actor, filters, "menu");
     const { limit, skip, page } = paging(filters);
+    const scope = normalizeScope(filters.scope);
+    if (scope === "assigned") {
+      const actorId = libraryUserId(actor);
+      const currentCoachId = isClient(actor)
+        ? idToString(
+            actor?.coach?.entrenadorId ||
+            actor?.coach?.coachId ||
+            actor?.coachId ||
+            actor?.entrenadorId ||
+            actor?.profesionalId
+          )
+        : "";
+      const data = await this.menusModel.listAssigned({
+        ...filters,
+        limit,
+        skip,
+        ...(isCoach(actor) ? { coachId: actorId } : {}),
+        ...(isClient(actor) ? { clienteId: actorId, coachId: currentCoachId || "__none__" } : {}),
+      });
+      const menus = (data.items || []).map((doc) => normalizeMenuForLibrary(assignedMenuAsLibraryDoc(doc), actor));
+      return {
+        menus,
+        total: data.total || menus.length,
+        limit,
+        skip,
+        page,
+        scope,
+        permissions: getNutritionLibraryLimits(actor),
+      };
+    }
     const data = await this.menusModel.listBase({
       ...filters,
       limit,
@@ -376,7 +503,7 @@ class ServicioNutritionLibrary {
     });
 
     const menus = (data.items || [])
-      .filter((doc) => canViewNutritionItem(actor, doc, { assignmentField: "asignadoA" }))
+      .filter((doc) => canViewNutritionItem(actor, doc, { assignmentField: "asignadoA", kind: "menu" }))
       .map((doc) => normalizeMenuForLibrary(doc, actor));
 
     return {
@@ -385,7 +512,7 @@ class ServicioNutritionLibrary {
       limit,
       skip,
       page,
-      scope: normalizeScope(filters.scope),
+      scope: isCoach(actor) && scope === "all" ? "mine" : scope,
       permissions: getNutritionLibraryLimits(actor),
     };
   }
@@ -394,9 +521,12 @@ class ServicioNutritionLibrary {
     const actor = await this._actor(user);
     const current = await this.comidasModel.getById(id);
     if (!current) throw new Error("NOT_FOUND");
-    if (!canCopyNutritionItem(actor, current, { assignmentField: "asignadaA" })) throw new Error("FORBIDDEN");
+    if (!canCopyNutritionItem(actor, current, { assignmentField: "asignadaA", kind: "meal" })) throw new Error("FORBIDDEN");
     if (isClient(actor)) {
       requireQuota(actor, "ownMeals", await this._ownMealCount(actor));
+    }
+    if (isCoach(actor)) {
+      this._assertCoachLibraryCapacity(actor, "meal", await this._coachOwnedMealCount(actor));
     }
 
     const role = normalizeRole(actor);
@@ -414,6 +544,7 @@ class ServicioNutritionLibrary {
       visibilidad: "privada",
       planMinimo: "free",
       source: isAdminOwned(current) ? "copied_from_admin" : "copied_from_library",
+      sourceType: ownerType === "coach" ? "coach_owned" : ownerType === "cliente" ? "client_owned" : "admin_global",
       sourceOriginalId: current._id,
       asignadaA: [],
       favorita: false,
@@ -425,18 +556,34 @@ class ServicioNutritionLibrary {
     };
     delete copy._id;
     delete copy.id;
+    delete copy.immutableSnapshot;
+    delete copy.snapshotVersion;
+    delete copy.assignedClientId;
+    delete copy.assignedByCoachId;
+    delete copy.sourceTemplateTier;
 
     return normalizeMealForLibrary(await this.comidasModel.create(copy), actor);
   }
 
+  async _menuLibraryItemById(id) {
+    const base = await this.menusModel.getBaseById(id);
+    if (base) return base;
+    if (typeof this.menusModel.getAssignedById !== "function") return null;
+    const assigned = await this.menusModel.getAssignedById(id);
+    return assigned ? assignedMenuAsLibraryDoc(assigned) : null;
+  }
+
   async copyMenuToMine(user, id, payload = {}) {
     const actor = await this._actor(user);
-    const current = await this.menusModel.getBaseById(id);
+    const current = await this._menuLibraryItemById(id);
     if (!current) throw new Error("NOT_FOUND");
-    if (!canCopyNutritionItem(actor, current, { assignmentField: "asignadoA" })) throw new Error("FORBIDDEN");
+    if (!canCopyNutritionItem(actor, current, { assignmentField: "asignadoA", kind: "menu" })) throw new Error("FORBIDDEN");
     if (isClient(actor)) {
       requireQuota(actor, "ownMenus", await this._ownMenuCount(actor));
       requireMenuDaysLimit(actor, current);
+    }
+    if (isCoach(actor)) {
+      this._assertCoachLibraryCapacity(actor, "menu", await this._ownMenuCount(actor));
     }
 
     const ownerType = ownerTypeForUser(actor);
@@ -470,6 +617,7 @@ class ServicioNutritionLibrary {
       visibilidad: "privada",
       planMinimo: "free",
       source: isAdminOwned(current) ? "copied_from_admin" : "copied_from_library",
+      sourceType: ownerType === "coach" ? "coach_owned" : ownerType === "cliente" ? "client_owned" : "admin_global",
       sourceOriginalId: current._id,
       asignadoA: [],
       favoritoPara: [],
@@ -480,6 +628,19 @@ class ServicioNutritionLibrary {
     };
     delete copy._id;
     delete copy.id;
+    delete copy.immutableSnapshot;
+    delete copy.snapshotVersion;
+    delete copy.clienteId;
+    delete copy.coachId;
+    delete copy.menuBaseId;
+    delete copy.assignedBy;
+    delete copy.assignedByRole;
+    delete copy.fechaInicio;
+    delete copy.fechaFin;
+    delete copy.notasCoach;
+    delete copy.historialCambios;
+    delete copy.totalesActuales;
+    delete copy.sourceTemplateTier;
 
     const created = await this.menusModel.createBase(copy);
     if (isClient(actor)) {
@@ -514,7 +675,8 @@ class ServicioNutritionLibrary {
     const actor = await this._actor(user);
     const current = await this.comidasModel.getById(id);
     if (!current) throw new Error("NOT_FOUND");
-    if (!canViewNutritionItem(actor, current, { assignmentField: "asignadaA" })) throw new Error("FORBIDDEN");
+    if (professionalTemplateSource(current) === "assigned_snapshot") throw new Error("FORBIDDEN");
+    if (!canViewNutritionItem(actor, current, { assignmentField: "asignadaA", kind: "meal" })) throw new Error("FORBIDDEN");
     const userId = libraryUserId(actor);
     if (isClient(actor) && favorite && !isFavoriteForUser(actor, current, "favoritaPara")) {
       requireQuota(actor, "favorites", await this._favoriteCount(actor));
@@ -533,7 +695,7 @@ class ServicioNutritionLibrary {
     const actor = await this._actor(user);
     const current = await this.menusModel.getBaseById(id);
     if (!current) throw new Error("NOT_FOUND");
-    if (!canViewNutritionItem(actor, current, { assignmentField: "asignadoA" })) throw new Error("FORBIDDEN");
+    if (!canViewNutritionItem(actor, current, { assignmentField: "asignadoA", kind: "menu" })) throw new Error("FORBIDDEN");
     if (isClient(actor) && favorite && !isFavoriteForUser(actor, current, "favoritoPara")) {
       requireQuota(actor, "favorites", await this._favoriteCount(actor));
     }
@@ -565,58 +727,109 @@ class ServicioNutritionLibrary {
     const actor = await this._actor(user);
     const current = await this.comidasModel.getById(id);
     if (!current) throw new Error("NOT_FOUND");
-    if (!canAssignNutritionItem(actor, current, { assignmentField: "asignadaA" })) throw new Error("FORBIDDEN");
+    if (!canAssignNutritionItem(actor, current, { assignmentField: "asignadaA", kind: "meal" })) throw new Error("FORBIDDEN");
     const ids = await this._validateCoachClients(actor, clientIds);
-    const list = Array.isArray(current.asignadaA) ? current.asignadaA : [];
-    const merged = [...list];
+    const snapshots = [];
     for (const clientId of ids) {
-      if (!hasAssignment(merged, clientId, libraryUserId(actor))) {
-        merged.push(assignmentEntry(clientId, libraryUserId(actor)));
-      }
+      const assignment = assignmentEntry(clientId, libraryUserId(actor));
+      const snapshot = {
+        ...current,
+        ownerType: "assigned_snapshot",
+        ownerId: null,
+        ownerRole: "coach",
+        creadaPorRol: "coach",
+        creadaPorId: toMongoIdOrString(libraryUserId(actor)),
+        creadaPorUserId: toMongoIdOrString(libraryUserId(actor)),
+        visibilidad: "asignada",
+        planMinimo: "free",
+        source: "assigned_snapshot",
+        sourceType: "assigned_snapshot",
+        sourceOriginalId: current._id,
+        sourceOriginalType: professionalTemplateSource(current),
+        sourceTemplateTier: professionalTemplateTier(current),
+        assignedClientId: toMongoIdOrString(clientId),
+        assignedByCoachId: toMongoIdOrString(libraryUserId(actor)),
+        asignadaA: [assignment],
+        favorita: false,
+        favoritaPara: [],
+        immutableSnapshot: true,
+        snapshotVersion: 1,
+        activo: true,
+        activa: true,
+        estado: "activo",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      delete snapshot._id;
+      delete snapshot.id;
+      snapshots.push(await this.comidasModel.create(snapshot));
     }
-
-    const _id = toObjectId(id);
-    if (!_id) throw new Error("ID_INVALIDO");
-    await this.comidasModel._col().updateOne(
-      { _id },
-      {
-        $set: {
-          asignadaA: merged,
-          visibilidad: current.visibilidad === "privada" ? "asignada" : current.visibilidad,
-          updatedAt: new Date(),
-        },
-      }
-    );
-    return normalizeMealForLibrary(await this.comidasModel.getById(id), actor);
+    const first = snapshots[0] || null;
+    return {
+      ...(first ? normalizeMealForLibrary(first, actor) : {}),
+      assignmentSnapshots: snapshots.map((snapshot) => normalizeMealForLibrary(snapshot, actor)),
+    };
   }
 
   async assignMenuToClients(user, id, clientIds = []) {
     const actor = await this._actor(user);
-    const current = await this.menusModel.getBaseById(id);
+    const current = await this._menuLibraryItemById(id);
     if (!current) throw new Error("NOT_FOUND");
-    if (!canAssignNutritionItem(actor, current, { assignmentField: "asignadoA" })) throw new Error("FORBIDDEN");
+    if (!canAssignNutritionItem(actor, current, { assignmentField: "asignadoA", kind: "menu" })) throw new Error("FORBIDDEN");
     const ids = await this._validateCoachClients(actor, clientIds);
-    const list = Array.isArray(current.asignadoA) ? current.asignadoA : [];
-    const merged = [...list];
+    const snapshots = [];
     for (const clientId of ids) {
-      if (!hasAssignment(merged, clientId, libraryUserId(actor))) {
-        merged.push(assignmentEntry(clientId, libraryUserId(actor)));
-      }
-    }
-
-    const _id = toObjectId(id);
-    if (!_id) throw new Error("ID_INVALIDO");
-    await this.menusModel._base().updateOne(
-      { _id },
-      {
-        $set: {
-          asignadoA: merged,
-          visibilidad: current.visibilidad === "privada" ? "asignada" : current.visibilidad,
+      const client = await this.usuariosModel.obtenerPorId(clientId);
+      await this.menusModel.pauseActiveForClient(clientId);
+      const snapshot = {
+        clienteId: toMongoIdOrString(clientId),
+        coachId: toMongoIdOrString(libraryUserId(actor)),
+        menuBaseId: current._id,
+        nombre: cleanString(current.nombre || "Menu asignado", 180),
+        descripcion: cleanString(current.descripcion, 2500),
+        fechaInicio: new Date(),
+        fechaFin: null,
+        estado: "activo",
+        activa: true,
+        kcalObjetivo: number(current.kcalObjetivo),
+        macrosObjetivo: { ...(current.macrosObjetivo || {}) },
+        totalesActuales: totalsFromMenuDoc(current),
+        comidas: Array.isArray(current.comidas)
+          ? current.comidas.map((meal) => ({
+              ...meal,
+              items: Array.isArray(meal?.items) ? meal.items.map((item) => ({ ...item })) : [],
+            }))
+          : [],
+        notasCoach: "",
+        historialCambios: [],
+        source: "assigned_snapshot",
+        sourceType: "assigned_snapshot",
+        sourceOriginalId: current._id,
+        sourceOriginalType: professionalTemplateSource(current),
+        sourceTemplateTier: professionalTemplateTier(current),
+        immutableSnapshot: true,
+        snapshotVersion: 1,
+        assignedBy: toMongoIdOrString(libraryUserId(actor)),
+        assignedByRole: "coach",
+      };
+      const created = await this.menusModel.createAssigned(snapshot);
+      snapshots.push(created);
+      await this.usuariosModel.updateById(clientId, {
+        menu: {
+          ...(client?.menu || {}),
+          activeSource: "coach",
+          activeOwnMenuId: null,
           updatedAt: new Date(),
+          updatedByCoachId: toMongoIdOrString(libraryUserId(actor)),
         },
-      }
-    );
-    return normalizeMenuForLibrary(await this.menusModel.getBaseById(id), actor);
+        updatedAt: new Date(),
+      });
+    }
+    const normalized = snapshots.map((snapshot) => normalizeMenuForLibrary(assignedMenuAsLibraryDoc(snapshot), actor));
+    return {
+      ...(normalized[0] || {}),
+      assignmentSnapshots: normalized,
+    };
   }
 }
 

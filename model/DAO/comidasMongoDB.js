@@ -96,6 +96,17 @@ class ModelMongoDBComidas {
     return await this._col().countDocuments(buildFilter(filters));
   };
 
+  countOwnedByCoach = async (coachId) => {
+    const values = idValues(coachId);
+    if (!values.length) return 0;
+    return await this._col().countDocuments({
+      $and: [
+        this.ownerOnlyForCoach(coachId),
+        { sourceType: { $nin: ["assigned_snapshot", "client_owned_meal", "client_owned"] } },
+      ],
+    });
+  };
+
   obtenerPorId = async (id) => {
     const _id = toObjectId(id);
     if (!_id) return null;
@@ -152,6 +163,46 @@ class ModelMongoDBComidas {
         },
         {
           userId: String(coachId),
+        },
+      ],
+    };
+  }
+
+  ownerOnlyForCoach(coachId) {
+    const values = idValues(coachId);
+    return {
+      $or: [
+        { ownerType: "coach", ownerId: { $in: values } },
+        { userId: String(coachId) },
+      ],
+    };
+  }
+
+  adminTemplatesForCoach({ premium = false } = {}) {
+    const visibility = premium
+      ? ["publica", "sistema", "global", "solo_coaches", "premium"]
+      : ["publica", "sistema", "global", "solo_coaches"];
+    const tiers = premium
+      ? ["global_basic", "global_pro", "global_premium"]
+      : ["global_basic", "global_pro"];
+    const plans = premium ? ["free", "pro", "vip"] : ["free", "pro"];
+    return {
+      $and: [
+        { ownerType: "admin" },
+        { estado: "activo" },
+        { visibilidad: { $in: visibility } },
+        {
+          $or: [
+            { templateTier: { $in: tiers } },
+            {
+              templateTier: { $exists: false },
+              $or: [
+                { planMinimo: { $in: plans } },
+                { planMinimo: { $exists: false } },
+                { planMinimo: null },
+              ],
+            },
+          ],
         },
       ],
     };

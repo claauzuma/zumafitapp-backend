@@ -4,11 +4,11 @@ import ModelMongoDBFoodLogs from "../model/DAO/foodLogsMongoDB.js";
 import ModelMongoDBUsuarios from "../model/DAO/usuariosMongoDB.js";
 import ModelMongoDBMenus from "../model/DAO/menusMongoDB.js";
 import ModelMongoDBAlimentos from "../model/DAO/alimentosMongoDB.js";
-import { requireTrackingHistoryRange } from "./accessGates.js";
+import { requireCapability, requireTrackingHistoryRange } from "./accessGates.js";
 
 const MEAL_TYPES = ["desayuno", "almuerzo", "merienda", "cena", "snack", "otra"];
 const MEAL_TYPE_SET = new Set(MEAL_TYPES);
-const DEFAULT_OBJECTIVE = { kcal: 1900, proteina: 140, carbs: 205, grasas: 58 };
+const AUTO_COMPLETE_REMAINING_MEALS_OPERATION = "auto_complete_remaining_meals";
 
 function cleanString(value = "", max = 500) {
   if (value === null || value === undefined) return "";
@@ -560,8 +560,8 @@ class ServicioFoodLogs {
     }
 
     return {
-      objetivo: DEFAULT_OBJECTIVE,
-      source: "default",
+      objetivo: null,
+      source: "missing",
       planificado: null,
       menuAsignadoId: null,
       coachId: currentCoachId || null,
@@ -646,13 +646,13 @@ class ServicioFoodLogs {
     const day = dayOverride || (await this.foodLogsModel.getDayByUserDate(userId, date));
     const logs = logsOverride || (await this.foodLogsModel.listLogsByUserDate(userId, date));
     const totals = totalLogs(logs);
-    const objetivo = objectiveInfo?.objetivo || day?.objetivo || DEFAULT_OBJECTIVE;
+    const objetivo = objectiveInfo?.objetivo || null;
     const mealsConfig = buildMealsConfig(day, logs);
 
     return {
       date,
       objetivo,
-      objetivoSource: objectiveInfo?.source || "default",
+      objetivoSource: objectiveInfo?.source || "missing",
       totals,
       remaining: remainingTotals(objetivo, totals),
       planificado: objectiveInfo?.planificado || null,
@@ -675,6 +675,9 @@ class ServicioFoodLogs {
     const actor = await this._actor(user);
     const date = normalizeDate(payload.date);
     this._assertCanWriteTracking(actor, date);
+    if (payload.operation === AUTO_COMPLETE_REMAINING_MEALS_OPERATION) {
+      requireCapability(actor, "nutrition.autoCompleteRemainingMeals");
+    }
     const { objectiveInfo, day } = await this._dayForConfig(actor, date);
     const mealsConfig = normalizeMealsConfig(payload.mealsConfig || payload.meals || payload.comidas || []);
     const updatedDay = await this.foodLogsModel.updateDayMealsConfig(day._id, mealsConfig);
