@@ -258,8 +258,65 @@ test("cliente Free con coach recibe automatismos solo del servicio profesional e
 
   assert.equal(coachPro.capabilities.canAutoCompleteRemainingMeals, false);
   assert.equal(coachPro.capabilities.canUseFlexibleMarginRecommendations, false);
+  assert.equal(coachPro.capabilities.canUseManualDayCompletion, true);
+  assert.equal(coachPro.capabilities.canPlanRemainingIntake, true);
+  assert.equal(coachPro.capabilities.canAutoCalculateTrackingQuantities, true);
   assert.equal(coachVip.capabilities.canAutoCompleteRemainingMeals, true);
   assert.equal(coachVip.capabilities.canUseFlexibleMarginRecommendations, true);
+  assert.equal(coachVip.capabilities.canPlanRemainingIntake, true);
+  assert.equal(coachVip.capabilities.canAutoCalculateTrackingQuantities, true);
+});
+
+test("cliente Free con coach legacy queda fail-closed sin paquete profesional explícito", () => {
+  const context = resolveClientAccessContext({
+    role: "cliente",
+    personalPlan: "free",
+    coach: {
+      entrenadorId: "coach-legacy",
+      assignedAt: "2026-06-20T00:00:00.000Z",
+    },
+  }, { now });
+
+  assert.equal(context.hasCoach, true);
+  assert.equal(context.coachAccess.servicePackage, "service_pro");
+  assert.equal(context.coachAccess.servicePackageExplicit, false);
+  assert.equal(context.capabilities.canUseManualDayCompletion, true);
+  assert.equal(context.capabilities.canPlanRemainingIntake, false);
+  assert.equal(context.capabilities.canAutoCalculateTrackingQuantities, false);
+  assert.equal(context.featureAvailability.nutrition.planRemainingIntake.status, "blocked");
+  assert.equal(context.featureAvailability.nutrition.autoCalculateTrackingQuantities.status, "blocked");
+});
+
+test("paquete profesional desconocido no se convierte en service_pro", () => {
+  const context = resolveClientAccessContext({
+    role: "cliente",
+    personalPlan: "free",
+    coachAccess: {
+      status: "active",
+      coachId: "coach-unknown-package",
+      servicePackage: "service_enterprise_future",
+    },
+  }, { now });
+
+  assert.equal(context.hasCoach, true);
+  assert.equal(context.coachAccess.servicePackage, null);
+  assert.equal(context.capabilities.canPlanRemainingIntake, false);
+  assert.equal(context.capabilities.canAutoCalculateTrackingQuantities, false);
+});
+
+test("plan personal Pro conserva automatismos aunque el vínculo legacy no declare servicio", () => {
+  const context = resolveClientAccessContext({
+    role: "cliente",
+    personalPlan: "pro",
+    coach: {
+      entrenadorId: "coach-legacy",
+    },
+  }, { now });
+
+  assert.equal(context.hasCoach, true);
+  assert.equal(context.coachAccess.servicePackageExplicit, false);
+  assert.equal(context.capabilities.canPlanRemainingIntake, true);
+  assert.equal(context.capabilities.canAutoCalculateTrackingQuantities, true);
 });
 
 test("cancel_at_period_end personal se conserva al entrar con coach", () => {

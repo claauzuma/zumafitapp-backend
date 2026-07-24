@@ -10,6 +10,7 @@ import { requireCapability, requireTrackingHistoryRange } from "./accessGates.js
 const MEAL_TYPES = ["desayuno", "almuerzo", "merienda", "cena", "snack", "otra"];
 const MEAL_TYPE_SET = new Set(MEAL_TYPES);
 const AUTO_COMPLETE_REMAINING_MEALS_OPERATION = "auto_complete_remaining_meals";
+const CONFIGURE_MANUAL_COMPLETION_MEALS_OPERATION = "configure_manual_completion_meals";
 
 function cleanString(value = "", max = 500) {
   if (value === null || value === undefined) return "";
@@ -677,11 +678,17 @@ class ServicioFoodLogs {
     const actor = await this._actor(user);
     const date = normalizeDate(payload.date);
     this._assertCanWriteTracking(actor, date);
+    const mealsConfig = normalizeMealsConfig(payload.mealsConfig || payload.meals || payload.comidas || []);
     if (payload.operation === AUTO_COMPLETE_REMAINING_MEALS_OPERATION) {
       requireCapability(actor, "nutrition.autoCompleteRemainingMeals");
     }
+    if (payload.operation === CONFIGURE_MANUAL_COMPLETION_MEALS_OPERATION) {
+      requireCapability(actor, "nutrition.planRemainingIntake");
+      if (mealsConfig.length < 1 || mealsConfig.length > 4) {
+        throw new Error("MANUAL_COMPLETION_MEALS_LIMIT");
+      }
+    }
     const { objectiveInfo, day } = await this._dayForConfig(actor, date);
-    const mealsConfig = normalizeMealsConfig(payload.mealsConfig || payload.meals || payload.comidas || []);
     const updatedDay = await this.foodLogsModel.updateDayMealsConfig(day._id, mealsConfig);
     const logs = await this.foodLogsModel.listLogsByUserDate(this._actorId(actor), date);
     return await this._buildResponse(actor, date, objectiveInfo, updatedDay, logs);
@@ -692,7 +699,17 @@ class ServicioFoodLogs {
     const date = normalizeDate(payload.date);
     this._assertCanWriteTracking(actor, date);
     requireCapability(actor, "nutrition.autoCalculateTrackingQuantities");
-    return await this.alimentosService.generarCantidades(payload);
+    return await this.alimentosService.generarCantidades({
+      ...payload,
+      // Tracking optimiza un restante: kcal son techo, proteína es un mínimo
+      // prioritario y C/G son objetivos secundarios. Admin/Coach conservan
+      // sus modos configurables al usar directamente ServicioAlimentos.
+      mode: "kcalProteina",
+      options: {
+        ...(payload.options || {}),
+        trackingPriority: true,
+      },
+    });
   }
 
   async deleteMeal(user, mealId, payload = {}) {
@@ -706,6 +723,14 @@ class ServicioFoodLogs {
     const mealsConfig = normalizeMealsConfig(day.mealsConfig || []);
     const currentMeal = mealsConfig.find((meal) => meal.mealId === cleanMealId);
     const mealType = currentMeal?.tipo || (MEAL_TYPE_SET.has(cleanMealId) ? cleanMealId : "");
+    const currentLogs = await this.foodLogsModel.listLogsByUserDate(this._actorId(actor), date);
+    const mealLogs = currentLogs.filter((log) => (
+      normalizeMealId(log?.mealId || log?.mealConfigId || log?.mealKey) === cleanMealId ||
+      (!log?.mealId && mealType && normalizeMealType(log?.mealType || log?.comida) === mealType)
+    ));
+    if (mealLogs.length && payload.confirmDeleteLogs !== true) {
+      throw new Error("TRACKING_MEAL_NOT_EMPTY");
+    }
 
     await this.foodLogsModel.deleteLogsByMeal({
       userId: this._actorId(actor),

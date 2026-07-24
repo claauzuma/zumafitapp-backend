@@ -58,7 +58,7 @@ function client(plan = "free") {
   };
 }
 
-function completionService({ plan = "free", completed = 2 } = {}) {
+function completionService({ plan = "free", completed = 2, manualEntries = [] } = {}) {
   const date = todayIso();
   const user = client(plan);
   let stored = completed
@@ -71,11 +71,16 @@ function completionService({ plan = "free", completed = 2 } = {}) {
           mealId: `meal-${index + 1}`,
           totals: { kcal: 400, proteina: 30, carbs: 44, grasas: 13 },
         })),
-        manualEntries: [],
+        manualEntries,
         generatedRemainingMeals: [],
         mealReplacements: [],
         foodReplacements: [],
-        consumedTotals: { kcal: completed * 400, proteina: completed * 30, carbs: completed * 44, grasas: completed * 13 },
+        consumedTotals: {
+          kcal: completed * 400 + manualEntries.reduce((sum, entry) => sum + Number(entry.kcal || 0), 0),
+          proteina: completed * 30,
+          carbs: completed * 44,
+          grasas: completed * 13,
+        },
         nutrition: {
           status: "in_progress",
           completedMealsCount: completed,
@@ -146,6 +151,48 @@ test("activar manual_completion conserva comidas realizadas y es idempotente", a
   assert.equal(context.getStored().manualCompletion.startedAt, firstStartedAt);
 });
 
+test("Free puede activar manual_completion con cero comidas hechas sin copiar pendientes", async () => {
+  const context = completionService({ plan: "free", completed: 0 });
+  const result = await context.service.updateMyMenuTrackingDayCompletion(
+    { id: context.user.id },
+    context.date,
+    { dayCompletionMode: "manual_completion" }
+  );
+  const stored = context.getStored();
+
+  assert.equal(result.ok, true);
+  assert.equal(stored.completedMenuMeals.length, 0);
+  assert.equal(stored.manualCompletion.startedCompletedMealsCount, 0);
+  assert.equal(stored.manualCompletion.startedTotalMealsCount, 5);
+  assert.equal(stored.manualCompletion.plan, null);
+  assert.deepEqual(stored.manualEntries, []);
+  assert.deepEqual(stored.generatedRemainingMeals, []);
+});
+
+test("activar manual_completion conserva las calorias libres ya registradas", async () => {
+  const flexibleEntry = {
+    id: "flex-1",
+    source: "flexible_margin",
+    countsAsMenuMeal: false,
+    kcal: 100,
+  };
+  const context = completionService({
+    plan: "free",
+    completed: 3,
+    manualEntries: [flexibleEntry],
+  });
+
+  await context.service.updateMyMenuTrackingDayCompletion(
+    { id: context.user.id },
+    context.date,
+    { dayCompletionMode: "manual_completion" }
+  );
+
+  assert.deepEqual(context.getStored().manualEntries, [flexibleEntry]);
+  assert.equal(context.getStored().consumedTotals.kcal, 1300);
+  assert.equal(context.getStored().completedMenuMeals.length, 3);
+});
+
 test("Free no puede persistir planificación automática de momentos", async () => {
   const context = completionService({ plan: "free", completed: 1 });
   await assert.rejects(
@@ -171,6 +218,70 @@ test("Pro persiste de 1 a 4 momentos temporales sin guardar un restante fijo", a
   assert.equal(Object.hasOwn(stored.manualCompletion, "remainingTotals"), false);
 });
 
+test("Pro elimina un momento vacío, persiste los ids restantes y evita duplicados al reorganizar", async () => {
+  const context = completionService({ plan: "pro", completed: 2 });
+  await context.service.updateMyMenuTrackingDayCompletion(
+    { id: context.user.id },
+    context.date,
+    {
+      dayCompletionMode: "manual_completion",
+      plan: {
+        count: 3,
+        moments: [
+          { id: "manual_completion_moment_1", label: "Momento 1" },
+          { id: "manual_completion_moment_2", label: "Momento 2" },
+          { id: "manual_completion_moment_3", label: "Momento 3" },
+        ],
+      },
+    }
+  );
+
+  const reduced = await context.service.updateMyMenuTrackingDayCompletion(
+    { id: context.user.id },
+    context.date,
+    {
+      dayCompletionMode: "manual_completion",
+      plan: {
+        count: 2,
+        moments: [
+          { id: "manual_completion_moment_1", label: "Momento 1" },
+          { id: "manual_completion_moment_3", label: "Momento 3" },
+        ],
+      },
+    }
+  );
+
+  assert.equal(reduced.record.tracking.manualCompletion.plan.count, 2);
+  assert.deepEqual(
+    context.getStored().manualCompletion.plan.moments.map((moment) => moment.id),
+    ["manual_completion_moment_1", "manual_completion_moment_3"]
+  );
+
+  await context.service.updateMyMenuTrackingDayCompletion(
+    { id: context.user.id },
+    context.date,
+    {
+      dayCompletionMode: "manual_completion",
+      plan: {
+        count: 3,
+        moments: [
+          { id: "manual_completion_moment_1", label: "Momento 1" },
+          { id: "manual_completion_moment_3", label: "Momento 3" },
+          { id: "manual_completion_moment_3", label: "Momento nuevo" },
+        ],
+      },
+    }
+  );
+
+  const ids = context.getStored().manualCompletion.plan.moments.map((moment) => moment.id);
+  assert.equal(new Set(ids).size, 3);
+  assert.deepEqual(ids, [
+    "manual_completion_moment_1",
+    "manual_completion_moment_3",
+    "manual_completion_moment_2",
+  ]);
+});
+
 test("el cálculo automático de cantidades falla cerrado para Free y funciona para Pro", async () => {
   const date = todayIso();
   const freeService = new ServicioFoodLogs();
@@ -185,15 +296,21 @@ test("el cálculo automático de cantidades falla cerrado para Free y funciona p
   const proService = new ServicioFoodLogs();
   proService._actor = async () => client("pro");
   proService._assertCanWriteTracking = () => {};
+  let calculationPayload = null;
   proService.alimentosService = {
-    generarCantidades: async (payload) => ({ status: "ok", foods: [{ nombre: "Banana" }], target: payload.target }),
+    generarCantidades: async (payload) => {
+      calculationPayload = payload;
+      return { status: "ok", foods: [{ nombre: "Banana" }], target: payload.target };
+    },
   };
   const result = await proService.calculateRemainingQuantities(
     { id: client("pro").id },
-    { date, target: { kcal: 200 } }
+    { date, mode: "full", target: { kcal: 200 }, options: { trackingPriority: false } }
   );
   assert.equal(result.status, "ok");
   assert.equal(result.target.kcal, 200);
+  assert.equal(calculationPayload.mode, "kcalProteina");
+  assert.equal(calculationPayload.options.trackingPriority, true);
 });
 
 test("confirmar cantidades calculadas usa una escritura batch idempotente", async () => {

@@ -190,8 +190,8 @@ export function getClientNutritionCapabilities(user = {}, options = {}) {
     canAutoCompleteRemainingMeals: config.autoCompleteRemainingMeals === true,
     canUseFlexibleMarginRecommendations: config.flexibleMarginRecommendations === true,
     canUseManualDayCompletion: config.manualDayCompletion === true,
-    canPlanRemainingIntake: config.planRemainingIntake === true || hasCoach,
-    canAutoCalculateTrackingQuantities: config.autoCalculateTrackingQuantities === true || hasCoach,
+    canPlanRemainingIntake: config.planRemainingIntake === true,
+    canAutoCalculateTrackingQuantities: config.autoCalculateTrackingQuantities === true,
     canViewCoachAdherenceBreakdown: hasCoach,
     canExportMenuPdf: !!config.exportPdf,
     limits: {

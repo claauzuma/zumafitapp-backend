@@ -20,6 +20,9 @@ test("free autogestionado puede trackear y crear hasta 1 menu propio", () => {
 
   assert.equal(capabilities.clientType, "self_managed");
   assert.equal(capabilities.canTrack, true);
+  assert.equal(capabilities.canUseManualDayCompletion, true);
+  assert.equal(capabilities.canPlanRemainingIntake, false);
+  assert.equal(capabilities.canAutoCalculateTrackingQuantities, false);
   assert.equal(capabilities.canCreateOwnMenu, true);
   assert.equal(capabilities.limits.ownMenus, 1);
   assert.equal(capabilities.limits.ownMeals, 5);
@@ -42,6 +45,20 @@ test("cliente con coach se detecta por coach.entrenadorId", () => {
   assert.equal(capabilities.clientType, "with_coach");
   assert.equal(capabilities.hasCoach, true);
   assert.equal(capabilities.activeMenuSource, "coach");
+});
+
+test("tener coach no desbloquea planificación ni cantidades automáticas por sí solo", () => {
+  const capabilities = getClientNutritionCapabilities({
+    role: "cliente",
+    personalPlan: "free",
+    coach: { entrenadorId: "coach-1" },
+    menu: { activeSource: "coach" },
+  });
+
+  assert.equal(capabilities.hasCoach, true);
+  assert.equal(capabilities.canUseManualDayCompletion, true);
+  assert.equal(capabilities.canPlanRemainingIntake, false);
+  assert.equal(capabilities.canAutoCalculateTrackingQuantities, false);
 });
 
 test("coachAccess finalizado no se detecta como coach activo en capabilities", () => {

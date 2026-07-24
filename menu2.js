@@ -7,6 +7,7 @@
 // La salida conserva proteicos/carbohidratos/grasas para compatibilidad.
 
 const EPS = 1e-9;
+const TRACKING_CALORIE_EPS = 1e-6;
 const MAX_FOODS_PER_GROUP = 5;
 const MAX_TOTAL_FOODS = 15;
 
@@ -122,9 +123,26 @@ function normalizeFood(raw, fallbackGroup = null) {
   ]));
   let grasas = toNumber(firstValue(raw, ["grasas", "grasa", "Grasas", "fat", "fats"]));
 
+  // El servicio de cantidades puede declarar explícitamente la base para evitar
+  // confundir alimentos por unidad (por ejemplo, un huevo de 78 kcal) con datos
+  // expresados por 100 g.
+  const macroBasis = normalizeName(raw.macroBasis || raw.macroBase || raw.nutritionBasis);
+  const rawUnit = normalizeName(raw.unit || raw.unidad || raw.measurementUnit);
+  const unitImpliesPerUnit = Boolean(
+    rawUnit &&
+    !["g", "gr", "gramo", "gramos", "ml", "mililitro", "mililitros"].includes(rawUnit)
+  );
+  const explicitlyPerUnit =
+    ["perunit", "porunidad", "unit"].includes(macroBasis) || unitImpliesPerUnit;
+  const explicitlyPerGram = ["pergram", "porgramo", "gram"].includes(macroBasis);
+  const explicitlyPer100 = ["per100", "per100g", "por100", "100g"].includes(macroBasis);
   // Si vienen valores por 100 g, los bajamos a valor por gramo.
-  // Si ya vienen por gramo, los dejamos como estan.
-  const looksPer100g = calorias > 20 || proteina > 5 || carbohidratos > 5 || grasas > 5;
+  // Si ya vienen por gramo o por unidad, los dejamos como están.
+  const looksPer100g = explicitlyPer100 || (
+    !explicitlyPerUnit &&
+    !explicitlyPerGram &&
+    (calorias > 20 || proteina > 5 || carbohidratos > 5 || grasas > 5)
+  );
   if (looksPer100g) {
     calorias /= 100;
     proteina /= 100;
@@ -640,7 +658,14 @@ function solveQuantities(selection, objective, mode, opts = {}) {
   const fixed = selection.filter((item) => item.fixed);
   const pending = selection.filter((item) => !item.fixed);
   const fixedTotals = calculateTotals(fixed);
-  const errors = validateFixedExcess(fixedTotals, objective, mode);
+  const trackingPriority = trackingPriorityRequested(opts);
+  const errors = trackingPriority ? [] : validateFixedExcess(fixedTotals, objective, mode);
+
+  if (trackingPriority && fixedTotals.calorias > objective.calorias + TRACKING_CALORIE_EPS) {
+    errors.push(
+      `Las cantidades fijas superan el techo calorico: ${round(fixedTotals.calorias)} > ${round(objective.calorias)}.`
+    );
+  }
 
   if (errors.length) {
     return {
@@ -660,23 +685,54 @@ function solveQuantities(selection, objective, mode, opts = {}) {
     };
   }
 
-  const lowerBounds = pending.map((item) => minimumAllowedQuantity(item));
+  if (trackingPriority) {
+    const invalidGridItem = pending.find((item) =>
+      maximumTrackingQuantity(item) + EPS < minimumTrackingQuantity(item)
+    );
+    if (invalidGridItem) {
+      return {
+        ok: false,
+        reason: "invalid_tracking_quantity_grid",
+        errors: [
+          `No hay una cantidad valida para ${invalidGridItem.nombre || invalidGridItem.food?.nombre || "el alimento"} dentro de sus minimos, maximos y multiplos.`,
+        ],
+        fixedTotals,
+      };
+    }
+  }
+
+  const lowerBounds = pending.map((item) =>
+    trackingPriority ? minimumTrackingQuantity(item) : minimumAllowedQuantity(item)
+  );
+  const upperBounds = pending.map((item) =>
+    trackingPriority ? maximumTrackingQuantity(item) : maxQuantityFor(item)
+  );
   const baselineTotals = { ...fixedTotals };
   for (let i = 0; i < pending.length; i++) {
     addTotals(baselineTotals, foodVector(pending[i].food), lowerBounds[i]);
+  }
+  if (trackingPriority && baselineTotals.calorias > objective.calorias + TRACKING_CALORIE_EPS) {
+    return {
+      ok: false,
+      reason: "minimums_exceed_calorie_ceiling",
+      errors: [
+        `Las cantidades minimas de los alimentos seleccionados superan el techo calorico: ${round(baselineTotals.calorias)} > ${round(objective.calorias)}.`,
+      ],
+      fixedTotals,
+    };
   }
 
   const residualItems = pending.map((item, index) => ({
     ...item,
     minGramos: 0,
-    maxQuantityOverride: Math.max(0, maxQuantityFor(item) - lowerBounds[index]),
+    maxQuantityOverride: Math.max(0, upperBounds[index] - lowerBounds[index]),
     preferUse: false,
   }));
   const residualQuantities = solveNonNegativeLeastSquares(residualItems, objective, baselineTotals, mode, opts);
 
   for (let i = 0; i < pending.length; i++) {
     pending[i].cantidad = round(
-      Math.min(lowerBounds[i] + Math.max(residualQuantities[i] || 0, 0), maxQuantityFor(pending[i])),
+      Math.min(lowerBounds[i] + Math.max(residualQuantities[i] || 0, 0), upperBounds[i]),
       2
     );
   }
@@ -685,12 +741,16 @@ function solveQuantities(selection, objective, mode, opts = {}) {
     roundAndPolishQuantities(selection, pending, objective, mode);
   }
 
+  const trackingOptimization = trackingPriority
+    ? optimizeTrackingQuantities(selection, pending, objective)
+    : null;
   const totals = calculateTotals(selection);
   const minimumKcalExcess = baselineTotals.calorias - objective.calorias;
   return {
     ok: true,
     fixedTotals,
     totals,
+    trackingOptimization,
     minimumsWarning: minimumKcalExcess > 10
       ? `No se puede respetar el margen de 10 kcal usando todos los alimentos elegidos: sus cantidades minimas superan el objetivo por ${round(minimumKcalExcess, 1)} kcal.`
       : "",
@@ -824,6 +884,18 @@ function minimumAllowedQuantity(item) {
   return Math.min(minPracticalQuantity(item), maxQuantityFor(item));
 }
 
+function minimumTrackingQuantity(item) {
+  const minimum = minimumAllowedQuantity(item);
+  const step = quantityStepFor(item);
+  return Math.max(0, Math.ceil((minimum - EPS) / step) * step);
+}
+
+function maximumTrackingQuantity(item) {
+  const maximum = maxQuantityFor(item);
+  const step = quantityStepFor(item);
+  return Math.max(0, Math.floor((maximum + EPS) / step) * step);
+}
+
 function solveLeastSquares(rows, b, ridge = 1e-8) {
   const cols = rows[0]?.length || 0;
   if (!cols) return [];
@@ -914,6 +986,532 @@ function roundAndPolishQuantities(selection, pending, objective, mode) {
     best.item.cantidad = best.nextQuantity;
     currentScore = best.score;
   }
+}
+
+function trackingPriorityRequested(opts = {}) {
+  return toBoolean(
+    opts.trackingPriority ??
+    opts.prioridadTracking ??
+    opts.strictTrackingPriority,
+    false
+  );
+}
+
+function totalsForPendingQuantities(selection, pending, quantities) {
+  const previous = pending.map((item) => item.cantidad);
+  for (let index = 0; index < pending.length; index++) {
+    pending[index].cantidad = quantities[index];
+  }
+  const totals = calculateTotals(selection);
+  for (let index = 0; index < pending.length; index++) {
+    pending[index].cantidad = previous[index];
+  }
+  return totals;
+}
+
+function trackingProteinAssessment(selection, pending, objective) {
+  const minimums = pending.map((item) => minimumTrackingQuantity(item));
+  const baseline = totalsForPendingQuantities(selection, pending, minimums);
+  const calorieCeiling = Math.max(0, objective.calorias);
+  const proteinTarget = Math.max(0, objective.proteina - baseline.proteina);
+
+  if (baseline.calorias > calorieCeiling + TRACKING_CALORIE_EPS) {
+    return {
+      reachable: baseline.proteina >= objective.proteina - 0.05,
+      maximumProtein: baseline.proteina,
+      quantities: minimums,
+    };
+  }
+  if (!(objective.proteina > 0) || proteinTarget <= 0.05) {
+    return {
+      reachable: true,
+      maximumProtein: baseline.proteina,
+      quantities: minimums,
+    };
+  }
+
+  const calorieBudget = Math.max(0, calorieCeiling - baseline.calorias);
+  const freeExtraSteps = new Array(pending.length).fill(0);
+  const chunks = [];
+  for (let itemIndex = 0; itemIndex < pending.length; itemIndex++) {
+    const item = pending[itemIndex];
+    const step = quantityStepFor(item);
+    const kcalPerStep = Math.max(0, item.food.calorias * step);
+    const proteinPerStep = Math.max(0, item.food.proteina * step);
+    const maximumExtra = Math.max(0, maximumTrackingQuantity(item) - minimums[itemIndex]);
+    const maximumSteps = Math.floor((maximumExtra + EPS) / step);
+
+    if (maximumSteps <= 0 || proteinPerStep <= EPS) continue;
+    if (kcalPerStep <= EPS) {
+      freeExtraSteps[itemIndex] = maximumSteps;
+      continue;
+    }
+
+    let remainingSteps = maximumSteps;
+    let chunkSize = 1;
+    while (remainingSteps > 0) {
+      const count = Math.min(chunkSize, remainingSteps);
+      chunks.push({
+        itemIndex,
+        count,
+        calories: count * kcalPerStep,
+        protein: count * proteinPerStep,
+      });
+      remainingSteps -= count;
+      chunkSize *= 2;
+    }
+  }
+
+  const scale = calorieBudget <= 1500 ? 100 : 10;
+  const capacity = Math.max(0, Math.floor(calorieBudget * scale + EPS));
+  const proteinByCapacity = new Float64Array(capacity + 1);
+  const caloriesByCapacity = new Float64Array(capacity + 1);
+  proteinByCapacity.fill(Number.NEGATIVE_INFINITY);
+  caloriesByCapacity.fill(Number.POSITIVE_INFINITY);
+  proteinByCapacity[0] = 0;
+  caloriesByCapacity[0] = 0;
+
+  const decisions = [];
+  for (const chunk of chunks) {
+    const weight = Math.max(1, Math.round(chunk.calories * scale));
+    const selected = new Uint8Array(capacity + 1);
+    for (let current = capacity; current >= weight; current--) {
+      const previous = current - weight;
+      if (!Number.isFinite(proteinByCapacity[previous])) continue;
+      const calories = caloriesByCapacity[previous] + chunk.calories;
+      if (calories > calorieBudget + TRACKING_CALORIE_EPS) continue;
+      const protein = proteinByCapacity[previous] + chunk.protein;
+      if (
+        protein > proteinByCapacity[current] + 1e-8 ||
+        (
+          Math.abs(protein - proteinByCapacity[current]) <= 1e-8 &&
+          calories < caloriesByCapacity[current] - 1e-8
+        )
+      ) {
+        proteinByCapacity[current] = protein;
+        caloriesByCapacity[current] = calories;
+        selected[current] = 1;
+      }
+    }
+    decisions.push({ chunk, selected, weight });
+  }
+
+  const freeProtein = freeExtraSteps.reduce(
+    (total, steps, index) =>
+      total + steps * quantityStepFor(pending[index]) * pending[index].food.proteina,
+    0
+  );
+  let bestCapacity = 0;
+  let bestProtein = freeProtein;
+  let bestCalories = 0;
+  let reachedCapacity = -1;
+  let reachedCalories = Number.POSITIVE_INFINITY;
+  for (let current = 0; current <= capacity; current++) {
+    if (!Number.isFinite(proteinByCapacity[current])) continue;
+    const protein = proteinByCapacity[current] + freeProtein;
+    const calories = caloriesByCapacity[current];
+    if (
+      protein > bestProtein + 1e-8 ||
+      (Math.abs(protein - bestProtein) <= 1e-8 && calories < bestCalories - 1e-8)
+    ) {
+      bestCapacity = current;
+      bestProtein = protein;
+      bestCalories = calories;
+    }
+    if (
+      protein >= proteinTarget - 0.05 &&
+      calories < reachedCalories - 1e-8
+    ) {
+      reachedCapacity = current;
+      reachedCalories = calories;
+    }
+  }
+
+  const reachable = reachedCapacity >= 0;
+  let currentCapacity = reachable ? reachedCapacity : bestCapacity;
+  const extraSteps = [...freeExtraSteps];
+  for (let index = decisions.length - 1; index >= 0; index--) {
+    const decision = decisions[index];
+    if (!decision.selected[currentCapacity]) continue;
+    extraSteps[decision.chunk.itemIndex] += decision.chunk.count;
+    currentCapacity -= decision.weight;
+  }
+  const quantities = minimums.map((minimum, index) =>
+    minimum + extraSteps[index] * quantityStepFor(pending[index])
+  );
+  const totals = totalsForPendingQuantities(selection, pending, quantities);
+  const maximumProtein = baseline.proteina + bestProtein;
+
+  return {
+    reachable: reachable && totals.proteina >= objective.proteina - 0.05,
+    maximumProtein,
+    quantities,
+  };
+}
+
+function trackingSecondaryMacroError(totals, objective) {
+  let error = 0;
+  if (objective.carbohidratos > 0) {
+    error += Math.abs(totals.carbohidratos - objective.carbohidratos) /
+      Math.max(objective.carbohidratos, 1);
+  }
+  if (objective.grasas > 0) {
+    error += Math.abs(totals.grasas - objective.grasas) /
+      Math.max(objective.grasas, 1);
+  }
+  return error;
+}
+
+function trackingPriorityRank(totals, objective, proteinReachable) {
+  const calorieExcess = Math.max(0, totals.calorias - objective.calorias);
+  if (calorieExcess > TRACKING_CALORIE_EPS) {
+    return [1, calorieExcess, 0, 0, 0, 0];
+  }
+
+  const calorieDeficit = Math.max(0, objective.calorias - totals.calorias);
+  const materialCalorieDeficit = Math.max(0, calorieDeficit - 3);
+  const proteinDeficit = objective.proteina > 0
+    ? Math.max(0, objective.proteina - totals.proteina)
+    : 0;
+  const proteinExcess = objective.proteina > 0
+    ? Math.max(0, totals.proteina - objective.proteina)
+    : 0;
+  const secondaryError = trackingSecondaryMacroError(totals, objective);
+
+  if (proteinReachable && objective.proteina > 0) {
+    return [
+      0,
+      proteinDeficit > 0.05 ? 1 : 0,
+      proteinDeficit,
+      materialCalorieDeficit,
+      secondaryError,
+      calorieDeficit,
+      proteinExcess,
+    ];
+  }
+
+  return [
+    0,
+    calorieDeficit,
+    proteinDeficit,
+    secondaryError,
+    proteinExcess,
+  ];
+}
+
+function compareTrackingRanks(left, right) {
+  for (let index = 0; index < Math.max(left.length, right.length); index++) {
+    const difference = (left[index] || 0) - (right[index] || 0);
+    if (Math.abs(difference) > 1e-8) return difference;
+  }
+  return 0;
+}
+
+function normalizeTrackingQuantity(item, value) {
+  const step = quantityStepFor(item);
+  const minimum = minimumTrackingQuantity(item);
+  const maximum = maximumTrackingQuantity(item);
+  const rounded = Math.round(toNumber(value, minimum) / step) * step;
+  return Math.min(maximum, Math.max(minimum, rounded));
+}
+
+function trackingCalorieAssessment(selection, pending, objective) {
+  const minimums = pending.map((item) => minimumTrackingQuantity(item));
+  const baseline = totalsForPendingQuantities(selection, pending, minimums);
+  const calorieBudget = Math.max(0, objective.calorias - baseline.calorias);
+  const chunks = [];
+
+  for (let itemIndex = 0; itemIndex < pending.length; itemIndex++) {
+    const item = pending[itemIndex];
+    const step = quantityStepFor(item);
+    const kcalPerStep = Math.max(0, item.food.calorias * step);
+    const proteinPerStep = Math.max(0, item.food.proteina * step);
+    const maximumExtra = Math.max(0, maximumTrackingQuantity(item) - minimums[itemIndex]);
+    const maximumSteps = Math.floor((maximumExtra + EPS) / step);
+    if (maximumSteps <= 0 || kcalPerStep <= EPS) continue;
+
+    let remainingSteps = maximumSteps;
+    let chunkSize = 1;
+    while (remainingSteps > 0) {
+      const count = Math.min(chunkSize, remainingSteps);
+      chunks.push({
+        itemIndex,
+        count,
+        calories: count * kcalPerStep,
+        protein: count * proteinPerStep,
+      });
+      remainingSteps -= count;
+      chunkSize *= 2;
+    }
+  }
+
+  const scale = calorieBudget <= 1500 ? 100 : 10;
+  const capacity = Math.max(0, Math.floor(calorieBudget * scale + EPS));
+  const caloriesByCapacity = new Float64Array(capacity + 1);
+  const proteinByCapacity = new Float64Array(capacity + 1);
+  caloriesByCapacity.fill(Number.NEGATIVE_INFINITY);
+  proteinByCapacity.fill(Number.NEGATIVE_INFINITY);
+  caloriesByCapacity[0] = 0;
+  proteinByCapacity[0] = 0;
+
+  const decisions = [];
+  for (const chunk of chunks) {
+    const weight = Math.max(1, Math.round(chunk.calories * scale));
+    const selected = new Uint8Array(capacity + 1);
+    for (let current = capacity; current >= weight; current--) {
+      const previous = current - weight;
+      if (!Number.isFinite(caloriesByCapacity[previous])) continue;
+      const calories = caloriesByCapacity[previous] + chunk.calories;
+      if (calories > calorieBudget + TRACKING_CALORIE_EPS) continue;
+      const protein = proteinByCapacity[previous] + chunk.protein;
+      if (
+        calories > caloriesByCapacity[current] + 1e-8 ||
+        (
+          Math.abs(calories - caloriesByCapacity[current]) <= 1e-8 &&
+          protein > proteinByCapacity[current] + 1e-8
+        )
+      ) {
+        caloriesByCapacity[current] = calories;
+        proteinByCapacity[current] = protein;
+        selected[current] = 1;
+      }
+    }
+    decisions.push({ chunk, selected, weight });
+  }
+
+  let bestCapacity = 0;
+  for (let current = 1; current <= capacity; current++) {
+    if (
+      caloriesByCapacity[current] > caloriesByCapacity[bestCapacity] + 1e-8 ||
+      (
+        Math.abs(caloriesByCapacity[current] - caloriesByCapacity[bestCapacity]) <= 1e-8 &&
+        proteinByCapacity[current] > proteinByCapacity[bestCapacity] + 1e-8
+      )
+    ) {
+      bestCapacity = current;
+    }
+  }
+
+  const extraSteps = new Array(pending.length).fill(0);
+  let currentCapacity = bestCapacity;
+  for (let index = decisions.length - 1; index >= 0; index--) {
+    const decision = decisions[index];
+    if (!decision.selected[currentCapacity]) continue;
+    extraSteps[decision.chunk.itemIndex] += decision.chunk.count;
+    currentCapacity -= decision.weight;
+  }
+
+  return {
+    quantities: minimums.map((minimum, index) =>
+      minimum + extraSteps[index] * quantityStepFor(pending[index])
+    ),
+    calories: baseline.calorias + caloriesByCapacity[bestCapacity],
+  };
+}
+
+function fillTrackingCalories(selection, pending, objective, seed, order) {
+  const quantities = [...seed];
+  for (const index of order) {
+    const item = pending[index];
+    const step = quantityStepFor(item);
+    const maximum = maximumTrackingQuantity(item);
+    if (quantities[index] + step > maximum + EPS) continue;
+
+    const totals = totalsForPendingQuantities(selection, pending, quantities);
+    const availableCalories = objective.calorias - totals.calorias;
+    const kcalPerStep = item.food.calorias * step;
+    const affordableSteps = kcalPerStep > EPS
+      ? Math.floor((availableCalories + TRACKING_CALORIE_EPS) / kcalPerStep)
+      : Math.floor((maximum - quantities[index] + EPS) / step);
+    const availableSteps = Math.floor((maximum - quantities[index] + EPS) / step);
+    const steps = Math.min(availableSteps, Math.max(0, affordableSteps));
+    quantities[index] += steps * step;
+  }
+  return quantities;
+}
+
+function trackingSeedOrders(pending = []) {
+  const indexes = pending.map((_, index) => index);
+  const byCaloriesAscending = [...indexes].sort((left, right) =>
+    pending[left].food.calorias * quantityStepFor(pending[left]) -
+    pending[right].food.calorias * quantityStepFor(pending[right])
+  );
+  const byCaloriesDescending = [...byCaloriesAscending].reverse();
+  const byProteinDensity = [...indexes].sort((left, right) => {
+    const leftKcal = pending[left].food.calorias;
+    const rightKcal = pending[right].food.calorias;
+    const leftRatio = leftKcal > EPS
+      ? pending[left].food.proteina / leftKcal
+      : Number.POSITIVE_INFINITY;
+    const rightRatio = rightKcal > EPS
+      ? pending[right].food.proteina / rightKcal
+      : Number.POSITIVE_INFINITY;
+    return rightRatio - leftRatio;
+  });
+  const orders = [indexes, byCaloriesAscending, byCaloriesDescending, byProteinDensity];
+
+  for (const first of indexes) {
+    orders.push([first, ...byCaloriesDescending.filter((index) => index !== first)]);
+  }
+
+  const seen = new Set();
+  return orders.filter((order) => {
+    const key = order.join("|");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function optimizeTrackingQuantities(selection, pending, objective) {
+  if (!pending.length || !(objective.calorias > 0)) return null;
+  const calorieCeiling = objective.calorias;
+  const minimums = pending.map((item) => minimumTrackingQuantity(item));
+  const maximums = pending.map((item) => maximumTrackingQuantity(item));
+  const steps = pending.map(quantityStepFor);
+  let quantities = pending.map((item, index) =>
+    normalizeTrackingQuantity(item, item.cantidad ?? minimums[index])
+  );
+  const proteinAssessment = trackingProteinAssessment(selection, pending, objective);
+  const calorieAssessment = trackingCalorieAssessment(selection, pending, objective);
+  const proteinReachable = proteinAssessment.reachable;
+
+  // Primero dejamos la propuesta estrictamente por debajo del techo calórico.
+  for (let guard = 0; guard < 5000; guard++) {
+    const totals = totalsForPendingQuantities(selection, pending, quantities);
+    if (totals.calorias <= calorieCeiling + TRACKING_CALORIE_EPS) break;
+    let best = null;
+
+    for (let index = 0; index < pending.length; index++) {
+      if (quantities[index] - steps[index] < minimums[index] - EPS) continue;
+      const candidate = [...quantities];
+      candidate[index] = Math.max(minimums[index], candidate[index] - steps[index]);
+      const candidateTotals = totalsForPendingQuantities(selection, pending, candidate);
+      const underCeiling = candidateTotals.calorias <= calorieCeiling + TRACKING_CALORIE_EPS;
+      const candidateRank = trackingPriorityRank(candidateTotals, objective, proteinReachable);
+
+      if (
+        !best ||
+        (underCeiling && !best.underCeiling) ||
+        (underCeiling === best.underCeiling && (
+          underCeiling
+            ? compareTrackingRanks(candidateRank, best.rank) < 0
+            : candidateTotals.calorias < best.totals.calorias - 1e-8
+        ))
+      ) {
+        best = {
+          quantities: candidate,
+          totals: candidateTotals,
+          rank: candidateRank,
+          underCeiling,
+        };
+      }
+    }
+
+    if (!best) break;
+    quantities = best.quantities;
+  }
+
+  // Después aplicamos la prioridad lexicográfica:
+  // proteína alcanzable -> kcal más cercanas por debajo -> C/G.
+  const seedCandidates = [
+    quantities,
+    proteinAssessment.quantities,
+    calorieAssessment.quantities,
+    minimums,
+  ];
+  const seedOrders = trackingSeedOrders(pending);
+  for (const seed of [minimums, proteinAssessment.quantities]) {
+    for (const order of seedOrders) {
+      seedCandidates.push(fillTrackingCalories(selection, pending, objective, seed, order));
+    }
+  }
+  quantities = seedCandidates.reduce((best, seed) => {
+    const normalized = seed.map((value, index) =>
+      normalizeTrackingQuantity(pending[index], value)
+    );
+    const totals = totalsForPendingQuantities(selection, pending, normalized);
+    if (totals.calorias > calorieCeiling + TRACKING_CALORIE_EPS) return best;
+    const rank = trackingPriorityRank(totals, objective, proteinReachable);
+    const bestTotals = totalsForPendingQuantities(selection, pending, best);
+    const bestRank = trackingPriorityRank(bestTotals, objective, proteinReachable);
+    return compareTrackingRanks(rank, bestRank) < 0 ? normalized : best;
+  }, quantities);
+
+  for (let guard = 0; guard < 5000; guard++) {
+    const currentTotals = totalsForPendingQuantities(selection, pending, quantities);
+    const currentRank = trackingPriorityRank(currentTotals, objective, proteinReachable);
+    let best = null;
+    const seen = new Set();
+
+    const consider = (candidate) => {
+      const key = candidate.join("|");
+      if (seen.has(key)) return;
+      seen.add(key);
+      const candidateTotals = totalsForPendingQuantities(selection, pending, candidate);
+      if (candidateTotals.calorias > calorieCeiling + TRACKING_CALORIE_EPS) return;
+      const rank = trackingPriorityRank(candidateTotals, objective, proteinReachable);
+      if (compareTrackingRanks(rank, currentRank) >= 0) return;
+      if (!best || compareTrackingRanks(rank, best.rank) < 0) {
+        best = { quantities: candidate, totals: candidateTotals, rank };
+      }
+    };
+
+    for (let index = 0; index < pending.length; index++) {
+      if (quantities[index] + steps[index] <= maximums[index] + EPS) {
+        const increased = [...quantities];
+        increased[index] += steps[index];
+        consider(increased);
+      }
+      if (quantities[index] - steps[index] >= minimums[index] - EPS) {
+        const decreased = [...quantities];
+        decreased[index] -= steps[index];
+        consider(decreased);
+      }
+    }
+
+    // Si agregar una porción supera el techo, probamos intercambiarla por
+    // suficientes pasos de otro alimento. Esto permite priorizar proteína
+    // sin quedar atrapados en una solución calóricamente llena.
+    for (let addIndex = 0; addIndex < pending.length; addIndex++) {
+      if (quantities[addIndex] + steps[addIndex] > maximums[addIndex] + EPS) continue;
+      const withAddition = [...quantities];
+      withAddition[addIndex] += steps[addIndex];
+      const addedTotals = totalsForPendingQuantities(selection, pending, withAddition);
+      const excess = addedTotals.calorias - calorieCeiling;
+      if (excess <= TRACKING_CALORIE_EPS) continue;
+
+      for (let removeIndex = 0; removeIndex < pending.length; removeIndex++) {
+        if (removeIndex === addIndex) continue;
+        const kcalPerRemoval = pending[removeIndex].food.calorias * steps[removeIndex];
+        if (!(kcalPerRemoval > EPS)) continue;
+        const removalSteps = Math.max(
+          1,
+          Math.ceil((excess - TRACKING_CALORIE_EPS) / kcalPerRemoval)
+        );
+        const nextQuantity = quantities[removeIndex] - removalSteps * steps[removeIndex];
+        if (nextQuantity < minimums[removeIndex] - EPS) continue;
+        const swapped = [...withAddition];
+        swapped[removeIndex] = nextQuantity;
+        consider(swapped);
+      }
+    }
+
+    if (!best) break;
+    quantities = best.quantities;
+  }
+
+  for (let index = 0; index < pending.length; index++) {
+    pending[index].cantidad = round(quantities[index], 2);
+  }
+  const totals = calculateTotals(selection);
+  return {
+    profile: "tracking_remaining",
+    calorieCeiling: round(calorieCeiling, 2),
+    calorieCeilingSatisfied: totals.calorias <= calorieCeiling + TRACKING_CALORIE_EPS,
+    proteinReachable,
+    proteinDeficit: round(Math.max(0, objective.proteina - totals.proteina), 2),
+  };
 }
 
 function scoreScaleFor(key, objective, mode) {
@@ -1110,6 +1708,11 @@ function generarMenu(...args) {
   }
 
   if (solve.minimumsWarning) warnings.push(solve.minimumsWarning);
+  if (solve.trackingOptimization?.calorieCeilingSatisfied === false) {
+    warnings.push(
+      "No se pudo respetar el techo calórico con los mínimos, múltiplos o unidades de los alimentos seleccionados."
+    );
+  }
 
   const variant = generateQuantityVariant(selection, objective, mode, opts);
   if (variant.requested && !variant.applied && variant.message) {
@@ -1123,6 +1726,7 @@ function generarMenu(...args) {
 
   return {
     ...buildResult(selection, objective, mode, warnings),
+    optimizacionTracking: solve.trackingOptimization,
     variante: variant,
   };
 }

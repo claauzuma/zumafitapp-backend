@@ -158,6 +158,10 @@ function normalizeTarget(target = {}, mode = "kcalProteina") {
   };
 }
 
+function isGramBasedUnit(value = "g") {
+  return ["g", "gr", "gramo", "gramos", "ml", "mililitro", "mililitros"].includes(cleanText(value));
+}
+
 function normalizeFoodLike(raw = {}, fallbackName = "") {
   const name =
     raw.name ||
@@ -186,6 +190,7 @@ function normalizeFoodLike(raw = {}, fallbackName = "") {
     fatPerGram = fatPerGram || fatTotal / quantity;
   }
 
+  const unit = raw.unit || raw.unidad || "g";
   return {
     id: raw.foodId || raw.alimentoId || raw.id || raw._id || null,
     nombre: String(name).trim(),
@@ -194,7 +199,8 @@ function normalizeFoodLike(raw = {}, fallbackName = "") {
     carbohidratos: carbsPerGram || carbsTotal,
     grasas: fatPerGram || fatTotal,
     categoria: raw.categoria || raw.categoriaSnapshot || raw.fuente || raw.source || "",
-    unidad: raw.unit || raw.unidad || "g",
+    unidad: unit,
+    macroBasis: isGramBasedUnit(unit) ? "perGram" : "perUnit",
     quantity,
     currentQuantity: toNumber(raw.currentQuantity ?? raw.cantidadActual ?? raw.automaticQuantity, 0),
     source: cleanText(raw.source || raw.quantitySource || raw.quantityStatus),
@@ -229,27 +235,38 @@ function inferMacroRole(food = {}) {
 function gramsLimitsForFood(food = {}, role = "") {
   const name = cleanText(food.nombre || food.name);
   const category = cleanText(food.categoria || food.fuente || food.source);
+  const explicitMin = toNumber(food.minGramos ?? food.minQuantity, 0);
+  const explicitMax = toNumber(food.maxGramos ?? food.maxQuantity, 0);
+  const explicitStep = toNumber(food.stepGramos ?? food.stepQuantity, 0);
 
-  if (/aceite|oil/.test(name)) return { minGramos: 2, maxGramos: 25, stepGramos: 1 };
-  if (/whey|proteina en polvo|protein powder/.test(name)) return { minGramos: 10, maxGramos: 60, stepGramos: 1 };
-  if (/almendra|nuez|mani|maní|fruto seco|frutos secos/.test(name)) return { minGramos: 5, maxGramos: 40, stepGramos: 1 };
-  if (/palta|avocado/.test(name)) return { minGramos: 30, maxGramos: 250, stepGramos: 1 };
+  if (!isGramBasedUnit(food.unidad || food.unit)) {
+    return {
+      minGramos: explicitMin || 1,
+      maxGramos: explicitMax || 12,
+      stepGramos: explicitStep || 1,
+    };
+  }
+
+  if (/aceite|oil/.test(name)) return { minGramos: explicitMin || 2, maxGramos: explicitMax || 25, stepGramos: explicitStep || 1 };
+  if (/whey|proteina en polvo|protein powder/.test(name)) return { minGramos: explicitMin || 10, maxGramos: explicitMax || 60, stepGramos: explicitStep || 1 };
+  if (/almendra|nuez|mani|maní|fruto seco|frutos secos/.test(name)) return { minGramos: explicitMin || 5, maxGramos: explicitMax || 40, stepGramos: explicitStep || 1 };
+  if (/palta|avocado/.test(name)) return { minGramos: explicitMin || 30, maxGramos: explicitMax || 250, stepGramos: explicitStep || 1 };
   if (/banana|manzana|pera|fruta|higo|sandia/.test(name) || category.includes("fruta")) {
-    return { minGramos: 50, maxGramos: 250, stepGramos: 1 };
+    return { minGramos: explicitMin || 50, maxGramos: explicitMax || 250, stepGramos: explicitStep || 1 };
   }
   if (/arroz|fideo|pasta|papa|batata|pan|avena|cereal/.test(name) || role === "carbohidratos") {
-    return { minGramos: 20, maxGramos: 300, stepGramos: 1 };
+    return { minGramos: explicitMin || 20, maxGramos: explicitMax || 300, stepGramos: explicitStep || 1 };
   }
   if (/bife|chorizo|pollo|pavo|carne|atun|pescado|higado|jamon|huevo/.test(name) || role === "proteicos") {
-    return { minGramos: 50, maxGramos: 400, stepGramos: 1 };
+    return { minGramos: explicitMin || 50, maxGramos: explicitMax || 400, stepGramos: explicitStep || 1 };
   }
   if (/pollo|pavo|carne|atun|atún|pescado|higado|jamon|jamón|huevo/.test(name) || role === "proteicos") {
-    return { minGramos: 50, maxGramos: 300, stepGramos: 1 };
+    return { minGramos: explicitMin || 50, maxGramos: explicitMax || 300, stepGramos: explicitStep || 1 };
   }
   if (/verdura|tomate|lechuga|brocoli|brócoli|zanahoria|zapallo/.test(name)) {
-    return { minGramos: 50, maxGramos: 300, stepGramos: 1 };
+    return { minGramos: explicitMin || 50, maxGramos: explicitMax || 300, stepGramos: explicitStep || 1 };
   }
-  return { minGramos: 0, maxGramos: 300, stepGramos: 1 };
+  return { minGramos: explicitMin, maxGramos: explicitMax || 300, stepGramos: explicitStep || 1 };
 }
 
 function itemForEngine(food = {}, options = {}) {
@@ -544,9 +561,13 @@ class ServicioAlimentos {
       alimentosProteACuadrar: groups.proteicos,
       alimentosChACuadrar: groups.carbohidratos,
       alimentosGrACuadrar: groups.grasas,
-      alimentosBase: [...alimentosBase, ...allFoods],
+      // Los snapshots elegidos para esta operación prevalecen sobre la base
+      // global si comparten nombre. Así Tracking y los editores calculan con
+      // los mismos macros que el usuario está viendo.
+      alimentosBase: [...allFoods, ...alimentosBase],
       permitirDefaults: false,
       redondear: payload.options?.redondear !== false,
+      trackingPriority: payload.options?.trackingPriority === true,
       generarVariante: payload.options?.generarVariante === true || payload.options?.generateVariant === true,
       variantSeed: payload.options?.variantSeed,
     });
@@ -577,8 +598,8 @@ class ServicioAlimentos {
         nombre: food.nombre,
         quantity: food.cantidad,
         cantidad: food.cantidad,
-        unit: "g",
-        unidad: "g",
+        unit: sourceFood.unidad || sourceFood.unit || "g",
+        unidad: sourceFood.unidad || sourceFood.unit || "g",
         source,
         kcal: food.calorias,
         proteina: food.proteina,
@@ -619,6 +640,7 @@ class ServicioAlimentos {
       diff: result.diferencia,
       warnings: result.warnings || [],
       errors: result.errors || [],
+      optimization: result.optimizacionTracking || null,
     };
   };
 

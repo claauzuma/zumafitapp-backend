@@ -270,7 +270,7 @@ function normalizeServicePackage(value = "") {
   const normalized = token(value);
   if (["service_vip", "coach_vip", "vip"].includes(normalized)) return "service_vip";
   if (["service_pro", "coach_pro", "pro"].includes(normalized)) return "service_pro";
-  return "service_pro";
+  return null;
 }
 
 function activePersonalSubscription(user = {}, plan = "free", now = new Date()) {
@@ -376,8 +376,10 @@ function resolveCoachAccess(user = {}) {
     Boolean(resolvedCoachId) ||
     ["accepted_pending_activation", "pending_activation", "invited"].includes(status)
   );
+  const rawServicePackage = stored.servicePackage || stored.package || user?.coach?.servicePackage || "";
+  const servicePackageExplicit = Boolean(token(rawServicePackage));
   const servicePackage = visible
-    ? normalizeServicePackage(stored.servicePackage || stored.package || user?.coach?.servicePackage || "service_pro")
+    ? normalizeServicePackage(rawServicePackage || "service_pro")
     : null;
   const serviceScopes = Array.isArray(stored.serviceScopes || stored.scopes) && (stored.serviceScopes || stored.scopes).length
     ? (stored.serviceScopes || stored.scopes).map(token).filter(Boolean)
@@ -390,6 +392,7 @@ function resolveCoachAccess(user = {}) {
     active,
     coachId: idToString(resolvedCoachId) || null,
     servicePackage,
+    servicePackageExplicit,
     package: servicePackage,
     label: servicePackage ? PROFESSIONAL_SERVICE_CATALOG[servicePackage]?.label || "Coach Pro" : null,
     serviceScopes,
@@ -485,7 +488,14 @@ function includedFeature(mode = "included") {
   };
 }
 
-function buildFeatureAvailability({ planConfig, effectivePersonalPlan, hasCoach, coachAccess, effectiveService } = {}) {
+function buildFeatureAvailability({
+  planConfig,
+  effectivePersonalPlan,
+  hasCoach,
+  coachAccess,
+  effectiveService,
+  advancedCapabilities = {},
+} = {}) {
   const isFree = effectivePersonalPlan === "free" && !hasCoach;
   const autoCoachMode = hasCoach
     ? "coach_review"
@@ -504,9 +514,9 @@ function buildFeatureAvailability({ planConfig, effectivePersonalPlan, hasCoach,
   const canUseFlexibleMarginRecommendations = hasCoach
     ? effectiveService?.nutrition?.flexibleMarginRecommendations === true
     : planConfig?.nutrition?.flexibleMarginRecommendations === true;
-  const canPlanRemainingIntake = hasCoach || planConfig?.nutrition?.planRemainingIntake === true;
+  const canPlanRemainingIntake = advancedCapabilities.canPlanRemainingIntake === true;
   const canAutoCalculateTrackingQuantities =
-    hasCoach || planConfig?.nutrition?.autoCalculateTrackingQuantities === true;
+    advancedCapabilities.canAutoCalculateTrackingQuantities === true;
 
   return {
     nutrition: {
@@ -606,13 +616,6 @@ export function resolveClientAccessContext(user = {}, { now = new Date() } = {})
     coachAccess,
   });
   const effectiveService = hasCoach ? PROFESSIONAL_SERVICE_CATALOG[coachAccess.servicePackage] : null;
-  const featureAvailability = buildFeatureAvailability({
-    planConfig: personalPlanConfig,
-    effectivePersonalPlan,
-    hasCoach,
-    coachAccess,
-    effectiveService,
-  });
   const baseCapabilities = getClientNutritionCapabilities({
     ...user,
     role,
@@ -623,6 +626,23 @@ export function resolveClientAccessContext(user = {}, { now = new Date() } = {})
     plan: effectivePersonalPlan,
     personalPlan,
     effectivePersonalPlan,
+  });
+  const capabilityService = hasCoach && coachAccess.servicePackageExplicit ? effectiveService : null;
+  const advancedCapabilities = {
+    canPlanRemainingIntake:
+      personalCapabilities.canPlanRemainingIntake === true ||
+      capabilityService?.nutrition?.planRemainingIntake === true,
+    canAutoCalculateTrackingQuantities:
+      personalCapabilities.canAutoCalculateTrackingQuantities === true ||
+      capabilityService?.nutrition?.autoCalculateTrackingQuantities === true,
+  };
+  const featureAvailability = buildFeatureAvailability({
+    planConfig: personalPlanConfig,
+    effectivePersonalPlan,
+    hasCoach,
+    coachAccess,
+    effectiveService,
+    advancedCapabilities,
   });
 
   const primaryAccess = hasCoach
@@ -732,8 +752,8 @@ export function resolveClientAccessContext(user = {}, { now = new Date() } = {})
           canAutoCompleteRemainingMeals: effectiveService?.nutrition?.autoCompleteRemainingMeals === true,
           canUseFlexibleMarginRecommendations: effectiveService?.nutrition?.flexibleMarginRecommendations === true,
           canUseManualDayCompletion: true,
-          canPlanRemainingIntake: true,
-          canAutoCalculateTrackingQuantities: true,
+          canPlanRemainingIntake: advancedCapabilities.canPlanRemainingIntake,
+          canAutoCalculateTrackingQuantities: advancedCapabilities.canAutoCalculateTrackingQuantities,
           canViewCoachAdherenceBreakdown: true,
           primaryAuthority: "coach",
           canTrack: true,

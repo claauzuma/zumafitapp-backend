@@ -1747,12 +1747,23 @@ function normalizeManualCompletionPlan(value = null, previous = null) {
   const previousMoments = Array.isArray(previous?.moments) ? previous.moments : [];
   const count = Math.max(1, Math.min(4, Math.trunc(Number(source.count || source.momentsCount || previous?.count || 1))));
   const suppliedMoments = Array.isArray(source.moments) ? source.moments : [];
+  const usedIds = new Set();
+
+  function nextMomentId() {
+    let sequence = 1;
+    while (usedIds.has(`manual_completion_moment_${sequence}`)) sequence += 1;
+    return `manual_completion_moment_${sequence}`;
+  }
+
   return {
     count,
     moments: Array.from({ length: count }, (_, index) => {
       const incoming = suppliedMoments[index] || previousMoments[index] || {};
+      const suppliedId = cleanString(incoming.id, 80);
+      const id = suppliedId && !usedIds.has(suppliedId) ? suppliedId : nextMomentId();
+      usedIds.add(id);
       return {
-        id: cleanString(incoming.id || `manual_completion_moment_${index + 1}`, 80),
+        id,
         label: cleanString(incoming.label || incoming.name || `Momento ${index + 1}`, 80),
         order: index,
       };
