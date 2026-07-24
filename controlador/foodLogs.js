@@ -12,6 +12,7 @@ function sendError(res, error) {
   if (msg === "INVALID_DATE") return res.status(400).json({ error: "Fecha invalida" });
   if (msg === "INVALID_MEAL_TYPE") return res.status(400).json({ error: "Comida invalida" });
   if (msg === "FOOD_REQUIRED") return res.status(400).json({ error: "Falta el alimento" });
+  if (msg === "REQUEST_ID_REQUIRED") return res.status(400).json({ error: "Falta el identificador de la operación" });
   if (msg === "LOG_NOT_FOUND") return res.status(404).json({ error: "Registro no encontrado" });
   if (msg === "ID_INVALIDO") return res.status(400).json({ error: "ID invalido" });
 
@@ -46,6 +47,24 @@ class ControladorFoodLogs {
     try {
       const data = await this.servicio.updateMealsConfig(req.user, req.body || {});
       return res.json({ ok: true, ...data });
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
+  calculateRemainingQuantities = async (req, res) => {
+    try {
+      const data = await this.servicio.calculateRemainingQuantities(req.user, req.body || {});
+      return res.status(data?.status === "error" ? 400 : 200).json(data);
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
+  addCalculatedLogs = async (req, res) => {
+    try {
+      const data = await this.servicio.addCalculatedLogs(req.user, req.body || {});
+      return res.status(201).json({ ok: true, ...data });
     } catch (error) {
       return sendError(res, error);
     }

@@ -247,6 +247,11 @@ function adminError(res, error) {
   }
 
   if (msg === "INVALID_DATE") return res.status(400).json({ error: "Fecha invalida" });
+  if (msg === "DAY_COMPLETION_MODE_INVALID") return res.status(400).json({ error: "Modo de cierre diario invalido" });
+  if (msg === "MENU_NOT_ASSIGNED_FOR_DATE") return res.status(409).json({ error: "No hay un menu asignado para esa fecha" });
+  if (msg === "MENU_DAY_ALREADY_COMPLETED") return res.status(409).json({ error: "Todas las comidas del menu ya estan realizadas" });
+  if (msg === "MANUAL_DAY_COMPLETION_NOT_ALLOWED") return res.status(403).json({ error: "No tenes habilitado completar el dia por tu cuenta" });
+  if (msg === "REMAINING_INTAKE_PLAN_NOT_ALLOWED") return res.status(403).json({ error: "Organizar lo que queda esta disponible en Pro" });
   if (msg === "USER_NOT_CLIENT") return res.status(400).json({ error: "El usuario no es cliente" });
   if (msg === "NO_AUTENTICADO") return res.status(401).json({ error: "No autenticado" });
 
@@ -937,6 +942,19 @@ class ControladorUsuarios {
         ...(req.body || {}),
         date: req.params.date,
       });
+      return res.json(data);
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  updateMyMenuTrackingDayCompletion = async (req, res) => {
+    try {
+      const data = await this.servicio.updateMyMenuTrackingDayCompletion(
+        req.user,
+        req.params.date,
+        req.body || {}
+      );
       return res.json(data);
     } catch (error) {
       return adminError(res, error);
@@ -1690,6 +1708,21 @@ class ControladorUsuarios {
         client: mapUserPublic(data.client),
         assignmentInvalidation: data.assignmentInvalidation || null,
       });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  getCoachClientMenuTracking = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const { clientId } = req.params;
+      const data = await this.servicio.getCoachClientMenuTracking({
+        coachId,
+        clientId,
+        query: req.query || {},
+      });
+      return res.json(data);
     } catch (error) {
       return adminError(res, error);
     }

@@ -30,6 +30,9 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     automaticMenu: false,
     autoCompleteRemainingMeals: false,
     flexibleMarginRecommendations: false,
+    manualDayCompletion: true,
+    planRemainingIntake: false,
+    autoCalculateTrackingQuantities: false,
     exportPdf: false,
   },
   pro: {
@@ -52,6 +55,9 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     automaticMenu: false,
     autoCompleteRemainingMeals: true,
     flexibleMarginRecommendations: true,
+    manualDayCompletion: true,
+    planRemainingIntake: true,
+    autoCalculateTrackingQuantities: true,
     exportPdf: false,
   },
   vip: {
@@ -74,6 +80,9 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     automaticMenu: false,
     autoCompleteRemainingMeals: true,
     flexibleMarginRecommendations: true,
+    manualDayCompletion: true,
+    planRemainingIntake: true,
+    autoCalculateTrackingQuantities: true,
     exportPdf: false,
   },
 };
@@ -180,6 +189,10 @@ export function getClientNutritionCapabilities(user = {}, options = {}) {
     canGenerateAutomaticMenu: !!config.automaticMenu,
     canAutoCompleteRemainingMeals: config.autoCompleteRemainingMeals === true,
     canUseFlexibleMarginRecommendations: config.flexibleMarginRecommendations === true,
+    canUseManualDayCompletion: config.manualDayCompletion === true,
+    canPlanRemainingIntake: config.planRemainingIntake === true || hasCoach,
+    canAutoCalculateTrackingQuantities: config.autoCalculateTrackingQuantities === true || hasCoach,
+    canViewCoachAdherenceBreakdown: hasCoach,
     canExportMenuPdf: !!config.exportPdf,
     limits: {
       ownMenus: config.ownMenusLimit,

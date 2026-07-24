@@ -29,6 +29,20 @@ class RouterFoodLogs {
       writeLimiter,
       this.controladorFoodLogs.addLog
     );
+    this.router.post(
+      "/day/calculate-quantities",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorFoodLogs.calculateRemainingQuantities
+    );
+    this.router.post(
+      "/day/logs/calculated",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorFoodLogs.addCalculatedLogs
+    );
     this.router.patch(
       "/day/meals",
       authMiddleware,

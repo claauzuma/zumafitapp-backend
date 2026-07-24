@@ -97,6 +97,59 @@ class ModelMongoDBClientMenuTracking {
     return await this.getByUserDate(clientId, date);
   };
 
+  setDayCompletionState = async (doc = {}) => {
+    const clientId = toMongoIdOrString(doc.clientId);
+    const date = String(doc.date || "").trim();
+    if (!clientId || !date) throw new Error("INVALID_DATE");
+
+    const now = new Date();
+    const payload = {
+      dayCompletionMode: doc.dayCompletionMode || "menu",
+      manualCompletion: doc.manualCompletion || null,
+      updatedAt: now,
+    };
+
+    [
+      "coachId",
+      "dayKey",
+      "weekStart",
+      "weekEnd",
+      "menuId",
+      "menuSnapshotId",
+      "menuSnapshotSummary",
+      "target",
+      "menuTotals",
+    ].forEach((key) => {
+      if (doc[key] !== undefined) payload[key] = doc[key];
+    });
+
+    if (payload.coachId) payload.coachId = toMongoIdOrString(payload.coachId);
+    if (payload.menuId) payload.menuId = toMongoIdOrString(payload.menuId);
+
+    await this._col().updateOne(
+      { clientId, date },
+      {
+        $setOnInsert: {
+          clientId,
+          date,
+          completedMenuMeals: [],
+          manualEntries: [],
+          generatedRemainingMeals: [],
+          mealReplacements: [],
+          foodReplacements: [],
+          consumedTotals: { kcal: 0, proteina: 0, carbs: 0, grasas: 0 },
+          remainingTotals: null,
+          nutrition: {},
+          createdAt: now,
+        },
+        $set: payload,
+      },
+      { upsert: true }
+    );
+
+    return await this.getByUserDate(clientId, date);
+  };
+
   async ensureIndexes() {
     const col = this._col();
     await col.createIndex({ clientId: 1, date: 1 }, { unique: true });

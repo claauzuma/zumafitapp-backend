@@ -4,6 +4,7 @@ import ModelMongoDBFoodLogs from "../model/DAO/foodLogsMongoDB.js";
 import ModelMongoDBUsuarios from "../model/DAO/usuariosMongoDB.js";
 import ModelMongoDBMenus from "../model/DAO/menusMongoDB.js";
 import ModelMongoDBAlimentos from "../model/DAO/alimentosMongoDB.js";
+import ServiciosAlimentos from "./alimentos.js";
 import { requireCapability, requireTrackingHistoryRange } from "./accessGates.js";
 
 const MEAL_TYPES = ["desayuno", "almuerzo", "merienda", "cena", "snack", "otra"];
@@ -496,6 +497,7 @@ class ServicioFoodLogs {
     this.usuariosModel = new ModelMongoDBUsuarios();
     this.menusModel = new ModelMongoDBMenus();
     this.alimentosModel = new ModelMongoDBAlimentos();
+    this.alimentosService = new ServiciosAlimentos();
   }
 
   async _actor(user) {
@@ -685,6 +687,14 @@ class ServicioFoodLogs {
     return await this._buildResponse(actor, date, objectiveInfo, updatedDay, logs);
   }
 
+  async calculateRemainingQuantities(user, payload = {}) {
+    const actor = await this._actor(user);
+    const date = normalizeDate(payload.date);
+    this._assertCanWriteTracking(actor, date);
+    requireCapability(actor, "nutrition.autoCalculateTrackingQuantities");
+    return await this.alimentosService.generarCantidades(payload);
+  }
+
   async deleteMeal(user, mealId, payload = {}) {
     const actor = await this._actor(user);
     const date = normalizeDate(payload.date);
@@ -744,15 +754,18 @@ class ServicioFoodLogs {
     return await this._buildResponse(actor, date, objectiveInfo, updatedDay, logs);
   }
 
-  async addSnapshotLogs(user, payload = {}) {
+  async addSnapshotLogs(user, payload = {}, { requiredCapability = "", requireRequestId = false } = {}) {
     const actor = await this._actor(user);
     const date = normalizeDate(payload.date);
     this._assertCanWriteTracking(actor, date);
+    if (requiredCapability) requireCapability(actor, requiredCapability);
 
     const mealType = normalizeMealType(payload.mealType || payload.comida);
     const mealId = normalizeMealId(payload.mealId || payload.mealConfigId || payload.mealKey) || mealType;
     const items = Array.isArray(payload.items) ? payload.items : [];
     if (!items.length) throw new Error("FOOD_REQUIRED");
+    const writeRequestId = cleanString(payload.requestId || payload.writeRequestId, 120);
+    if (requireRequestId && !writeRequestId) throw new Error("REQUEST_ID_REQUIRED");
 
     const objectiveInfo = await this._resolveObjective(actor);
     const day = await this.foodLogsModel.upsertDayBase({
@@ -764,26 +777,48 @@ class ServicioFoodLogs {
     });
     await this._ensureMealConfig(day, { mealId, tipo: mealType, nombre: payload.mealName || payload.nombreComida });
 
-    for (const item of items.slice(0, 80)) {
+    let insertedCount = 0;
+    for (const [writeItemIndex, item] of items.slice(0, 80).entries()) {
       const snapshot = snapshotFromSavedMealItem(item);
       if (snapshot.cantidad <= 0) continue;
-      await this.foodLogsModel.insertLog({
-        userId: this._actorId(actor),
-        foodLogDayId: day._id,
-        date,
-        mealType,
-        mealId,
-        ...snapshot,
-        source: payload.source || "saved_meal",
-        savedMealId: payload.savedMealId || null,
-        savedMealName: payload.savedMealName || "",
-        notas: cleanString(payload.notas || payload.notes || "", 1000),
-      });
+      try {
+        await this.foodLogsModel.insertLog({
+          userId: this._actorId(actor),
+          foodLogDayId: day._id,
+          date,
+          mealType,
+          mealId,
+          ...snapshot,
+          source: payload.source || "saved_meal",
+          savedMealId: payload.savedMealId || null,
+          savedMealName: payload.savedMealName || "",
+          notas: cleanString(payload.notas || payload.notes || "", 1000),
+          ...(writeRequestId ? { writeRequestId, writeItemIndex } : {}),
+        });
+        insertedCount += 1;
+      } catch (error) {
+        if (!(writeRequestId && Number(error?.code) === 11000)) throw error;
+      }
     }
 
     const logs = await this.foodLogsModel.listLogsByUserDate(this._actorId(actor), date);
     const updatedDay = await this.foodLogsModel.updateDayTotals(day._id, totalLogs(logs));
-    return await this._buildResponse(actor, date, objectiveInfo, updatedDay, logs);
+    const response = await this._buildResponse(actor, date, objectiveInfo, updatedDay, logs);
+    return {
+      ...response,
+      ...(writeRequestId ? { writeRequestId, insertedCount, idempotent: insertedCount === 0 } : {}),
+    };
+  }
+
+  async addCalculatedLogs(user, payload = {}) {
+    return await this.addSnapshotLogs(
+      user,
+      { ...payload, source: "manual_completion_calculator" },
+      {
+        requiredCapability: "nutrition.autoCalculateTrackingQuantities",
+        requireRequestId: true,
+      }
+    );
   }
 
   async updateLog(user, logId, payload = {}) {

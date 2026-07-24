@@ -126,6 +126,18 @@ class ModelMongoDBFoodLogs {
       .toArray();
   };
 
+  listLogsByUserDateRange = async (userId, from, to) => {
+    const values = idValues(userId);
+    if (!values.length || !from || !to) return [];
+    return await this._logs()
+      .find({
+        userId: { $in: values },
+        date: { $gte: String(from), $lte: String(to) },
+      })
+      .sort({ date: 1, createdAt: 1 })
+      .toArray();
+  };
+
   insertLog = async (doc) => {
     const now = new Date();
     const payload = {
@@ -215,6 +227,13 @@ class ModelMongoDBFoodLogs {
     await logs.createIndex({ foodLogDayId: 1 });
     await logs.createIndex({ userId: 1, mealType: 1, date: -1 });
     await logs.createIndex({ userId: 1, date: -1, mealId: 1 });
+    await logs.createIndex(
+      { userId: 1, date: 1, writeRequestId: 1, writeItemIndex: 1 },
+      {
+        unique: true,
+        partialFilterExpression: { writeRequestId: { $type: "string" } },
+      }
+    );
   }
 }
 

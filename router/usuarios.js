@@ -176,6 +176,12 @@ class RouterUsuarios {
       denyWriteWhenReadOnlyImpersonation,
       this.controladorUsuarios.patchMyMenuTrackingDay
     );
+    this.router.patch(
+      "/me/menu-tracking/day/:date/completion",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.updateMyMenuTrackingDayCompletion
+    );
 
     const users = express.Router();
 
@@ -233,6 +239,12 @@ class RouterUsuarios {
       authMiddleware,
       requireRole("coach"),
       this.controladorUsuarios.getMyCoachClientDetail
+    );
+    users.get(
+      "/me/coach-clients/:clientId/menu-tracking",
+      authMiddleware,
+      requireRole("coach"),
+      this.controladorUsuarios.getCoachClientMenuTracking
     );
     users.patch(
       "/me/coach-clients/:clientId/end-service",

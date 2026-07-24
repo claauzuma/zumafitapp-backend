@@ -62,6 +62,9 @@ export const PERSONAL_PLAN_CATALOG = {
       mealTargets: false,
       autoCompleteRemainingMeals: false,
       flexibleMarginRecommendations: false,
+      manualDayCompletion: true,
+      planRemainingIntake: false,
+      autoCalculateTrackingQuantities: false,
       adaptiveSuggestions: false,
       autoCoach: "manual",
     },
@@ -97,6 +100,9 @@ export const PERSONAL_PLAN_CATALOG = {
       mealTargets: true,
       autoCompleteRemainingMeals: true,
       flexibleMarginRecommendations: true,
+      manualDayCompletion: true,
+      planRemainingIntake: true,
+      autoCalculateTrackingQuantities: true,
       adaptiveSuggestions: "suggestions",
       autoCoach: "suggestions",
     },
@@ -132,6 +138,9 @@ export const PERSONAL_PLAN_CATALOG = {
       mealTargets: true,
       autoCompleteRemainingMeals: true,
       flexibleMarginRecommendations: true,
+      manualDayCompletion: true,
+      planRemainingIntake: true,
+      autoCalculateTrackingQuantities: true,
       adaptiveSuggestions: "review_required",
       autoCoach: "adaptive_review_required",
     },
@@ -158,6 +167,9 @@ export const PROFESSIONAL_SERVICE_CATALOG = {
       assignedMenus: true,
       autoCompleteRemainingMeals: false,
       flexibleMarginRecommendations: false,
+      manualDayCompletion: true,
+      planRemainingIntake: true,
+      autoCalculateTrackingQuantities: true,
       adaptiveSuggestions: "coach_supervised",
       autoCoach: "coach_supervised",
     },
@@ -179,6 +191,9 @@ export const PROFESSIONAL_SERVICE_CATALOG = {
       assignedMenus: true,
       autoCompleteRemainingMeals: true,
       flexibleMarginRecommendations: true,
+      manualDayCompletion: true,
+      planRemainingIntake: true,
+      autoCalculateTrackingQuantities: true,
       adaptiveSuggestions: "ai_assisted_coach_review",
       autoCoach: "ai_assisted_coach_review",
     },
@@ -489,10 +504,20 @@ function buildFeatureAvailability({ planConfig, effectivePersonalPlan, hasCoach,
   const canUseFlexibleMarginRecommendations = hasCoach
     ? effectiveService?.nutrition?.flexibleMarginRecommendations === true
     : planConfig?.nutrition?.flexibleMarginRecommendations === true;
+  const canPlanRemainingIntake = hasCoach || planConfig?.nutrition?.planRemainingIntake === true;
+  const canAutoCalculateTrackingQuantities =
+    hasCoach || planConfig?.nutrition?.autoCalculateTrackingQuantities === true;
 
   return {
     nutrition: {
       tracking: includedFeature("manual"),
+      manualDayCompletion: includedFeature("manual"),
+      planRemainingIntake: canPlanRemainingIntake
+        ? includedFeature("temporary_day_plan")
+        : blockedFeature("plan_upgrade_required"),
+      autoCalculateTrackingQuantities: canAutoCalculateTrackingQuantities
+        ? includedFeature("deterministic_quantities")
+        : blockedFeature("plan_upgrade_required"),
       ownMenus: hasCoach ? includedFeature("personal_drafts") : includedFeature("personal"),
       weeklyPlanning: planConfig?.nutrition?.weeklyPlanning ? includedFeature("manual") : blockedFeature("plan_upgrade_required"),
       equivalences: planConfig?.nutrition?.equivalences || hasCoach ? includedFeature("manual") : blockedFeature("plan_upgrade_required"),
@@ -551,6 +576,10 @@ function capabilityFromCatalog(planConfig = {}, baseCapabilities = {}) {
     canUseMealTargets: planConfig.nutrition?.mealTargets === true,
     canAutoCompleteRemainingMeals: planConfig.nutrition?.autoCompleteRemainingMeals === true,
     canUseFlexibleMarginRecommendations: planConfig.nutrition?.flexibleMarginRecommendations === true,
+    canUseManualDayCompletion: planConfig.nutrition?.manualDayCompletion !== false,
+    canPlanRemainingIntake: planConfig.nutrition?.planRemainingIntake === true,
+    canAutoCalculateTrackingQuantities: planConfig.nutrition?.autoCalculateTrackingQuantities === true,
+    canViewCoachAdherenceBreakdown: false,
     autoCoachNutrition: nutritionAutoCoach && nutritionAutoCoach !== "manual" ? "coming_soon" : "manual",
     autoCoachNutritionMode: nutritionAutoCoach || "manual",
     autoCoachTraining: trainingAutoCoach && trainingAutoCoach !== "manual" ? "coming_soon" : "manual",
@@ -702,6 +731,10 @@ export function resolveClientAccessContext(user = {}, { now = new Date() } = {})
           ...personalCapabilities,
           canAutoCompleteRemainingMeals: effectiveService?.nutrition?.autoCompleteRemainingMeals === true,
           canUseFlexibleMarginRecommendations: effectiveService?.nutrition?.flexibleMarginRecommendations === true,
+          canUseManualDayCompletion: true,
+          canPlanRemainingIntake: true,
+          canAutoCalculateTrackingQuantities: true,
+          canViewCoachAdherenceBreakdown: true,
           primaryAuthority: "coach",
           canTrack: true,
           canUseAssignedCoachContent: true,
