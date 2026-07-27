@@ -1,5 +1,10 @@
 import ModelFactory from "../model/DAO/alimentosFactory.js";
-import menu from "../menu2.js";
+import menu, { TRACKING_OPTIMIZATION_POLICY } from "../menu2.js";
+
+// Tolerancia exclusiva de mensajería. El optimizador sigue usando su propia
+// precisión y su ranking; una diferencia visual de hasta 0,5 g no se anuncia
+// como déficit proteico al usuario.
+const TRACKING_PROTEIN_MESSAGE_EPSILON = 0.5;
 
 const round = (value, digits = 2) => {
   const n = Number(value);
@@ -159,10 +164,111 @@ function normalizeTarget(target = {}, mode = "kcalProteina") {
 }
 
 function isGramBasedUnit(value = "g") {
-  return ["g", "gr", "gramo", "gramos", "ml", "mililitro", "mililitros"].includes(cleanText(value));
+  return ["g", "gr", "grs", "gramo", "gramos", "ml", "mililitro", "mililitros"].includes(cleanText(value));
 }
 
-function normalizeFoodLike(raw = {}, fallbackName = "") {
+const QUANTITY_CONSTRAINT_FIELDS = Object.freeze({
+  min: ["minGramos", "minQuantity", "cantidadMin", "porcionMin"],
+  max: ["maxGramos", "maxQuantity", "cantidadMax", "porcionMax"],
+  step: ["stepGramos", "stepQuantity", "step", "multiplo"],
+});
+
+function normalizedUnit(value = "") {
+  const unit = cleanText(value);
+  if (["g", "gr", "grs", "gramo", "gramos"].includes(unit)) return "g";
+  if (["ml", "mililitro", "mililitros"].includes(unit)) return "ml";
+  return unit;
+}
+
+function foodUnit(food = {}) {
+  return food.unit || food.unidad || food.Unidad || food.unidadBase || food.measurementUnit || "";
+}
+
+function constraintFromShape(food = {}, kind = "max", label = "payload") {
+  const fields = QUANTITY_CONSTRAINT_FIELDS[kind] || [];
+  for (const [shape, shapeLabel] of [[food, label], [food?.raw, `${label}.raw`]]) {
+    if (!shape || typeof shape !== "object") continue;
+    for (const field of fields) {
+      if (!hasValue(shape[field])) continue;
+      const value = toNumber(shape[field], 0);
+      if (value > 0) return { value, source: `${shapeLabel}.${field}` };
+    }
+  }
+  return null;
+}
+
+function foodRecordRank(food = {}) {
+  let rank = 0;
+  if (food.activo === true) rank += 1000;
+  if (food.activo === false) rank -= 1000;
+  if (hasValue(food.alimentoId)) rank += 300;
+  if (hasValue(food.macroBasis)) rank += 100;
+  if (constraintFromShape(food, "max", "catalog")) rank += 50;
+  if (constraintFromShape(food, "min", "catalog")) rank += 20;
+  if (constraintFromShape(food, "step", "catalog")) rank += 10;
+  if (toNumber(food.kcalUnidad ?? food.kcal ?? food.calorias ?? food.Calorias, 0) > 0) rank += 5;
+  return rank;
+}
+
+function foodIdentityValues(food = {}) {
+  return [food.foodId, food.alimentoId, food.id, food._id, food?.raw?._id, food?.raw?.alimentoId]
+    .filter(hasValue)
+    .map((value) => String(value));
+}
+
+function catalogFoodFor(payloadFood = {}, allFoods = []) {
+  const payloadIds = new Set(foodIdentityValues(payloadFood));
+  const name = foodNameText(payloadFood);
+  const unit = normalizedUnit(foodUnit(payloadFood));
+  const records = Array.isArray(allFoods) ? allFoods : [];
+  const rankCandidates = (candidates) =>
+    candidates.sort((left, right) => foodRecordRank(right) - foodRecordRank(left))[0] || null;
+
+  if (payloadIds.size) {
+    const exactIdCandidates = records.filter((candidate) =>
+      foodIdentityValues(candidate).some((id) => payloadIds.has(id))
+    );
+    // Un request con identidad conserva su snapshot si el catálogo ya no
+    // contiene ese ID. Caer por nombre mezclaría sus macros con constraints de
+    // un homónimo distinto.
+    return rankCandidates(exactIdCandidates);
+  }
+
+  const candidates = records.filter((candidate) => {
+    if (!name || foodNameText(candidate) !== name) return false;
+    const candidateUnit = normalizedUnit(foodUnit(candidate));
+    return !unit || !candidateUnit || candidateUnit === unit;
+  });
+  return rankCandidates(candidates);
+}
+
+function resolvedQuantityConstraints(payloadFood = {}, catalogFood = null) {
+  const resolved = {};
+  const sources = {};
+  for (const kind of Object.keys(QUANTITY_CONSTRAINT_FIELDS)) {
+    const constraint =
+      constraintFromShape(catalogFood, kind, "catalog") ||
+      constraintFromShape(payloadFood, kind, "payload");
+    if (!constraint) continue;
+    resolved[kind] = constraint.value;
+    sources[kind] = constraint.source;
+  }
+  return { ...resolved, sources };
+}
+
+function preferStructuredFoodRecords(alimentos = []) {
+  const selected = new Map();
+  (Array.isArray(alimentos) ? alimentos : []).forEach((food, index) => {
+    const name = foodNameText(food);
+    const unit = normalizedUnit(foodUnit(food));
+    const key = name ? `${name}|${unit}` : `__record_${index}`;
+    const current = selected.get(key);
+    if (!current || foodRecordRank(food) > foodRecordRank(current)) selected.set(key, food);
+  });
+  return [...selected.values()];
+}
+
+function normalizeFoodLike(raw = {}, fallbackName = "", catalogFood = null) {
   const name =
     raw.name ||
     raw.nombre ||
@@ -190,7 +296,8 @@ function normalizeFoodLike(raw = {}, fallbackName = "") {
     fatPerGram = fatPerGram || fatTotal / quantity;
   }
 
-  const unit = raw.unit || raw.unidad || "g";
+  const unit = raw.unit || raw.unidad || foodUnit(catalogFood) || "g";
+  const constraints = resolvedQuantityConstraints(raw, catalogFood);
   return {
     id: raw.foodId || raw.alimentoId || raw.id || raw._id || null,
     nombre: String(name).trim(),
@@ -198,15 +305,24 @@ function normalizeFoodLike(raw = {}, fallbackName = "") {
     proteina: proteinPerGram || proteinTotal,
     carbohidratos: carbsPerGram || carbsTotal,
     grasas: fatPerGram || fatTotal,
-    categoria: raw.categoria || raw.categoriaSnapshot || raw.fuente || raw.source || "",
+    categoria:
+      raw.categoria ||
+      raw.categoriaSnapshot ||
+      raw.fuente ||
+      raw.source ||
+      catalogFood?.categoria ||
+      catalogFood?.categoriaZumaFit ||
+      catalogFood?.Fuente ||
+      "",
     unidad: unit,
     macroBasis: isGramBasedUnit(unit) ? "perGram" : "perUnit",
     quantity,
     currentQuantity: toNumber(raw.currentQuantity ?? raw.cantidadActual ?? raw.automaticQuantity, 0),
     source: cleanText(raw.source || raw.quantitySource || raw.quantityStatus),
-    minGramos: raw.minGramos,
-    maxGramos: raw.maxGramos,
-    stepGramos: raw.stepGramos,
+    minGramos: constraints.min,
+    maxGramos: constraints.max,
+    stepGramos: constraints.step,
+    quantityConstraintSources: constraints.sources,
   };
 }
 
@@ -235,38 +351,63 @@ function inferMacroRole(food = {}) {
 function gramsLimitsForFood(food = {}, role = "") {
   const name = cleanText(food.nombre || food.name);
   const category = cleanText(food.categoria || food.fuente || food.source);
-  const explicitMin = toNumber(food.minGramos ?? food.minQuantity, 0);
-  const explicitMax = toNumber(food.maxGramos ?? food.maxQuantity, 0);
-  const explicitStep = toNumber(food.stepGramos ?? food.stepQuantity, 0);
+  const shapeConstraints = resolvedQuantityConstraints(food);
+  const explicitMin = toNumber(shapeConstraints.min, 0);
+  const explicitMax = toNumber(shapeConstraints.max, 0);
+  const explicitStep = toNumber(shapeConstraints.step, 0);
+  const sourceFor = (kind, fallback) =>
+    food.quantityConstraintSources?.[kind] || shapeConstraints.sources?.[kind] || fallback;
+  const limits = (minGramos, maxGramos, stepGramos, fallbacks = {}) => ({
+    minGramos,
+    maxGramos,
+    stepGramos,
+    minSource: sourceFor("min", fallbacks.min),
+    maxSource: sourceFor("max", fallbacks.max),
+    stepSource: sourceFor("step", fallbacks.step),
+    minExplicit: explicitMin > 0,
+    maxExplicit: explicitMax > 0,
+    stepExplicit: explicitStep > 0,
+  });
 
   if (!isGramBasedUnit(food.unidad || food.unit)) {
-    return {
-      minGramos: explicitMin || 1,
-      maxGramos: explicitMax || 12,
-      stepGramos: explicitStep || 1,
-    };
+    return limits(explicitMin || 1, explicitMax || 12, explicitStep || 1, {
+      min: "fallback.discrete.min",
+      max: "fallback.discrete.max12",
+      step: "fallback.discrete.step",
+    });
   }
 
-  if (/aceite|oil/.test(name)) return { minGramos: explicitMin || 2, maxGramos: explicitMax || 25, stepGramos: explicitStep || 1 };
-  if (/whey|proteina en polvo|protein powder/.test(name)) return { minGramos: explicitMin || 10, maxGramos: explicitMax || 60, stepGramos: explicitStep || 1 };
-  if (/almendra|nuez|mani|maní|fruto seco|frutos secos/.test(name)) return { minGramos: explicitMin || 5, maxGramos: explicitMax || 40, stepGramos: explicitStep || 1 };
-  if (/palta|avocado/.test(name)) return { minGramos: explicitMin || 30, maxGramos: explicitMax || 250, stepGramos: explicitStep || 1 };
+  const namedLimits = (min, max, step = 1, fallbackLabel = "named") =>
+    limits(explicitMin || min, explicitMax || max, explicitStep || step, {
+      min: `fallback.${fallbackLabel}.min`,
+      max: `fallback.${fallbackLabel}.max`,
+      step: `fallback.${fallbackLabel}.step`,
+    });
+
+  if (/aceite|oil/.test(name)) return namedLimits(2, 25, 1, "oil");
+  if (/whey|proteina en polvo|protein powder/.test(name)) return namedLimits(10, 60, 1, "proteinPowder");
+  if (/almendra|nuez|mani|maní|fruto seco|frutos secos/.test(name)) return namedLimits(5, 40, 1, "nuts");
+  if (/palta|avocado/.test(name)) return namedLimits(30, 250, 1, "avocado");
   if (/banana|manzana|pera|fruta|higo|sandia/.test(name) || category.includes("fruta")) {
-    return { minGramos: explicitMin || 50, maxGramos: explicitMax || 250, stepGramos: explicitStep || 1 };
+    return namedLimits(50, 250, 1, "fruit");
   }
   if (/arroz|fideo|pasta|papa|batata|pan|avena|cereal/.test(name) || role === "carbohidratos") {
-    return { minGramos: explicitMin || 20, maxGramos: explicitMax || 300, stepGramos: explicitStep || 1 };
+    return namedLimits(20, 300, 1, "carbohydrates");
   }
   if (/bife|chorizo|pollo|pavo|carne|atun|pescado|higado|jamon|huevo/.test(name) || role === "proteicos") {
-    return { minGramos: explicitMin || 50, maxGramos: explicitMax || 400, stepGramos: explicitStep || 1 };
+    return namedLimits(50, 400, 1, "protein");
   }
   if (/pollo|pavo|carne|atun|atún|pescado|higado|jamon|jamón|huevo/.test(name) || role === "proteicos") {
-    return { minGramos: explicitMin || 50, maxGramos: explicitMax || 300, stepGramos: explicitStep || 1 };
+    return namedLimits(50, 300, 1, "proteinLegacy");
   }
   if (/verdura|tomate|lechuga|brocoli|brócoli|zanahoria|zapallo/.test(name)) {
-    return { minGramos: explicitMin || 50, maxGramos: explicitMax || 300, stepGramos: explicitStep || 1 };
+    return namedLimits(50, 300, 1, "vegetables");
   }
-  return { minGramos: explicitMin, maxGramos: explicitMax || 300, stepGramos: explicitStep || 1 };
+  return limits(explicitMin, explicitMax || 300, explicitStep || 1, {
+    min: "fallback.generic.min0",
+    max: "fallback.generic.max300",
+    step: "fallback.generic.step",
+  });
 }
 
 function itemForEngine(food = {}, options = {}) {
@@ -274,7 +415,15 @@ function itemForEngine(food = {}, options = {}) {
   const limits = gramsLimitsForFood(food, role);
   const sourceKind = options.sourceKind || (options.fixed ? "fixed" : "selectedPending");
   return {
+    id: food.id || food.foodId || food.alimentoId || food._id || null,
     nombre: food.nombre || food.name,
+    unidad: food.unidad || food.unit || "g",
+    macroBasis: food.macroBasis || (isGramBasedUnit(food.unidad || food.unit) ? "perGram" : "perUnit"),
+    calorias: toNumber(food.calorias ?? food.kcalPerUnitOrGram, 0),
+    proteina: toNumber(food.proteina ?? food.proteinPerUnitOrGram, 0),
+    carbohidratos: toNumber(food.carbohidratos ?? food.carbsPerUnitOrGram, 0),
+    grasas: toNumber(food.grasas ?? food.fatPerUnitOrGram, 0),
+    categoria: food.categoria || food.fuente || food.source || role,
     cantidad: options.fixed
       ? toNumber(options.quantity, 0)
       : toNumber(options.currentQuantity, 0) || undefined,
@@ -286,6 +435,10 @@ function itemForEngine(food = {}, options = {}) {
     minGramos: options.fixed ? 0 : limits.minGramos,
     maxGramos: limits.maxGramos,
     stepGramos: limits.stepGramos,
+    minSource: options.fixed ? "fixed.quantity" : limits.minSource,
+    maxSource: limits.maxSource,
+    stepSource: limits.stepSource,
+    maxExplicit: limits.maxExplicit,
   };
 }
 
@@ -302,6 +455,22 @@ function selectedNameSet(...lists) {
     for (const item of list || []) set.add(cleanText(item.name || item.nombre || item.Alimentos || item.nombreSnapshot));
   }
   return set;
+}
+
+function selectedIdentitySet(...lists) {
+  const set = new Set();
+  for (const list of lists) {
+    for (const item of list || []) {
+      for (const id of foodIdentityValues(item)) set.add(id);
+    }
+  }
+  return set;
+}
+
+function belongsToSelection(food = {}, ids = new Set(), names = new Set()) {
+  const foodIds = foodIdentityValues(food);
+  if (foodIds.length) return foodIds.some((id) => ids.has(id));
+  return names.has(cleanText(food.nombre || food.name || food.Alimentos));
 }
 
 function scoreCandidate(food = {}, role = "") {
@@ -377,6 +546,29 @@ function messageForResult(result = {}, mode = "", generationType = "") {
   const generationHint = generationType === "selectedOnly"
     ? " con estos alimentos"
     : " usando alimentos compatibles";
+  const trackingOptimization = result.optimizacionTracking || null;
+
+  if (trackingOptimization?.policy === TRACKING_OPTIMIZATION_POLICY) {
+    if (trackingOptimization.proteinTargetActive !== true) {
+      if (Math.abs(carbsDiff) > 0.5 || Math.abs(fatDiff) > 0.5) {
+        return "La proteina restante ya estaba cubierta. Las metas de carbohidratos y grasas no pueden alcanzarse exactamente con estos alimentos dentro del limite calorico; esta es la combinacion mas equilibrada disponible.";
+      }
+      return "La proteina restante ya estaba cubierta. La propuesta respeta el limite calorico y equilibra los macros configurados.";
+    }
+    if (trackingOptimization.proteinDeficit > 10) {
+      return `Esta combinacion queda ${round(trackingOptimization.proteinDeficit, 1)} g por debajo de tu meta de proteina. Te conviene agregar o reemplazar un alimento proteico.`;
+    }
+    if (trackingOptimization.proteinDeficit > TRACKING_PROTEIN_MESSAGE_EPSILON) {
+      return `Faltan aproximadamente ${round(trackingOptimization.proteinDeficit, 1)} g de proteina. Podes revisar la seleccion o continuar igualmente.`;
+    }
+    if (trackingOptimization.normalCalorieZoneReached !== true) {
+      return `Con estos alimentos, el mejor nivel calorico alcanzable es ${round(trackingOptimization.bestReachableCalories, 1)} kcal y queda fuera de la zona esperada. Podes revisar la seleccion o continuar igualmente.`;
+    }
+    if (Math.abs(carbsDiff) > 0.5 || Math.abs(fatDiff) > 0.5) {
+      return "La propuesta alcanza la proteina y usa el mejor equilibrio disponible de carbohidratos y grasas dentro de la zona calorica.";
+    }
+    return "La propuesta respeta el techo calorico, alcanza la proteina y equilibra los macros configurados.";
+  }
 
   if (mode === "kcal") {
     if (diff.calorias < -10 && reachedMax) {
@@ -430,7 +622,7 @@ class ServicioAlimentos {
   obtenerAlimentos = async (filters = {}) => {
     try {
       const alimentosTotales = await this.model.obtenerAlimentos();
-      return filterAlimentos(alimentosTotales, filters);
+      return filterAlimentos(preferStructuredFoodRecords(alimentosTotales), filters);
     } catch (error) {
       console.error("Error al obtener alimentos:", error);
       throw new Error("No se pudieron obtener los alimentos");
@@ -509,13 +701,21 @@ class ServicioAlimentos {
     const mode = normalizeMode(payload.mode || payload.modo);
     const generationType = normalizeGenerationType(payload.generationType || payload.alcance);
     const target = normalizeTarget(payload.target || payload.mealTarget || {}, mode);
+    const trackingOptimizationPolicy =
+      payload.options?.trackingOptimizationPolicy === TRACKING_OPTIMIZATION_POLICY
+        ? TRACKING_OPTIMIZATION_POLICY
+        : undefined;
     const fixedFoods = Array.isArray(payload.fixedFoods) ? payload.fixedFoods : [];
     const pendingFoods = Array.isArray(payload.pendingFoods) ? payload.pendingFoods : [];
     const explicitCandidates = Array.isArray(payload.candidateFoods) ? payload.candidateFoods : [];
     const allFoods = await this.model.obtenerAlimentos();
 
-    const normalizedFixed = fixedFoods.map((food) => normalizeFoodLike(food));
-    const normalizedPending = pendingFoods.map((food) => normalizeFoodLike(food));
+    const normalizedFixed = fixedFoods.map((food) =>
+      normalizeFoodLike(food, "", catalogFoodFor(food, allFoods))
+    );
+    const normalizedPending = pendingFoods.map((food) =>
+      normalizeFoodLike(food, "", catalogFoodFor(food, allFoods))
+    );
     const selectedNames = selectedNameSet(normalizedFixed, normalizedPending);
 
     const groups = { proteicos: [], carbohidratos: [], grasas: [] };
@@ -539,6 +739,7 @@ class ServicioAlimentos {
     }
 
     const addedCandidateNames = new Set();
+    const addedCandidateIds = new Set();
     if (generationType === "completeMeal") {
       const neededRoles = [];
       if (!groups.proteicos.length && mode !== "kcal") neededRoles.push("proteicos");
@@ -551,6 +752,7 @@ class ServicioAlimentos {
         const role = inferMacroRole(candidate);
         alimentosBase.push(candidate);
         addedCandidateNames.add(cleanText(candidate.nombre || candidate.name));
+        for (const id of foodIdentityValues(candidate)) addedCandidateIds.add(id);
         addToGroups(groups, itemForEngine(candidate, { role, fixed: false, sourceKind: "addedCandidate" }), role);
       }
     }
@@ -567,28 +769,39 @@ class ServicioAlimentos {
       alimentosBase: [...allFoods, ...alimentosBase],
       permitirDefaults: false,
       redondear: payload.options?.redondear !== false,
-      trackingPriority: payload.options?.trackingPriority === true,
+      // El boolean legacy no puede habilitar por sí solo la policy de Tracking.
+      // El identificador explícito actúa como allowlist validada en servidor.
+      trackingPriority:
+        trackingOptimizationPolicy === TRACKING_OPTIMIZATION_POLICY &&
+        payload.options?.trackingPriority === true,
+      trackingOptimizationPolicy,
       generarVariante: payload.options?.generarVariante === true || payload.options?.generateVariant === true,
       variantSeed: payload.options?.variantSeed,
     });
 
+    const sourceFoods = [...allFoods, ...alimentosBase];
     const foodByName = new Map(
-      [...allFoods, ...alimentosBase]
+      sourceFoods
         .map((food) => [cleanText(food.nombre || food.name || food.Alimentos), food])
         .filter(([name]) => name)
     );
     const fixedNames = selectedNameSet(normalizedFixed);
     const selectedPendingNames = selectedNameSet(normalizedPending);
+    const fixedIds = selectedIdentitySet(normalizedFixed);
+    const selectedPendingIds = selectedIdentitySet(normalizedPending);
     const foods = [...(result.proteicos || []), ...(result.carbohidratos || []), ...(result.grasas || [])].map((food) => {
       const key = cleanText(food.nombre);
-      const sourceFood = foodByName.get(key) || {};
+      const sourceFood = catalogFoodFor(
+        { foodId: food.id, name: food.nombre },
+        sourceFoods
+      ) || foodByName.get(key) || {};
       const sourceImage = sourceFood.imagen && typeof sourceFood.imagen === "object" ? sourceFood.imagen : {};
       const imageUrl = sourceImage.url || sourceFood.imagenUrl || sourceFood.imagenUrlExacta || sourceFood.imagenUrlGenerica || "";
-      const source = fixedNames.has(key)
+      const source = belongsToSelection(food, fixedIds, fixedNames)
         ? "fixed"
-        : addedCandidateNames.has(key)
+        : belongsToSelection(food, addedCandidateIds, addedCandidateNames)
           ? "addedCandidate"
-          : selectedPendingNames.has(key)
+          : belongsToSelection(food, selectedPendingIds, selectedPendingNames)
             ? "generated"
             : "generated";
 
@@ -598,8 +811,8 @@ class ServicioAlimentos {
         nombre: food.nombre,
         quantity: food.cantidad,
         cantidad: food.cantidad,
-        unit: sourceFood.unidad || sourceFood.unit || "g",
-        unidad: sourceFood.unidad || sourceFood.unit || "g",
+        unit: foodUnit(sourceFood) || "g",
+        unidad: foodUnit(sourceFood) || "g",
         source,
         kcal: food.calorias,
         proteina: food.proteina,
@@ -611,6 +824,12 @@ class ServicioAlimentos {
         imagen: sourceFood.imagen || null,
         imagenUrl: imageUrl,
         maxGramos: food.maxGramos,
+        ...(result.optimizacionTracking ? {
+          minGramos: food.minGramos,
+          stepGramos: food.stepGramos,
+          quantityConstraintSources: food.quantityConstraintSources || null,
+          maxExplicit: food.maxExplicit === true,
+        } : {}),
         fixedQuantity: source === "fixed",
         quantityPending: false,
       };

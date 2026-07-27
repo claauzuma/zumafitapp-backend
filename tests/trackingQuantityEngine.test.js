@@ -2,12 +2,23 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import ServicioAlimentos from "../servicio/alimentos.js";
+import { TRACKING_OPTIMIZATION_POLICY } from "../menu2.js";
 
 function quantityService(databaseFoods = []) {
   const service = new ServicioAlimentos("TEST");
   service.model = {
     obtenerAlimentos: async () => databaseFoods,
   };
+  const generate = service.generarCantidades;
+  service.generarCantidades = (payload = {}) => generate({
+    ...payload,
+    options: payload.options?.trackingPriority === true
+      ? {
+          ...payload.options,
+          trackingOptimizationPolicy: TRACKING_OPTIMIZATION_POLICY,
+        }
+      : payload.options,
+  });
   return service;
 }
 
@@ -130,7 +141,7 @@ test("respeta alimentos por unidad sin tratarlos como gramos ni dividir sus kcal
   assert.equal(result.totals.calorias, 156);
 });
 
-test("tracking llena el techo calorico con arroz aunque P restante sea cero y C/G no cierren", async () => {
+test("tracking usa la zona calorica y C/G cuando la proteina restante es cero", async () => {
   const service = quantityService();
   const result = await service.generarCantidades({
     mode: "kcalProteina",
@@ -146,12 +157,16 @@ test("tracking llena el techo calorico con arroz aunque P restante sea cero y C/
     options: { redondear: true, usarMinMax: true, trackingPriority: true },
   });
 
-  assert.equal(result.foods[0].quantity, 104);
-  assert.equal(result.totals.calorias, 353.6);
+  assert.equal(result.foods[0].quantity, 103);
+  assert.equal(result.totals.calorias, 350.2);
   assert.ok(result.totals.calorias <= 355);
   assert.equal(result.optimization.profile, "tracking_remaining");
+  assert.equal(result.optimization.policy, "tracking_remaining_v2");
   assert.equal(result.optimization.calorieCeilingSatisfied, true);
+  assert.equal(result.optimization.inCalorieZone, true);
+  assert.equal(result.optimization.proteinTargetActive, false);
   assert.equal(result.optimization.proteinDeficit, 0);
+  assert.match(result.message, /proteina restante ya estaba cubierta/i);
 });
 
 test("tracking llena calorias y declara el deficit cuando la proteina no es alcanzable", async () => {
@@ -253,7 +268,7 @@ test("tracking reparte pollo arroz y almendras sin superar kcal y alcanza protei
   });
 
   assert.ok(result.totals.calorias <= 500);
-  assert.ok(result.totals.calorias >= 497);
+  assert.ok(result.totals.calorias >= 490);
   assert.ok(result.totals.proteina >= 30);
   assert.ok(Math.abs(result.diff.carbohidratos) <= 2);
   assert.ok(Math.abs(result.diff.grasas) <= 1);
@@ -545,7 +560,7 @@ test("tracking no tolera ni una unidad que exceda el techo por centesimas", asyn
   assert.match(result.errors.join(" "), /techo calorico/i);
 });
 
-test("si la proteina es imposible tracking prioriza la combinacion calorica mas cercana", async () => {
+test("si la proteina es imposible tracking maximiza proteina dentro de la zona calorica", async () => {
   const service = quantityService();
   const result = await service.generarCantidades({
     mode: "kcalProteina",
@@ -583,9 +598,11 @@ test("si la proteina es imposible tracking prioriza la combinacion calorica mas 
     options: { redondear: true, usarMinMax: true, trackingPriority: true },
   });
 
-  assert.equal(result.foods.find((food) => food.nombre === "Fuente calorica").quantity, 2);
-  assert.equal(result.foods.find((food) => food.nombre === "Fuente proteica").quantity, 1);
-  assert.equal(result.totals.calorias, 10);
+  assert.equal(result.foods.find((food) => food.nombre === "Fuente calorica").quantity, 1);
+  assert.equal(result.foods.find((food) => food.nombre === "Fuente proteica").quantity, 2);
+  assert.equal(result.totals.calorias, 8);
+  assert.equal(result.totals.proteina, 20);
+  assert.equal(result.optimization.inCalorieZone, true);
   assert.equal(result.optimization.proteinReachable, false);
 });
 
@@ -635,8 +652,9 @@ test("si la proteina es imposible el knapsack calorico evita un optimo local", a
   });
 
   assert.equal(result.optimization.proteinReachable, false);
-  assert.equal(result.totals.calorias, 117.6);
-  assert.deepEqual(result.foods.map((food) => food.quantity), [1, 2, 5]);
+  assert.equal(result.totals.calorias, 114.4);
+  assert.equal(result.totals.proteina, 73.4);
+  assert.deepEqual(result.foods.map((food) => food.quantity), [2, 4, 2]);
 });
 
 test("tracking respeta el multiplo y elige la cantidad mas cercana por debajo", async () => {

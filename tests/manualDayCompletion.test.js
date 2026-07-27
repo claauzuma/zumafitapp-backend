@@ -311,6 +311,7 @@ test("el cálculo automático de cantidades falla cerrado para Free y funciona p
   assert.equal(result.target.kcal, 200);
   assert.equal(calculationPayload.mode, "kcalProteina");
   assert.equal(calculationPayload.options.trackingPriority, true);
+  assert.equal(calculationPayload.options.trackingOptimizationPolicy, "tracking_remaining_v2");
 });
 
 test("confirmar cantidades calculadas usa una escritura batch idempotente", async () => {

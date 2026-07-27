@@ -8,7 +8,10 @@
 
 const EPS = 1e-9;
 const TRACKING_CALORIE_EPS = 1e-6;
-const MAX_FOODS_PER_GROUP = 5;
+export const TRACKING_OPTIMIZATION_POLICY = "tracking_remaining_v2";
+const TRACKING_EXACT_OPTION_LIMIT = 250000;
+const TRACKING_PAIR_REFINEMENT_PASSES = 3;
+const MAX_FOODS_PER_GROUP = 6;
 const MAX_TOTAL_FOODS = 15;
 
 const DEFAULT_OBJECTIVE = {
@@ -81,6 +84,32 @@ const normalizeName = (value) =>
     .toLowerCase()
     .trim();
 
+function normalizedMeasurementUnit(raw = {}) {
+  const value = typeof raw === "object" && raw !== null
+    ? firstValue(raw, ["unit", "unidad", "Unidad", "unidadBase", "measurementUnit"])
+    : raw;
+  const unit = normalizeName(value).replace(/\.$/, "");
+  if (["g", "gr", "grs", "gramo", "gramos"].includes(unit)) return "g";
+  if (["ml", "mililitro", "mililitros"].includes(unit)) return "ml";
+  return unit;
+}
+
+function foodIdentityValues(raw = {}) {
+  const source = raw && typeof raw === "object" ? raw : {};
+  return [
+    source.foodId,
+    source._id,
+    source.id,
+    source.alimentoId,
+    source.raw?.foodId,
+    source.raw?._id,
+    source.raw?.id,
+    source.raw?.alimentoId,
+  ]
+    .filter((value) => value !== undefined && value !== null && value !== "")
+    .map((value) => String(value));
+}
+
 function firstValue(source, keys) {
   for (const key of keys) {
     if (source?.[key] !== undefined && source?.[key] !== null && source?.[key] !== "") {
@@ -112,25 +141,51 @@ function normalizeFood(raw, fallbackGroup = null) {
   ]);
   if (!nombre) return null;
 
-  let calorias = toNumber(firstValue(raw, ["calorias", "kcal", "Calorias", "Kcal", "calories"]));
-  let proteina = toNumber(firstValue(raw, ["proteina", "proteinas", "Proteinas", "Proteina", "protein"]));
+  let calorias = toNumber(firstValue(raw, [
+    "calorias",
+    "kcal",
+    "Calorias",
+    "Kcal",
+    "calories",
+    "kcalPerUnitOrGram",
+    "kcalUnidad",
+  ]));
+  let proteina = toNumber(firstValue(raw, [
+    "proteina",
+    "proteinas",
+    "Proteinas",
+    "Proteina",
+    "protein",
+    "proteinPerUnitOrGram",
+    "proteinaUnidad",
+  ]));
   let carbohidratos = toNumber(firstValue(raw, [
     "carbohidratos",
     "carbs",
     "Carbohidratos",
     "Hidratos",
     "carbohydrates",
+    "carbsPerUnitOrGram",
+    "carbohidratosUnidad",
   ]));
-  let grasas = toNumber(firstValue(raw, ["grasas", "grasa", "Grasas", "fat", "fats"]));
+  let grasas = toNumber(firstValue(raw, [
+    "grasas",
+    "grasa",
+    "Grasas",
+    "fat",
+    "fats",
+    "fatPerUnitOrGram",
+    "grasasUnidad",
+  ]));
 
   // El servicio de cantidades puede declarar explícitamente la base para evitar
   // confundir alimentos por unidad (por ejemplo, un huevo de 78 kcal) con datos
   // expresados por 100 g.
   const macroBasis = normalizeName(raw.macroBasis || raw.macroBase || raw.nutritionBasis);
-  const rawUnit = normalizeName(raw.unit || raw.unidad || raw.measurementUnit);
+  const rawUnit = normalizedMeasurementUnit(raw);
   const unitImpliesPerUnit = Boolean(
     rawUnit &&
-    !["g", "gr", "gramo", "gramos", "ml", "mililitro", "mililitros"].includes(rawUnit)
+    !["g", "ml"].includes(rawUnit)
   );
   const explicitlyPerUnit =
     ["perunit", "porunidad", "unit"].includes(macroBasis) || unitImpliesPerUnit;
@@ -160,7 +215,7 @@ function normalizeFood(raw, fallbackGroup = null) {
     inferGroup({ proteina, carbohidratos, grasas });
 
   return {
-    id: raw._id || raw.id || raw.alimentoId || null,
+    id: raw.foodId || raw._id || raw.id || raw.alimentoId || null,
     nombre: String(nombre).trim(),
     calorias,
     proteina,
@@ -182,20 +237,73 @@ function inferGroup(food) {
 }
 
 function buildFoodIndex(extraFoods = []) {
-  const map = new Map();
-  for (const raw of [...INTERNAL_FOODS, ...(Array.isArray(extraFoods) ? extraFoods : [])]) {
+  const index = {
+    byId: new Map(),
+    byName: new Map(),
+  };
+  const records = [...INTERNAL_FOODS, ...(Array.isArray(extraFoods) ? extraFoods : [])];
+  records.forEach((raw, order) => {
     const food = normalizeFood(raw);
-    if (!food) continue;
-    map.set(normalizeName(food.nombre), food);
-  }
-  return map;
+    if (!food) return;
+    const entry = {
+      food,
+      order,
+      unit: normalizedMeasurementUnit(raw),
+      rank:
+        (raw?.activo === true ? 1000 : raw?.activo === false ? -1000 : 0) +
+        (foodIdentityValues(raw).length ? 100 : 0) +
+        (raw?.macroBasis ? 50 : 0) +
+        (normalizedMeasurementUnit(raw) ? 20 : 0),
+    };
+    for (const id of foodIdentityValues(raw)) {
+      const candidates = index.byId.get(id) || [];
+      candidates.push(entry);
+      index.byId.set(id, candidates);
+    }
+    const name = normalizeName(food.nombre);
+    const candidates = index.byName.get(name) || [];
+    candidates.push(entry);
+    index.byName.set(name, candidates);
+  });
+  return index;
+}
+
+function preferredIndexedFood(entries = []) {
+  const selected = entries.reduce((best, entry) => {
+    if (!best) return entry;
+    if (entry.rank !== best.rank) return entry.rank > best.rank ? entry : best;
+    return entry.order > best.order ? entry : best;
+  }, null);
+  return selected?.food || null;
 }
 
 function getFood(index, item, fallbackGroup) {
   const direct = normalizeFood(item, fallbackGroup);
-  const fromIndex = index.get(normalizeName(item?.nombre || item?.name || item?.Alimentos));
-  if (fromIndex) return { ...fromIndex, categoria: fallbackGroup || fromIndex.categoria };
   if (direct && direct.calorias > 0) return { ...direct, categoria: fallbackGroup || direct.categoria };
+
+  const itemIds = foodIdentityValues(item);
+  if (itemIds.length) {
+    const exactEntries = itemIds.flatMap((id) => index.byId.get(id) || []);
+    const exact = preferredIndexedFood(exactEntries);
+    if (exact) return { ...exact, categoria: fallbackGroup || exact.categoria };
+    // La identidad recibida no se degrada a un homónimo por nombre.
+    return null;
+  }
+
+  const name = normalizeName(item?.nombre || item?.name || item?.Alimentos);
+  const namedEntries = index.byName.get(name) || [];
+  const requestedUnit = normalizedMeasurementUnit(item);
+  let compatibleEntries = namedEntries;
+  if (requestedUnit) {
+    const exactUnitEntries = namedEntries.filter((entry) => entry.unit === requestedUnit);
+    const unknownUnitEntries = namedEntries.filter((entry) => !entry.unit);
+    compatibleEntries = exactUnitEntries.length ? exactUnitEntries : unknownUnitEntries;
+  } else {
+    const explicitUnits = new Set(namedEntries.map((entry) => entry.unit).filter(Boolean));
+    if (explicitUnits.size > 1) return null;
+  }
+  const fromIndex = preferredIndexedFood(compatibleEntries);
+  if (fromIndex) return { ...fromIndex, categoria: fallbackGroup || fromIndex.categoria };
   return null;
 }
 
@@ -340,6 +448,10 @@ function buildSelection(opts, foodIndex, warnings) {
         minGramos: toNumber(item.minGramos ?? item.min ?? item.minQuantity, 0),
         maxGramos: toNumber(item.maxGramos ?? item.max ?? item.maxQuantity, 0),
         stepGramos: toNumber(item.stepGramos ?? item.step ?? item.stepQuantity, 0),
+        minSource: item.minSource || item.quantityConstraintSources?.min || "",
+        maxSource: item.maxSource || item.quantityConstraintSources?.max || "",
+        stepSource: item.stepSource || item.quantityConstraintSources?.step || "",
+        maxExplicit: item.maxExplicit === true,
       });
     }
   }
@@ -989,6 +1101,14 @@ function roundAndPolishQuantities(selection, pending, objective, mode) {
 }
 
 function trackingPriorityRequested(opts = {}) {
+  const requestedPolicy = normalizeName(
+    opts.trackingOptimizationPolicy ??
+    opts.optimizationPolicy ??
+    opts.policy
+  );
+  if (requestedPolicy) {
+    return requestedPolicy === normalizeName(TRACKING_OPTIMIZATION_POLICY);
+  }
   return toBoolean(
     opts.trackingPriority ??
     opts.prioridadTracking ??
@@ -1009,7 +1129,7 @@ function totalsForPendingQuantities(selection, pending, quantities) {
   return totals;
 }
 
-function trackingProteinAssessment(selection, pending, objective) {
+function trackingProteinAssessment(selection, pending, objective, minimumCalories = 0) {
   const minimums = pending.map((item) => minimumTrackingQuantity(item));
   const baseline = totalsForPendingQuantities(selection, pending, minimums);
   const calorieCeiling = Math.max(0, objective.calorias);
@@ -1101,15 +1221,16 @@ function trackingProteinAssessment(selection, pending, objective) {
       total + steps * quantityStepFor(pending[index]) * pending[index].food.proteina,
     0
   );
-  let bestCapacity = 0;
-  let bestProtein = freeProtein;
-  let bestCalories = 0;
+  let bestCapacity = -1;
+  let bestProtein = Number.NEGATIVE_INFINITY;
+  let bestCalories = Number.POSITIVE_INFINITY;
   let reachedCapacity = -1;
   let reachedCalories = Number.POSITIVE_INFINITY;
   for (let current = 0; current <= capacity; current++) {
     if (!Number.isFinite(proteinByCapacity[current])) continue;
     const protein = proteinByCapacity[current] + freeProtein;
     const calories = caloriesByCapacity[current];
+    if (baseline.calorias + calories < minimumCalories - TRACKING_CALORIE_EPS) continue;
     if (
       protein > bestProtein + 1e-8 ||
       (Math.abs(protein - bestProtein) <= 1e-8 && calories < bestCalories - 1e-8)
@@ -1125,6 +1246,12 @@ function trackingProteinAssessment(selection, pending, objective) {
       reachedCapacity = current;
       reachedCalories = calories;
     }
+  }
+
+  if (bestCapacity < 0) {
+    bestCapacity = 0;
+    bestProtein = freeProtein;
+    bestCalories = 0;
   }
 
   const reachable = reachedCapacity >= 0;
@@ -1150,26 +1277,20 @@ function trackingProteinAssessment(selection, pending, objective) {
 }
 
 function trackingSecondaryMacroError(totals, objective) {
-  let error = 0;
-  if (objective.carbohidratos > 0) {
-    error += Math.abs(totals.carbohidratos - objective.carbohidratos) /
-      Math.max(objective.carbohidratos, 1);
-  }
-  if (objective.grasas > 0) {
-    error += Math.abs(totals.grasas - objective.grasas) /
-      Math.max(objective.grasas, 1);
-  }
-  return error;
+  const carbScale = objective.carbohidratos > 0 ? objective.carbohidratos : 25;
+  const fatScale = objective.grasas > 0 ? objective.grasas : 10;
+  const carbError = Math.abs(totals.carbohidratos - objective.carbohidratos) / carbScale;
+  const fatError = Math.abs(totals.grasas - objective.grasas) / fatScale;
+  return carbError ** 2 + fatError ** 2;
 }
 
-function trackingPriorityRank(totals, objective, proteinReachable) {
+function trackingPriorityRank(totals, objective, context = {}) {
   const calorieExcess = Math.max(0, totals.calorias - objective.calorias);
   if (calorieExcess > TRACKING_CALORIE_EPS) {
-    return [1, calorieExcess, 0, 0, 0, 0];
+    return [1, calorieExcess, 0, 0, 0, 0, 0];
   }
 
   const calorieDeficit = Math.max(0, objective.calorias - totals.calorias);
-  const materialCalorieDeficit = Math.max(0, calorieDeficit - 3);
   const proteinDeficit = objective.proteina > 0
     ? Math.max(0, objective.proteina - totals.proteina)
     : 0;
@@ -1177,25 +1298,52 @@ function trackingPriorityRank(totals, objective, proteinReachable) {
     ? Math.max(0, totals.proteina - objective.proteina)
     : 0;
   const secondaryError = trackingSecondaryMacroError(totals, objective);
+  const inNormalCalorieZone = totals.calorias >= context.calorieZoneFloor - TRACKING_CALORIE_EPS;
 
-  if (proteinReachable && objective.proteina > 0) {
+  // Cuando la grilla no entra en la zona normal, manda la mejor cantidad
+  // calórica alcanzable. Los demás criterios sólo desempatan esa cantidad.
+  if (!context.hasNormalCalorieZoneCandidate) {
     return [
       0,
+      calorieDeficit,
+      objective.proteina > 0 ? proteinDeficit : 0,
+      secondaryError,
+      proteinExcess,
+      objective.proteina > 0 ? 0 : totals.proteina,
+    ];
+  }
+
+  if (objective.proteina > 0 && context.proteinReachable) {
+    return [
+      0,
+      inNormalCalorieZone ? 0 : 1,
       proteinDeficit > 0.05 ? 1 : 0,
       proteinDeficit,
-      materialCalorieDeficit,
       secondaryError,
       calorieDeficit,
       proteinExcess,
     ];
   }
 
+  if (objective.proteina > 0) {
+    return [
+      0,
+      inNormalCalorieZone ? 0 : 1,
+      proteinDeficit,
+      secondaryError,
+      calorieDeficit,
+      proteinExcess,
+    ];
+  }
+
+  // Proteína restante cero: no es una meta ni un beneficio. C/G deciden
+  // dentro de la zona y la proteína sólo actúa como desempate final.
   return [
     0,
-    calorieDeficit,
-    proteinDeficit,
+    inNormalCalorieZone ? 0 : 1,
     secondaryError,
-    proteinExcess,
+    calorieDeficit,
+    totals.proteina,
   ];
 }
 
@@ -1205,6 +1353,96 @@ function compareTrackingRanks(left, right) {
     if (Math.abs(difference) > 1e-8) return difference;
   }
   return 0;
+}
+
+function trackingQuantityOptions(item) {
+  const minimum = minimumTrackingQuantity(item);
+  const maximum = maximumTrackingQuantity(item);
+  const step = quantityStepFor(item);
+  const values = [];
+  for (let value = minimum; value <= maximum + EPS; value += step) {
+    values.push(round(value, 8));
+  }
+  return values;
+}
+
+// En espacios discretos acotados podemos verificar toda la grilla. Es un
+// refinamiento exclusivo de Tracking: evita que la búsqueda heurística deje
+// una propuesta localmente buena cuando existe otra mejor según la misma
+// prioridad lexicográfica.
+function exactTrackingRefinement(selection, pending, objective, rankContext, seed) {
+  const options = pending.map(trackingQuantityOptions);
+  const optionCount = options.reduce((total, values) => total * values.length, 1);
+  if (optionCount > TRACKING_EXACT_OPTION_LIMIT) return null;
+
+  const candidate = new Array(pending.length).fill(0);
+  let bestQuantities = [...seed];
+  let bestTotals = totalsForPendingQuantities(selection, pending, bestQuantities);
+  let bestRank = trackingPriorityRank(bestTotals, objective, rankContext);
+
+  const visit = (index) => {
+    if (index < pending.length) {
+      for (const value of options[index]) {
+        candidate[index] = value;
+        visit(index + 1);
+      }
+      return;
+    }
+
+    const totals = totalsForPendingQuantities(selection, pending, candidate);
+    if (totals.calorias > objective.calorias + TRACKING_CALORIE_EPS) return;
+    const rank = trackingPriorityRank(totals, objective, rankContext);
+    if (compareTrackingRanks(rank, bestRank) < 0) {
+      bestQuantities = [...candidate];
+      bestTotals = totals;
+      bestRank = rank;
+    }
+  };
+
+  visit(0);
+  return { quantities: bestQuantities, optionCount };
+}
+
+// Para grillas grandes, un barrido de pares corrige los intercambios de dos
+// alimentos que no puede resolver un movimiento de una sola coordenada. El
+// número de pasadas está acotado para conservar el tiempo de respuesta.
+function pairwiseTrackingRefinement(selection, pending, objective, rankContext, seed) {
+  const options = pending.map(trackingQuantityOptions);
+  let quantities = [...seed];
+
+  for (let pass = 0; pass < TRACKING_PAIR_REFINEMENT_PASSES; pass++) {
+    const currentTotals = totalsForPendingQuantities(selection, pending, quantities);
+    const currentRank = trackingPriorityRank(currentTotals, objective, rankContext);
+    let best = null;
+
+    for (let left = 0; left < pending.length; left++) {
+      for (let right = left + 1; right < pending.length; right++) {
+        for (const leftValue of options[left]) {
+          for (const rightValue of options[right]) {
+            if (
+              Math.abs(leftValue - quantities[left]) <= EPS &&
+              Math.abs(rightValue - quantities[right]) <= EPS
+            ) continue;
+            const candidate = [...quantities];
+            candidate[left] = leftValue;
+            candidate[right] = rightValue;
+            const totals = totalsForPendingQuantities(selection, pending, candidate);
+            if (totals.calorias > objective.calorias + TRACKING_CALORIE_EPS) continue;
+            const rank = trackingPriorityRank(totals, objective, rankContext);
+            if (compareTrackingRanks(rank, currentRank) >= 0) continue;
+            if (!best || compareTrackingRanks(rank, best.rank) < 0) {
+              best = { quantities: candidate, rank };
+            }
+          }
+        }
+      }
+    }
+
+    if (!best) break;
+    quantities = best.quantities;
+  }
+
+  return quantities;
 }
 
 function normalizeTrackingQuantity(item, value) {
@@ -1363,6 +1601,39 @@ function trackingSeedOrders(pending = []) {
   });
 }
 
+function trackingLimitingMaxConstraints(pending, maximums, maximumTotals, objective, calorieZoneFloor) {
+  const checks = [
+    { key: "calorias", target: calorieZoneFloor, label: "kcal", group: "" },
+    { key: "proteina", target: objective.proteina, label: "proteína", group: "proteicos" },
+    { key: "carbohidratos", target: objective.carbohidratos, label: "carbohidratos", group: "carbohidratos" },
+    { key: "grasas", target: objective.grasas, label: "grasas", group: "grasas" },
+  ].filter((check) => check.target > 0 && maximumTotals[check.key] < check.target - 0.05);
+
+  const byItem = new Map();
+  for (const check of checks) {
+    let candidates = pending
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => item.maxExplicit && item.food?.[check.key] > EPS)
+      .filter(({ item }) => !check.group || item.group === check.group);
+    if (!candidates.length) {
+      candidates = pending
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => item.maxExplicit && item.food?.[check.key] > EPS);
+    }
+    for (const { item, index } of candidates) {
+      const current = byItem.get(item) || {
+        name: item.nombre || item.food?.nombre || "Alimento",
+        max: maximums[index],
+        maxSource: item.maxSource || "",
+        targets: [],
+      };
+      if (!current.targets.includes(check.label)) current.targets.push(check.label);
+      byItem.set(item, current);
+    }
+  }
+  return [...byItem.values()];
+}
+
 function optimizeTrackingQuantities(selection, pending, objective) {
   if (!pending.length || !(objective.calorias > 0)) return null;
   const calorieCeiling = objective.calorias;
@@ -1372,9 +1643,26 @@ function optimizeTrackingQuantities(selection, pending, objective) {
   let quantities = pending.map((item, index) =>
     normalizeTrackingQuantity(item, item.cantidad ?? minimums[index])
   );
-  const proteinAssessment = trackingProteinAssessment(selection, pending, objective);
   const calorieAssessment = trackingCalorieAssessment(selection, pending, objective);
-  const proteinReachable = proteinAssessment.reachable;
+  const calorieZoneTolerance = Math.max(5, objective.calorias * 0.02);
+  const normalCalorieZoneFloor = Math.max(0, objective.calorias - calorieZoneTolerance);
+  const hasNormalCalorieZoneCandidate =
+    calorieAssessment.calories >= normalCalorieZoneFloor - TRACKING_CALORIE_EPS;
+  const calorieZoneFloor = hasNormalCalorieZoneCandidate
+    ? normalCalorieZoneFloor
+    : calorieAssessment.calories;
+  const proteinAssessment = trackingProteinAssessment(
+    selection,
+    pending,
+    objective,
+    calorieZoneFloor
+  );
+  const proteinReachable = objective.proteina > 0 && proteinAssessment.reachable;
+  const rankContext = {
+    calorieZoneFloor,
+    hasNormalCalorieZoneCandidate,
+    proteinReachable,
+  };
 
   // Primero dejamos la propuesta estrictamente por debajo del techo calórico.
   for (let guard = 0; guard < 5000; guard++) {
@@ -1388,7 +1676,7 @@ function optimizeTrackingQuantities(selection, pending, objective) {
       candidate[index] = Math.max(minimums[index], candidate[index] - steps[index]);
       const candidateTotals = totalsForPendingQuantities(selection, pending, candidate);
       const underCeiling = candidateTotals.calorias <= calorieCeiling + TRACKING_CALORIE_EPS;
-      const candidateRank = trackingPriorityRank(candidateTotals, objective, proteinReachable);
+      const candidateRank = trackingPriorityRank(candidateTotals, objective, rankContext);
 
       if (
         !best ||
@@ -1432,15 +1720,15 @@ function optimizeTrackingQuantities(selection, pending, objective) {
     );
     const totals = totalsForPendingQuantities(selection, pending, normalized);
     if (totals.calorias > calorieCeiling + TRACKING_CALORIE_EPS) return best;
-    const rank = trackingPriorityRank(totals, objective, proteinReachable);
+    const rank = trackingPriorityRank(totals, objective, rankContext);
     const bestTotals = totalsForPendingQuantities(selection, pending, best);
-    const bestRank = trackingPriorityRank(bestTotals, objective, proteinReachable);
+    const bestRank = trackingPriorityRank(bestTotals, objective, rankContext);
     return compareTrackingRanks(rank, bestRank) < 0 ? normalized : best;
   }, quantities);
 
   for (let guard = 0; guard < 5000; guard++) {
     const currentTotals = totalsForPendingQuantities(selection, pending, quantities);
-    const currentRank = trackingPriorityRank(currentTotals, objective, proteinReachable);
+    const currentRank = trackingPriorityRank(currentTotals, objective, rankContext);
     let best = null;
     const seen = new Set();
 
@@ -1450,7 +1738,7 @@ function optimizeTrackingQuantities(selection, pending, objective) {
       seen.add(key);
       const candidateTotals = totalsForPendingQuantities(selection, pending, candidate);
       if (candidateTotals.calorias > calorieCeiling + TRACKING_CALORIE_EPS) return;
-      const rank = trackingPriorityRank(candidateTotals, objective, proteinReachable);
+      const rank = trackingPriorityRank(candidateTotals, objective, rankContext);
       if (compareTrackingRanks(rank, currentRank) >= 0) return;
       if (!best || compareTrackingRanks(rank, best.rank) < 0) {
         best = { quantities: candidate, totals: candidateTotals, rank };
@@ -1501,16 +1789,67 @@ function optimizeTrackingQuantities(selection, pending, objective) {
     quantities = best.quantities;
   }
 
+  const exactRefinement = exactTrackingRefinement(
+    selection,
+    pending,
+    objective,
+    rankContext,
+    quantities
+  );
+  quantities = exactRefinement
+    ? exactRefinement.quantities
+    : pairwiseTrackingRefinement(
+      selection,
+      pending,
+      objective,
+      rankContext,
+      quantities
+    );
+
   for (let index = 0; index < pending.length; index++) {
     pending[index].cantidad = round(quantities[index], 2);
   }
   const totals = calculateTotals(selection);
+  // La evaluación previa puede subestimar una combinación que luego encuentra
+  // el refinamiento exacto. Si la propuesta final demuestra alcanzabilidad
+  // dentro de la zona, la metadata no puede seguir diciendo lo contrario.
+  const proteinReachedInChosenZone = objective.proteina > 0 &&
+    totals.proteina >= objective.proteina - 0.05 &&
+    totals.calorias >= calorieZoneFloor - TRACKING_CALORIE_EPS;
+  const maximumTotals = totalsForPendingQuantities(selection, pending, maximums);
+  const limitingConstraints = trackingLimitingMaxConstraints(
+    pending,
+    maximums,
+    maximumTotals,
+    objective,
+    calorieZoneFloor
+  );
   return {
     profile: "tracking_remaining",
+    policy: TRACKING_OPTIMIZATION_POLICY,
     calorieCeiling: round(calorieCeiling, 2),
     calorieCeilingSatisfied: totals.calorias <= calorieCeiling + TRACKING_CALORIE_EPS,
-    proteinReachable,
+    calorieZoneTolerance: round(calorieZoneTolerance, 2),
+    calorieZoneFloor: round(calorieZoneFloor, 2),
+    normalCalorieZoneReached: hasNormalCalorieZoneCandidate,
+    inCalorieZone: totals.calorias >= calorieZoneFloor - TRACKING_CALORIE_EPS,
+    bestReachableCalories: round(calorieAssessment.calories, 2),
+    proteinReachable: proteinReachable || proteinReachedInChosenZone,
+    proteinTargetActive: objective.proteina > 0,
     proteinDeficit: round(Math.max(0, objective.proteina - totals.proteina), 2),
+    macroScore: round(trackingSecondaryMacroError(totals, objective), 6),
+    maxConstraintsLimited: limitingConstraints.length > 0,
+    limitingConstraints,
+    constraints: pending.map((item) => ({
+      name: item.nombre || item.food?.nombre || "Alimento",
+      min: minimumTrackingQuantity(item),
+      max: maximumTrackingQuantity(item),
+      step: quantityStepFor(item),
+      minSource: item.minSource || "",
+      maxSource: item.maxSource || "",
+      stepSource: item.stepSource || "",
+      maxExplicit: item.maxExplicit === true,
+    })),
   };
 }
 
@@ -1635,6 +1974,7 @@ function classifyStatus(diff, mode, objective, selection = []) {
 function itemSnapshot(item) {
   const q = round(item.cantidad, 2);
   return {
+    id: item.food?.id || null,
     nombre: item.nombre,
     cantidad: q,
     fixedQuantity: item.fixed,
@@ -1643,7 +1983,15 @@ function itemSnapshot(item) {
     proteina: round(item.food.proteina * q, 2),
     carbohidratos: round(item.food.carbohidratos * q, 2),
     grasas: round(item.food.grasas * q, 2),
+    minGramos: item.minGramos,
     maxGramos: maxQuantityFor(item),
+    stepGramos: quantityStepFor(item),
+    quantityConstraintSources: {
+      min: item.minSource || "",
+      max: item.maxSource || "",
+      step: item.stepSource || "",
+    },
+    maxExplicit: item.maxExplicit === true,
     unidadCalorica: round(item.food.calorias, 4),
     unidadProteica: round(item.food.proteina, 4),
     unidadCarbo: round(item.food.carbohidratos, 4),
@@ -1708,6 +2056,9 @@ function generarMenu(...args) {
   }
 
   if (solve.minimumsWarning) warnings.push(solve.minimumsWarning);
+  if (solve.trackingOptimization?.maxConstraintsLimited) {
+    warnings.push("Las cantidades máximas configuradas para algunos alimentos limitan esta propuesta.");
+  }
   if (solve.trackingOptimization?.calorieCeilingSatisfied === false) {
     warnings.push(
       "No se pudo respetar el techo calórico con los mínimos, múltiplos o unidades de los alimentos seleccionados."

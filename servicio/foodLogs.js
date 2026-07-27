@@ -4,6 +4,7 @@ import ModelMongoDBFoodLogs from "../model/DAO/foodLogsMongoDB.js";
 import ModelMongoDBUsuarios from "../model/DAO/usuariosMongoDB.js";
 import ModelMongoDBMenus from "../model/DAO/menusMongoDB.js";
 import ModelMongoDBAlimentos from "../model/DAO/alimentosMongoDB.js";
+import { TRACKING_OPTIMIZATION_POLICY } from "../menu2.js";
 import ServiciosAlimentos from "./alimentos.js";
 import { requireCapability, requireTrackingHistoryRange } from "./accessGates.js";
 
@@ -708,6 +709,7 @@ class ServicioFoodLogs {
       options: {
         ...(payload.options || {}),
         trackingPriority: true,
+        trackingOptimizationPolicy: TRACKING_OPTIMIZATION_POLICY,
       },
     });
   }
