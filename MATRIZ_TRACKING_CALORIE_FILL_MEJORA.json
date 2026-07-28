@@ -1,0 +1,2317 @@
+{
+  "generatedAt": "2026-07-28T03:04:29.238Z",
+  "rows": [
+    {
+      "id": "N01",
+      "level": "normal",
+      "label": "Pollo + arroz + aceite",
+      "target": {
+        "kcal": 650,
+        "proteina": 50,
+        "carbs": 70,
+        "grasas": 18
+      },
+      "consistency": "aproximadamente_consistente",
+      "foods": [
+        {
+          "id": "chicken",
+          "name": "Pechuga de pollo",
+          "quantity": 197,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "rice",
+          "name": "Arroz",
+          "quantity": 93,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "oil",
+          "name": "Aceite de oliva",
+          "quantity": 13,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 649.37,
+        "proteina": 50.78,
+        "carbohidratos": 70.22,
+        "grasas": 18.38
+      },
+      "diff": {
+        "kcal": -0.63,
+        "proteina": 0.78,
+        "carbs": 0.22,
+        "grasas": 0.38
+      },
+      "calorieDeficit": 0.627,
+      "proteinReached": true,
+      "warnings": [],
+      "timeMs": 51.53,
+      "constrained": {
+        "policy": "tracking_remaining_v2",
+        "foods": [
+          {
+            "id": "chicken",
+            "name": "Pechuga de pollo",
+            "quantity": 230,
+            "unit": "Grs",
+            "role": "Auto"
+          },
+          {
+            "id": "rice",
+            "name": "Arroz",
+            "quantity": 90,
+            "unit": "Grs",
+            "role": "Auto"
+          },
+          {
+            "id": "oil",
+            "name": "Aceite de oliva",
+            "quantity": 10,
+            "unit": "Grs",
+            "role": "Auto"
+          }
+        ],
+        "totals": {
+          "calorias": 648.71,
+          "proteina": 57.8,
+          "carbohidratos": 67.95,
+          "grasas": 16.19
+        },
+        "calorieDeficit": 1.29
+      },
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "N02",
+      "level": "normal",
+      "label": "Desayuno: huevos + pan + banana",
+      "target": {
+        "kcal": 500,
+        "proteina": 30,
+        "carbs": 60,
+        "grasas": 16
+      },
+      "consistency": "aproximadamente_consistente",
+      "foods": [
+        {
+          "id": "egg",
+          "name": "Huevos",
+          "quantity": 1,
+          "unit": "Unid",
+          "role": "Auto"
+        },
+        {
+          "id": "bread",
+          "name": "Pan blanco",
+          "quantity": 123,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "banana",
+          "name": "Banana",
+          "quantity": 1,
+          "unit": "Unid",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 499.71,
+        "proteina": 16.64,
+        "carbohidratos": 87.03,
+        "grasas": 9.45
+      },
+      "diff": {
+        "kcal": -0.29,
+        "proteina": -13.36,
+        "carbs": 27.03,
+        "grasas": -6.55
+      },
+      "calorieDeficit": 0.287,
+      "proteinReached": false,
+      "warnings": [
+        "macros limitados: proteina, grasas"
+      ],
+      "timeMs": 2.6704,
+      "constrained": {
+        "policy": "tracking_remaining_v2",
+        "foods": [
+          {
+            "id": "egg",
+            "name": "Huevos",
+            "quantity": 3,
+            "unit": "Unid",
+            "role": "Auto"
+          },
+          {
+            "id": "bread",
+            "name": "Pan blanco",
+            "quantity": 70,
+            "unit": "Grs",
+            "role": "Auto"
+          },
+          {
+            "id": "banana",
+            "name": "Banana",
+            "quantity": 1,
+            "unit": "Unid",
+            "role": "Auto"
+          }
+        ],
+        "totals": {
+          "calorias": 497.74,
+          "proteina": 24.61,
+          "carbohidratos": 60,
+          "grasas": 17.7
+        },
+        "calorieDeficit": 2.26
+      },
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "N03",
+      "level": "normal",
+      "label": "Churrasco + papas + aceite",
+      "target": {
+        "kcal": 700,
+        "proteina": 55,
+        "carbs": 75,
+        "grasas": 24
+      },
+      "consistency": "aproximadamente_consistente",
+      "foods": [
+        {
+          "id": "steak",
+          "name": "Churrasco magro",
+          "quantity": 187,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "potato",
+          "name": "Papas",
+          "quantity": 245,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "oil",
+          "name": "Aceite de oliva",
+          "quantity": 1,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 699.34,
+        "proteina": 54.66,
+        "carbohidratos": 46.55,
+        "grasas": 32.72
+      },
+      "diff": {
+        "kcal": -0.66,
+        "proteina": -0.34,
+        "carbs": -28.45,
+        "grasas": 8.72
+      },
+      "calorieDeficit": 0.664,
+      "proteinReached": true,
+      "warnings": [
+        "macros limitados: carbohidratos"
+      ],
+      "timeMs": 17.6296,
+      "constrained": {
+        "policy": "tracking_remaining_v2",
+        "foods": [
+          {
+            "id": "steak",
+            "name": "Churrasco magro",
+            "quantity": 200,
+            "unit": "Grs",
+            "role": "Auto"
+          },
+          {
+            "id": "potato",
+            "name": "Papas",
+            "quantity": 170,
+            "unit": "Grs",
+            "role": "Auto"
+          },
+          {
+            "id": "oil",
+            "name": "Aceite de oliva",
+            "quantity": 5,
+            "unit": "Grs",
+            "role": "Auto"
+          }
+        ],
+        "totals": {
+          "calorias": 694.67,
+          "proteina": 56.89,
+          "carbohidratos": 32.3,
+          "grasas": 37.54
+        },
+        "calorieDeficit": 5.33
+      },
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "N04",
+      "level": "normal",
+      "label": "Pollo + fideos + queso",
+      "target": {
+        "kcal": 800,
+        "proteina": 60,
+        "carbs": 95,
+        "grasas": 20
+      },
+      "consistency": "aproximadamente_consistente",
+      "foods": [
+        {
+          "id": "chicken",
+          "name": "Pechuga de pollo",
+          "quantity": 185,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "pasta",
+          "name": "Fideos",
+          "quantity": 126,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "cheese",
+          "name": "Queso cremoso",
+          "quantity": 40,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 799.94,
+        "proteina": 60.16,
+        "carbohidratos": 94.9,
+        "grasas": 19.97
+      },
+      "diff": {
+        "kcal": -0.06,
+        "proteina": 0.16,
+        "carbs": -0.1,
+        "grasas": -0.03
+      },
+      "calorieDeficit": 0.057,
+      "proteinReached": true,
+      "warnings": [],
+      "timeMs": 12.0002,
+      "constrained": {
+        "policy": "tracking_remaining_v2",
+        "foods": [
+          {
+            "id": "chicken",
+            "name": "Pechuga de pollo",
+            "quantity": 200,
+            "unit": "Grs",
+            "role": "Auto"
+          },
+          {
+            "id": "pasta",
+            "name": "Fideos",
+            "quantity": 120,
+            "unit": "Grs",
+            "role": "Auto"
+          },
+          {
+            "id": "cheese",
+            "name": "Queso cremoso",
+            "quantity": 40,
+            "unit": "Grs",
+            "role": "Auto"
+          }
+        ],
+        "totals": {
+          "calorias": 794.96,
+          "proteina": 62.8,
+          "carbohidratos": 90.4,
+          "grasas": 20.24
+        },
+        "calorieDeficit": 5.04
+      },
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "N05",
+      "level": "normal",
+      "label": "Jamón + pan + queso + manzana",
+      "target": {
+        "kcal": 450,
+        "proteina": 30,
+        "carbs": 45,
+        "grasas": 16
+      },
+      "consistency": "aproximadamente_consistente",
+      "foods": [
+        {
+          "id": "ham",
+          "name": "Jamón cocido",
+          "quantity": 164,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "bread",
+          "name": "Pan blanco",
+          "quantity": 1,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "apple",
+          "name": "Manzana",
+          "quantity": 2,
+          "unit": "Unid",
+          "role": "Auto"
+        },
+        {
+          "id": "cheese",
+          "name": "Queso cremoso",
+          "quantity": 34,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 449.46,
+        "proteina": 30.38,
+        "carbohidratos": 46.05,
+        "grasas": 15.97
+      },
+      "diff": {
+        "kcal": -0.54,
+        "proteina": 0.38,
+        "carbs": 1.05,
+        "grasas": -0.03
+      },
+      "calorieDeficit": 0.539,
+      "proteinReached": true,
+      "warnings": [
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 5.7878,
+      "constrained": {
+        "policy": "tracking_remaining_v2",
+        "foods": [
+          {
+            "id": "ham",
+            "name": "Jamón cocido",
+            "quantity": 100,
+            "unit": "Grs",
+            "role": "Auto"
+          },
+          {
+            "id": "bread",
+            "name": "Pan blanco",
+            "quantity": 35,
+            "unit": "Grs",
+            "role": "Auto"
+          },
+          {
+            "id": "apple",
+            "name": "Manzana",
+            "quantity": 1,
+            "unit": "Unid",
+            "role": "Auto"
+          },
+          {
+            "id": "cheese",
+            "name": "Queso cremoso",
+            "quantity": 50,
+            "unit": "Grs",
+            "role": "Auto"
+          }
+        ],
+        "totals": {
+          "calorias": 448.51,
+          "proteina": 25.13,
+          "carbohidratos": 40.95,
+          "grasas": 20.47
+        },
+        "calorieDeficit": 1.49
+      },
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "N06",
+      "level": "normal",
+      "label": "Pollo + arroz + almendras + banana",
+      "target": {
+        "kcal": 600,
+        "proteina": 45,
+        "carbs": 70,
+        "grasas": 16
+      },
+      "consistency": "aproximadamente_consistente",
+      "foods": [
+        {
+          "id": "chicken",
+          "name": "Pechuga de pollo",
+          "quantity": 155,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "rice",
+          "name": "Arroz",
+          "quantity": 53,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "banana",
+          "name": "Banana",
+          "quantity": 1,
+          "unit": "Unid",
+          "role": "Auto"
+        },
+        {
+          "id": "almonds",
+          "name": "Almendras",
+          "quantity": 20,
+          "unit": "Unid",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 599.55,
+        "proteina": 44.83,
+        "carbohidratos": 67.41,
+        "grasas": 16.73
+      },
+      "diff": {
+        "kcal": -0.45,
+        "proteina": -0.17,
+        "carbs": -2.59,
+        "grasas": 0.73
+      },
+      "calorieDeficit": 0.45,
+      "proteinReached": true,
+      "warnings": [
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 8.0826,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "N07",
+      "level": "normal",
+      "label": "Churrasco + fideos + aceite + manzana",
+      "target": {
+        "kcal": 900,
+        "proteina": 70,
+        "carbs": 105,
+        "grasas": 28
+      },
+      "consistency": "aproximadamente_consistente",
+      "foods": [
+        {
+          "id": "steak",
+          "name": "Churrasco magro",
+          "quantity": 234,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "pasta",
+          "name": "Fideos",
+          "quantity": 63,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "apple",
+          "name": "Manzana",
+          "quantity": 1,
+          "unit": "Unid",
+          "role": "Auto"
+        },
+        {
+          "id": "oil",
+          "name": "Aceite de oliva",
+          "quantity": 1,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 899.04,
+        "proteina": 70.58,
+        "carbohidratos": 69.85,
+        "grasas": 37.48
+      },
+      "diff": {
+        "kcal": -0.96,
+        "proteina": 0.58,
+        "carbs": -35.15,
+        "grasas": 9.48
+      },
+      "calorieDeficit": 0.96,
+      "proteinReached": true,
+      "warnings": [
+        "macros limitados: carbohidratos"
+      ],
+      "timeMs": 5.4654,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "N08",
+      "level": "normal",
+      "label": "Pollo + papas + pan + aceite",
+      "target": {
+        "kcal": 750,
+        "proteina": 55,
+        "carbs": 90,
+        "grasas": 20
+      },
+      "consistency": "aproximadamente_consistente",
+      "foods": [
+        {
+          "id": "chicken",
+          "name": "Pechuga de pollo",
+          "quantity": 190,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "potato",
+          "name": "Papas",
+          "quantity": 37,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "bread",
+          "name": "Pan blanco",
+          "quantity": 160,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "oil",
+          "name": "Aceite de oliva",
+          "quantity": 9,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 749.06,
+        "proteina": 54.59,
+        "carbohidratos": 88.63,
+        "grasas": 19.58
+      },
+      "diff": {
+        "kcal": -0.94,
+        "proteina": -0.41,
+        "carbs": -1.37,
+        "grasas": -0.42
+      },
+      "calorieDeficit": 0.94,
+      "proteinReached": true,
+      "warnings": [
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 12.5205,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "N09",
+      "level": "normal",
+      "label": "Huevos + jamón + pan + banana",
+      "target": {
+        "kcal": 550,
+        "proteina": 40,
+        "carbs": 65,
+        "grasas": 18
+      },
+      "consistency": "aproximadamente_consistente",
+      "foods": [
+        {
+          "id": "egg",
+          "name": "Huevos",
+          "quantity": 2,
+          "unit": "Unid",
+          "role": "Auto"
+        },
+        {
+          "id": "ham",
+          "name": "Jamón cocido",
+          "quantity": 140,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "bread",
+          "name": "Pan blanco",
+          "quantity": 72,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "banana",
+          "name": "Banana",
+          "quantity": 1,
+          "unit": "Unid",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 549.52,
+        "proteina": 39.76,
+        "carbohidratos": 61.02,
+        "grasas": 16.27
+      },
+      "diff": {
+        "kcal": -0.48,
+        "proteina": -0.24,
+        "carbs": -3.98,
+        "grasas": -1.73
+      },
+      "calorieDeficit": 0.478,
+      "proteinReached": true,
+      "warnings": [
+        "macros limitados: carbohidratos, grasas",
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 3.5478,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "N10",
+      "level": "normal",
+      "label": "Cinco fuentes completas",
+      "target": {
+        "kcal": 850,
+        "proteina": 65,
+        "carbs": 105,
+        "grasas": 24
+      },
+      "consistency": "aproximadamente_consistente",
+      "foods": [
+        {
+          "id": "chicken",
+          "name": "Pechuga de pollo",
+          "quantity": 254,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "rice",
+          "name": "Arroz",
+          "quantity": 1,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "potato",
+          "name": "Papas",
+          "quantity": 499,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "cheese",
+          "name": "Queso cremoso",
+          "quantity": 1,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "oil",
+          "name": "Aceite de oliva",
+          "quantity": 9,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 849.08,
+        "proteina": 64.58,
+        "carbohidratos": 95.58,
+        "grasas": 23.16
+      },
+      "diff": {
+        "kcal": -0.92,
+        "proteina": -0.42,
+        "carbs": -9.42,
+        "grasas": -0.84
+      },
+      "calorieDeficit": 0.919,
+      "proteinReached": true,
+      "warnings": [
+        "macros limitados: carbohidratos",
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 9.8439,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "L01",
+      "level": "limitado",
+      "label": "Sólo pechuga a 903 kcal",
+      "target": {
+        "kcal": 903,
+        "proteina": 58.5,
+        "carbs": 38.4,
+        "grasas": 56.1
+      },
+      "consistency": "incompatible",
+      "foods": [
+        {
+          "id": "chicken",
+          "name": "Pechuga de pollo",
+          "quantity": 817,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 902.79,
+        "proteina": 179.74,
+        "carbohidratos": 0,
+        "grasas": 20.43
+      },
+      "diff": {
+        "kcal": -0.21,
+        "proteina": 121.24,
+        "carbs": -38.4,
+        "grasas": -35.67
+      },
+      "calorieDeficit": 0.215,
+      "proteinReached": true,
+      "warnings": [
+        "macros limitados: carbohidratos, grasas",
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 0.5553,
+      "constrained": {
+        "policy": "tracking_remaining_v2",
+        "foods": [
+          {
+            "id": "chicken",
+            "name": "Pechuga de pollo",
+            "quantity": 250,
+            "unit": "Grs",
+            "role": "Auto"
+          }
+        ],
+        "totals": {
+          "calorias": 276.25,
+          "proteina": 55,
+          "carbohidratos": 0,
+          "grasas": 6.25
+        },
+        "calorieDeficit": 626.75
+      },
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "L02",
+      "level": "limitado",
+      "label": "Sólo arroz a 1200 kcal",
+      "target": {
+        "kcal": 1200,
+        "proteina": 35,
+        "carbs": 250,
+        "grasas": 10
+      },
+      "consistency": "incompatible",
+      "foods": [
+        {
+          "id": "rice",
+          "name": "Arroz",
+          "quantity": 354,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 1198.29,
+        "proteina": 28.32,
+        "carbohidratos": 267.27,
+        "grasas": 1.77
+      },
+      "diff": {
+        "kcal": -1.71,
+        "proteina": -6.68,
+        "carbs": 17.27,
+        "grasas": -8.23
+      },
+      "calorieDeficit": 1.71,
+      "proteinReached": false,
+      "warnings": [
+        "limitado por granularidad física",
+        "macros limitados: proteina, grasas",
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 0.416,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "L03",
+      "level": "limitado",
+      "label": "Sólo aceite",
+      "target": {
+        "kcal": 500,
+        "proteina": 30,
+        "carbs": 50,
+        "grasas": 30
+      },
+      "consistency": "incompatible",
+      "foods": [
+        {
+          "id": "oil",
+          "name": "Aceite de oliva",
+          "quantity": 55,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 494.51,
+        "proteina": 0,
+        "carbohidratos": 0,
+        "grasas": 54.95
+      },
+      "diff": {
+        "kcal": -5.49,
+        "proteina": -30,
+        "carbs": -50,
+        "grasas": 24.95
+      },
+      "calorieDeficit": 5.495,
+      "proteinReached": false,
+      "warnings": [
+        "limitado por granularidad física",
+        "macros limitados: proteina, carbohidratos",
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 0.3723,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "L04",
+      "level": "limitado",
+      "label": "Pollo + arroz sin grasa",
+      "target": {
+        "kcal": 620,
+        "proteina": 55,
+        "carbs": 70,
+        "grasas": 22
+      },
+      "consistency": "incompleta",
+      "foods": [
+        {
+          "id": "chicken",
+          "name": "Pechuga de pollo",
+          "quantity": 211,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "rice",
+          "name": "Arroz",
+          "quantity": 114,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 619.04,
+        "proteina": 55.54,
+        "carbohidratos": 86.07,
+        "grasas": 5.85
+      },
+      "diff": {
+        "kcal": -0.96,
+        "proteina": 0.54,
+        "carbs": 16.07,
+        "grasas": -16.15
+      },
+      "calorieDeficit": 0.955,
+      "proteinReached": true,
+      "warnings": [
+        "macros limitados: grasas"
+      ],
+      "timeMs": 2.3117,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "L05",
+      "level": "limitado",
+      "label": "Arroz + aceite sin proteína",
+      "target": {
+        "kcal": 680,
+        "proteina": 60,
+        "carbs": 90,
+        "grasas": 25
+      },
+      "consistency": "incompleta",
+      "foods": [
+        {
+          "id": "rice",
+          "name": "Arroz",
+          "quantity": 198,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "oil",
+          "name": "Aceite de oliva",
+          "quantity": 1,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 679.22,
+        "proteina": 15.84,
+        "carbohidratos": 149.49,
+        "grasas": 1.99
+      },
+      "diff": {
+        "kcal": -0.78,
+        "proteina": -44.16,
+        "carbs": 59.49,
+        "grasas": -23.01
+      },
+      "calorieDeficit": 0.779,
+      "proteinReached": false,
+      "warnings": [
+        "macros limitados: proteina, grasas",
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 1.2667,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "L06",
+      "level": "limitado",
+      "label": "Huevos + banana, ambas unidades",
+      "target": {
+        "kcal": 700,
+        "proteina": 45,
+        "carbs": 80,
+        "grasas": 30
+      },
+      "consistency": "discreta",
+      "foods": [
+        {
+          "id": "egg",
+          "name": "Huevos",
+          "quantity": 4,
+          "unit": "Unid",
+          "role": "Auto"
+        },
+        {
+          "id": "banana",
+          "name": "Banana",
+          "quantity": 4,
+          "unit": "Unid",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 699.48,
+        "proteina": 29.16,
+        "carbohidratos": 97.2,
+        "grasas": 21.56
+      },
+      "diff": {
+        "kcal": -0.52,
+        "proteina": -15.84,
+        "carbs": 17.2,
+        "grasas": -8.44
+      },
+      "calorieDeficit": 0.52,
+      "proteinReached": false,
+      "warnings": [
+        "macros limitados: proteina, grasas",
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 0.5682,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "L07",
+      "level": "limitado",
+      "label": "2 almendras Fijas + pollo + pan + huevos",
+      "target": {
+        "kcal": 903,
+        "proteina": 58.5,
+        "carbs": 38.4,
+        "grasas": 56.1
+      },
+      "consistency": "incompatible",
+      "foods": [
+        {
+          "id": "chicken",
+          "name": "Pechuga de pollo",
+          "quantity": 3,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "egg",
+          "name": "Huevos",
+          "quantity": 8,
+          "unit": "Unid",
+          "role": "Auto"
+        },
+        {
+          "id": "bread",
+          "name": "Pan blanco",
+          "quantity": 126,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "almonds",
+          "name": "Almendras",
+          "quantity": 2,
+          "unit": "Unid",
+          "role": "Fijo"
+        }
+      ],
+      "totals": {
+        "calorias": 902.38,
+        "proteina": 58.76,
+        "carbohidratos": 64.57,
+        "grasas": 45.45
+      },
+      "diff": {
+        "kcal": -0.62,
+        "proteina": 0.26,
+        "carbs": 26.17,
+        "grasas": -10.65
+      },
+      "calorieDeficit": 0.619,
+      "proteinReached": true,
+      "warnings": [
+        "macros limitados: grasas",
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 9.5991,
+      "constrained": {
+        "policy": "tracking_remaining_v2",
+        "foods": [
+          {
+            "id": "chicken",
+            "name": "Pechuga de pollo",
+            "quantity": 250,
+            "unit": "Grs",
+            "role": "Auto"
+          },
+          {
+            "id": "egg",
+            "name": "Huevos",
+            "quantity": 4,
+            "unit": "Unid",
+            "role": "Auto"
+          },
+          {
+            "id": "bread",
+            "name": "Pan blanco",
+            "quantity": 125,
+            "unit": "Grs",
+            "role": "Auto"
+          },
+          {
+            "id": "almonds",
+            "name": "Almendras",
+            "quantity": 2,
+            "unit": "Unid",
+            "role": "Fijo"
+          }
+        ],
+        "totals": {
+          "calorias": 896.68,
+          "proteina": 89.02,
+          "carbohidratos": 64.06,
+          "grasas": 31.6
+        },
+        "calorieDeficit": 6.32
+      },
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "L08",
+      "level": "limitado",
+      "label": "100 g de arroz Fijo + pollo + queso",
+      "target": {
+        "kcal": 903,
+        "proteina": 58.5,
+        "carbs": 38.4,
+        "grasas": 56.1
+      },
+      "consistency": "incompatible",
+      "foods": [
+        {
+          "id": "chicken",
+          "name": "Pechuga de pollo",
+          "quantity": 158,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "rice",
+          "name": "Arroz",
+          "quantity": 100,
+          "unit": "Grs",
+          "role": "Fijo"
+        },
+        {
+          "id": "cheese",
+          "name": "Queso cremoso",
+          "quantity": 109,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 902.22,
+        "proteina": 58.02,
+        "carbohidratos": 76.59,
+        "grasas": 40.42
+      },
+      "diff": {
+        "kcal": -0.78,
+        "proteina": -0.48,
+        "carbs": 38.19,
+        "grasas": -15.68
+      },
+      "calorieDeficit": 0.78,
+      "proteinReached": true,
+      "warnings": [
+        "macros limitados: grasas",
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 2.6525,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "L09",
+      "level": "limitado",
+      "label": "Jamón + queso sin carbohidrato",
+      "target": {
+        "kcal": 650,
+        "proteina": 65,
+        "carbs": 70,
+        "grasas": 25
+      },
+      "consistency": "incompleta",
+      "foods": [
+        {
+          "id": "ham",
+          "name": "Jamón cocido",
+          "quantity": 341,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "cheese",
+          "name": "Queso cremoso",
+          "quantity": 103,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 649.04,
+        "proteina": 65.57,
+        "carbohidratos": 1.03,
+        "grasas": 42.52
+      },
+      "diff": {
+        "kcal": -0.96,
+        "proteina": 0.57,
+        "carbs": -68.97,
+        "grasas": 17.52
+      },
+      "calorieDeficit": 0.965,
+      "proteinReached": true,
+      "warnings": [
+        "macros limitados: carbohidratos",
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 2.849,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "L10",
+      "level": "limitado",
+      "label": "Coca-Cola + alfajor",
+      "target": {
+        "kcal": 800,
+        "proteina": 35,
+        "carbs": 120,
+        "grasas": 25
+      },
+      "consistency": "incompleta",
+      "foods": [
+        {
+          "id": "cola",
+          "name": "Coca-Cola",
+          "quantity": 331,
+          "unit": "ml",
+          "role": "Auto"
+        },
+        {
+          "id": "alfajor",
+          "name": "Alfajor",
+          "quantity": 3,
+          "unit": "Unid",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 799.02,
+        "proteina": 9,
+        "carbohidratos": 136.76,
+        "grasas": 24
+      },
+      "diff": {
+        "kcal": -0.98,
+        "proteina": -26,
+        "carbs": 16.76,
+        "grasas": -1
+      },
+      "calorieDeficit": 0.98,
+      "proteinReached": false,
+      "warnings": [
+        "macros limitados: proteina",
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 3.1926,
+      "constrained": {
+        "policy": "tracking_remaining_v2",
+        "foods": [
+          {
+            "id": "cola",
+            "name": "Coca-Cola",
+            "quantity": 500,
+            "unit": "ml",
+            "role": "Auto"
+          },
+          {
+            "id": "alfajor",
+            "name": "Alfajor",
+            "quantity": 2,
+            "unit": "Unid",
+            "role": "Auto"
+          }
+        ],
+        "totals": {
+          "calorias": 650,
+          "proteina": 6,
+          "carbohidratos": 120.5,
+          "grasas": 16
+        },
+        "calorieDeficit": 150
+      },
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "X01",
+      "level": "extremo",
+      "label": "1500 kcal sólo con pollo",
+      "target": {
+        "kcal": 1500,
+        "proteina": 120,
+        "carbs": 180,
+        "grasas": 45
+      },
+      "consistency": "absurda",
+      "foods": [
+        {
+          "id": "chicken",
+          "name": "Pechuga de pollo",
+          "quantity": 1357,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 1499.49,
+        "proteina": 298.54,
+        "carbohidratos": 0,
+        "grasas": 33.93
+      },
+      "diff": {
+        "kcal": -0.51,
+        "proteina": 178.54,
+        "carbs": -180,
+        "grasas": -11.07
+      },
+      "calorieDeficit": 0.515,
+      "proteinReached": true,
+      "warnings": [
+        "macros limitados: carbohidratos, grasas",
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 0.4159,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "X02",
+      "level": "extremo",
+      "label": "1500 kcal sólo con alfajores",
+      "target": {
+        "kcal": 1500,
+        "proteina": 80,
+        "carbs": 200,
+        "grasas": 55
+      },
+      "consistency": "absurda",
+      "foods": [
+        {
+          "id": "alfajor",
+          "name": "Alfajor",
+          "quantity": 6,
+          "unit": "Unid",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 1320,
+        "proteina": 18,
+        "carbohidratos": 204,
+        "grasas": 48
+      },
+      "diff": {
+        "kcal": -180,
+        "proteina": -62,
+        "carbs": 4,
+        "grasas": -7
+      },
+      "calorieDeficit": 180,
+      "proteinReached": false,
+      "warnings": [
+        "limitado por unidades enteras",
+        "macros limitados: proteina, grasas",
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 0.3748,
+      "constrained": {
+        "policy": "tracking_remaining_v2",
+        "foods": [
+          {
+            "id": "alfajor",
+            "name": "Alfajor",
+            "quantity": 2,
+            "unit": "Unid",
+            "role": "Auto"
+          }
+        ],
+        "totals": {
+          "calorias": 440,
+          "proteina": 6,
+          "carbohidratos": 68,
+          "grasas": 16
+        },
+        "calorieDeficit": 1060
+      },
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "X03",
+      "level": "extremo",
+      "label": "1200 kcal sólo con Coca-Cola",
+      "target": {
+        "kcal": 1200,
+        "proteina": 80,
+        "carbs": 220,
+        "grasas": 35
+      },
+      "consistency": "absurda",
+      "foods": [
+        {
+          "id": "cola",
+          "name": "Coca-Cola",
+          "quantity": 2855,
+          "unit": "ml",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 1199.1,
+        "proteina": 0,
+        "carbohidratos": 299.77,
+        "grasas": 0
+      },
+      "diff": {
+        "kcal": -0.9,
+        "proteina": -80,
+        "carbs": 79.77,
+        "grasas": -35
+      },
+      "calorieDeficit": 0.9,
+      "proteinReached": false,
+      "warnings": [
+        "macros limitados: proteina, grasas",
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 0.3892,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "X04",
+      "level": "extremo",
+      "label": "Seis fuentes predominantemente proteicas",
+      "target": {
+        "kcal": 1400,
+        "proteina": 250,
+        "carbs": 0,
+        "grasas": 40
+      },
+      "consistency": "extrema",
+      "foods": [
+        {
+          "id": "chicken",
+          "name": "Pechuga de pollo",
+          "quantity": 601,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "steak",
+          "name": "Churrasco magro",
+          "quantity": 1,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "ham",
+          "name": "Jamón cocido",
+          "quantity": 425,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "egg",
+          "name": "Huevos",
+          "quantity": 1,
+          "unit": "Unid",
+          "role": "Auto"
+        },
+        {
+          "id": "whey",
+          "name": "Whey protein",
+          "quantity": 48,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "cheese",
+          "name": "Queso cremoso",
+          "quantity": 36,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 1399.1,
+        "proteina": 250.96,
+        "carbohidratos": 0.84,
+        "grasas": 43.54
+      },
+      "diff": {
+        "kcal": -0.9,
+        "proteina": 0.96,
+        "carbs": 0.84,
+        "grasas": 3.54
+      },
+      "calorieDeficit": 0.904,
+      "proteinReached": true,
+      "warnings": [
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 19.8187,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "X05",
+      "level": "extremo",
+      "label": "Seis fuentes de carbohidratos",
+      "target": {
+        "kcal": 1300,
+        "proteina": 40,
+        "carbs": 300,
+        "grasas": 15
+      },
+      "consistency": "extrema",
+      "foods": [
+        {
+          "id": "rice",
+          "name": "Arroz",
+          "quantity": 1,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "potato",
+          "name": "Papas",
+          "quantity": 2,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "pasta",
+          "name": "Fideos",
+          "quantity": 330,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "bread",
+          "name": "Pan blanco",
+          "quantity": 1,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "banana",
+          "name": "Banana",
+          "quantity": 1,
+          "unit": "Unid",
+          "role": "Auto"
+        },
+        {
+          "id": "cola",
+          "name": "Coca-Cola",
+          "quantity": 1,
+          "unit": "ml",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 1299.93,
+        "proteina": 37.78,
+        "carbohidratos": 273.55,
+        "grasas": 6.07
+      },
+      "diff": {
+        "kcal": -0.07,
+        "proteina": -2.22,
+        "carbs": -26.45,
+        "grasas": -8.93
+      },
+      "calorieDeficit": 0.068,
+      "proteinReached": false,
+      "warnings": [
+        "macros limitados: proteina, carbohidratos, grasas",
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 19.302,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "X06",
+      "level": "extremo",
+      "label": "Seis alimentos mezclados",
+      "target": {
+        "kcal": 1500,
+        "proteina": 120,
+        "carbs": 180,
+        "grasas": 45
+      },
+      "consistency": "aproximadamente_consistente",
+      "foods": [
+        {
+          "id": "chicken",
+          "name": "Pechuga de pollo",
+          "quantity": 477,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "egg",
+          "name": "Huevos",
+          "quantity": 1,
+          "unit": "Unid",
+          "role": "Auto"
+        },
+        {
+          "id": "rice",
+          "name": "Arroz",
+          "quantity": 9,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "banana",
+          "name": "Banana",
+          "quantity": 6,
+          "unit": "Unid",
+          "role": "Auto"
+        },
+        {
+          "id": "oil",
+          "name": "Aceite de oliva",
+          "quantity": 26,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "cheese",
+          "name": "Queso cremoso",
+          "quantity": 1,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 1499.11,
+        "proteina": 119.54,
+        "carbohidratos": 152.6,
+        "grasas": 45.61
+      },
+      "diff": {
+        "kcal": -0.89,
+        "proteina": -0.46,
+        "carbs": -27.4,
+        "grasas": 0.61
+      },
+      "calorieDeficit": 0.894,
+      "proteinReached": true,
+      "warnings": [
+        "macros limitados: carbohidratos",
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 11.3544,
+      "constrained": {
+        "policy": "tracking_remaining_v2",
+        "foods": [
+          {
+            "id": "chicken",
+            "name": "Pechuga de pollo",
+            "quantity": 250,
+            "unit": "Grs",
+            "role": "Auto"
+          },
+          {
+            "id": "egg",
+            "name": "Huevos",
+            "quantity": 4,
+            "unit": "Unid",
+            "role": "Auto"
+          },
+          {
+            "id": "rice",
+            "name": "Arroz",
+            "quantity": 115,
+            "unit": "Grs",
+            "role": "Auto"
+          },
+          {
+            "id": "banana",
+            "name": "Banana",
+            "quantity": 2,
+            "unit": "Unid",
+            "role": "Auto"
+          },
+          {
+            "id": "oil",
+            "name": "Aceite de oliva",
+            "quantity": 5,
+            "unit": "Grs",
+            "role": "Auto"
+          },
+          {
+            "id": "cheese",
+            "name": "Queso cremoso",
+            "quantity": 80,
+            "unit": "Grs",
+            "role": "Auto"
+          }
+        ],
+        "totals": {
+          "calorias": 1483.82,
+          "proteina": 101.98,
+          "carbohidratos": 136.23,
+          "grasas": 59
+        },
+        "calorieDeficit": 16.18
+      },
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "X07",
+      "level": "extremo",
+      "label": "Proteína cero neutral",
+      "target": {
+        "kcal": 900,
+        "proteina": 0,
+        "carbs": 120,
+        "grasas": 45
+      },
+      "consistency": "p_cero",
+      "foods": [
+        {
+          "id": "rice",
+          "name": "Arroz",
+          "quantity": 152,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "almonds",
+          "name": "Almendras",
+          "quantity": 1,
+          "unit": "Unid",
+          "role": "Auto"
+        },
+        {
+          "id": "oil",
+          "name": "Aceite de oliva",
+          "quantity": 42,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 899.29,
+        "proteina": 12.42,
+        "carbohidratos": 114.92,
+        "grasas": 43.33
+      },
+      "diff": {
+        "kcal": -0.71,
+        "proteina": 12.42,
+        "carbs": -5.08,
+        "grasas": -1.67
+      },
+      "calorieDeficit": 0.708,
+      "proteinReached": true,
+      "warnings": [
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 7.4417,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "X08",
+      "level": "extremo",
+      "label": "Carbohidratos cero",
+      "target": {
+        "kcal": 1000,
+        "proteina": 100,
+        "carbs": 0,
+        "grasas": 60
+      },
+      "consistency": "c_cero",
+      "foods": [
+        {
+          "id": "chicken",
+          "name": "Pechuga de pollo",
+          "quantity": 154,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "egg",
+          "name": "Huevos",
+          "quantity": 11,
+          "unit": "Unid",
+          "role": "Auto"
+        },
+        {
+          "id": "cheese",
+          "name": "Queso cremoso",
+          "quantity": 7,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "oil",
+          "name": "Aceite de oliva",
+          "quantity": 5,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 999.12,
+        "proteina": 100.86,
+        "carbohidratos": 0.07,
+        "grasas": 66.16
+      },
+      "diff": {
+        "kcal": -0.88,
+        "proteina": 0.86,
+        "carbs": 0.07,
+        "grasas": 6.16
+      },
+      "calorieDeficit": 0.885,
+      "proteinReached": true,
+      "warnings": [
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 7.2856,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "X09",
+      "level": "extremo",
+      "label": "Grasas cero",
+      "target": {
+        "kcal": 1000,
+        "proteina": 80,
+        "carbs": 170,
+        "grasas": 0
+      },
+      "consistency": "g_cero",
+      "foods": [
+        {
+          "id": "chicken",
+          "name": "Pechuga de pollo",
+          "quantity": 289,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "rice",
+          "name": "Arroz",
+          "quantity": 199,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "pasta",
+          "name": "Fideos",
+          "quantity": 1,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "bread",
+          "name": "Pan blanco",
+          "quantity": 1,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 999.19,
+        "proteina": 79.69,
+        "carbohidratos": 151.51,
+        "grasas": 8.27
+      },
+      "diff": {
+        "kcal": -0.81,
+        "proteina": -0.31,
+        "carbs": -18.49,
+        "grasas": 8.27
+      },
+      "calorieDeficit": 0.806,
+      "proteinReached": true,
+      "warnings": [
+        "macros limitados: carbohidratos",
+        "supera porciones recomendadas"
+      ],
+      "timeMs": 13.328,
+      "constrained": null,
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    },
+    {
+      "id": "X10",
+      "level": "extremo",
+      "label": "Meta fuertemente incompatible y selección alocada",
+      "target": {
+        "kcal": 500,
+        "proteina": 150,
+        "carbs": 150,
+        "grasas": 80
+      },
+      "consistency": "fuertemente_incompatible",
+      "foods": [
+        {
+          "id": "egg",
+          "name": "Huevos",
+          "quantity": 3,
+          "unit": "Unid",
+          "role": "Auto"
+        },
+        {
+          "id": "alfajor",
+          "name": "Alfajor",
+          "quantity": 1,
+          "unit": "Unid",
+          "role": "Auto"
+        },
+        {
+          "id": "cola",
+          "name": "Coca-Cola",
+          "quantity": 7,
+          "unit": "ml",
+          "role": "Auto"
+        },
+        {
+          "id": "oil",
+          "name": "Aceite de oliva",
+          "quantity": 1,
+          "unit": "Grs",
+          "role": "Auto"
+        },
+        {
+          "id": "cheese",
+          "name": "Queso cremoso",
+          "quantity": 17,
+          "unit": "Grs",
+          "role": "Auto"
+        }
+      ],
+      "totals": {
+        "calorias": 499.62,
+        "proteina": 23.38,
+        "carbohidratos": 34.91,
+        "grasas": 29.61
+      },
+      "diff": {
+        "kcal": -0.38,
+        "proteina": -126.62,
+        "carbs": -115.09,
+        "grasas": -50.39
+      },
+      "calorieDeficit": 0.379,
+      "proteinReached": false,
+      "warnings": [
+        "macros limitados: proteina, carbohidratos, grasas"
+      ],
+      "timeMs": 3.0492,
+      "constrained": {
+        "policy": "tracking_remaining_v2",
+        "foods": [
+          {
+            "id": "egg",
+            "name": "Huevos",
+            "quantity": 1,
+            "unit": "Unid",
+            "role": "Auto"
+          },
+          {
+            "id": "alfajor",
+            "name": "Alfajor",
+            "quantity": 1,
+            "unit": "Unid",
+            "role": "Auto"
+          },
+          {
+            "id": "cola",
+            "name": "Coca-Cola",
+            "quantity": 200,
+            "unit": "ml",
+            "role": "Auto"
+          },
+          {
+            "id": "oil",
+            "name": "Aceite de oliva",
+            "quantity": 5,
+            "unit": "Grs",
+            "role": "Auto"
+          },
+          {
+            "id": "cheese",
+            "name": "Queso cremoso",
+            "quantity": 20,
+            "unit": "Grs",
+            "role": "Auto"
+          }
+        ],
+        "totals": {
+          "calorias": 489.35,
+          "proteina": 11.8,
+          "carbohidratos": 55.2,
+          "grasas": 24.6
+        },
+        "calorieDeficit": 10.65
+      },
+      "checks": {
+        "policy": true,
+        "ceiling": true,
+        "deterministic": true,
+        "discreteValid": true,
+        "fixedPreserved": true,
+        "constrainedIsolated": true,
+        "finite": true
+      }
+    }
+  ],
+  "summary": {
+    "executed": 30,
+    "normal": 10,
+    "limited": 10,
+    "extreme": 10,
+    "uniqueTargets": 27,
+    "comparedWithConstrained": 11,
+    "withinOneKcal": 27,
+    "overCeiling": [],
+    "nondeterministic": [],
+    "failures": []
+  }
+}

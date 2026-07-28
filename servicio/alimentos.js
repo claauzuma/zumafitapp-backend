@@ -1,5 +1,12 @@
 import ModelFactory from "../model/DAO/alimentosFactory.js";
-import menu, { TRACKING_OPTIMIZATION_POLICY } from "../menu2.js";
+import menu, {
+  TRACKING_CALORIE_FILL_POLICY,
+  TRACKING_OPTIMIZATION_POLICY,
+} from "../menu2.js";
+
+// Un Symbol no puede llegar desde JSON. El modo calorie_fill se habilita
+// solamente cuando el servicio especifico de Tracking entrega este contexto.
+export const TRACKING_QUANTITY_INTERNAL_CONTEXT = Symbol("tracking_quantity_internal_context");
 
 // Tolerancia exclusiva de mensajería. El optimizador sigue usando su propia
 // precisión y su ranking; una diferencia visual de hasta 0,5 g no se anuncia
@@ -323,6 +330,13 @@ function normalizeFoodLike(raw = {}, fallbackName = "", catalogFood = null) {
     maxGramos: constraints.max,
     stepGramos: constraints.step,
     quantityConstraintSources: constraints.sources,
+    allowFractionalQuantity:
+      raw.allowFractionalQuantity === true ||
+      raw.fractionalQuantityAllowed === true ||
+      raw.fractionalUnitsAllowed === true ||
+      catalogFood?.allowFractionalQuantity === true ||
+      catalogFood?.fractionalQuantityAllowed === true ||
+      catalogFood?.fractionalUnitsAllowed === true,
   };
 }
 
@@ -419,6 +433,7 @@ function itemForEngine(food = {}, options = {}) {
     nombre: food.nombre || food.name,
     unidad: food.unidad || food.unit || "g",
     macroBasis: food.macroBasis || (isGramBasedUnit(food.unidad || food.unit) ? "perGram" : "perUnit"),
+    allowFractionalQuantity: food.allowFractionalQuantity === true,
     calorias: toNumber(food.calorias ?? food.kcalPerUnitOrGram, 0),
     proteina: toNumber(food.proteina ?? food.proteinPerUnitOrGram, 0),
     carbohidratos: toNumber(food.carbohidratos ?? food.carbsPerUnitOrGram, 0),
@@ -547,6 +562,26 @@ function messageForResult(result = {}, mode = "", generationType = "") {
     ? " con estos alimentos"
     : " usando alimentos compatibles";
   const trackingOptimization = result.optimizacionTracking || null;
+
+  if (trackingOptimization?.policy === TRACKING_CALORIE_FILL_POLICY) {
+    if (trackingOptimization.invalidFoods?.length && result.errors?.length) {
+      return result.errors[0];
+    }
+    if (trackingOptimization.calorieTargetCompleted === true) {
+      if (trackingOptimization.macroLimitations?.length) {
+        return "Objetivo calorico completado. Con estos alimentos no es posible acercarse a todos los macronutrientes; revisa el detalle antes de confirmar.";
+      }
+      return "Objetivo calorico completado.";
+    }
+    const remaining = round(trackingOptimization.calorieDeficit, 1);
+    if (trackingOptimization.discreteLimited === true) {
+      return `Quedan aproximadamente ${remaining} kcal. Con las unidades enteras seleccionadas no es posible acercarse mas a la meta calorica.`;
+    }
+    if (trackingOptimization.granularityLimited === true) {
+      return `Quedan aproximadamente ${remaining} kcal. Con la granularidad fisica de los alimentos seleccionados no es posible acercarse mas sin superar el objetivo.`;
+    }
+    return `Todavia faltan aproximadamente ${remaining} kcal para completar esta comida.`;
+  }
 
   if (trackingOptimization?.policy === TRACKING_OPTIMIZATION_POLICY) {
     if (trackingOptimization.proteinTargetActive !== true) {
@@ -697,14 +732,22 @@ class ServicioAlimentos {
     }
   };
 
-  generarCantidades = async (payload = {}) => {
+  generarCantidades = async (payload = {}, internalContext = null) => {
     const mode = normalizeMode(payload.mode || payload.modo);
     const generationType = normalizeGenerationType(payload.generationType || payload.alcance);
     const target = normalizeTarget(payload.target || payload.mealTarget || {}, mode);
-    const trackingOptimizationPolicy =
-      payload.options?.trackingOptimizationPolicy === TRACKING_OPTIMIZATION_POLICY
+    const trackingContextAllowed =
+      internalContext?.authorization === TRACKING_QUANTITY_INTERNAL_CONTEXT;
+    const internalTrackingQuantityMode = trackingContextAllowed
+      ? internalContext.trackingQuantityMode
+      : "";
+    const trackingOptimizationPolicy = internalTrackingQuantityMode === "calorie_fill"
+      ? TRACKING_CALORIE_FILL_POLICY
+      : internalTrackingQuantityMode === "constrained"
         ? TRACKING_OPTIMIZATION_POLICY
-        : undefined;
+        : payload.options?.trackingOptimizationPolicy === TRACKING_OPTIMIZATION_POLICY
+          ? TRACKING_OPTIMIZATION_POLICY
+          : undefined;
     const fixedFoods = Array.isArray(payload.fixedFoods) ? payload.fixedFoods : [];
     const pendingFoods = Array.isArray(payload.pendingFoods) ? payload.pendingFoods : [];
     const explicitCandidates = Array.isArray(payload.candidateFoods) ? payload.candidateFoods : [];
@@ -860,6 +903,9 @@ class ServicioAlimentos {
       warnings: result.warnings || [],
       errors: result.errors || [],
       optimization: result.optimizacionTracking || null,
+      ...(trackingContextAllowed ? {
+        trackingQuantityMode: internalTrackingQuantityMode,
+      } : {}),
     };
   };
 

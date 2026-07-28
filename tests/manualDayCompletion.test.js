@@ -297,9 +297,11 @@ test("el cálculo automático de cantidades falla cerrado para Free y funciona p
   proService._actor = async () => client("pro");
   proService._assertCanWriteTracking = () => {};
   let calculationPayload = null;
+  let calculationContext = null;
   proService.alimentosService = {
-    generarCantidades: async (payload) => {
+    generarCantidades: async (payload, context) => {
       calculationPayload = payload;
+      calculationContext = context;
       return { status: "ok", foods: [{ nombre: "Banana" }], target: payload.target };
     },
   };
@@ -310,8 +312,22 @@ test("el cálculo automático de cantidades falla cerrado para Free y funciona p
   assert.equal(result.status, "ok");
   assert.equal(result.target.kcal, 200);
   assert.equal(calculationPayload.mode, "kcalProteina");
+  assert.equal(calculationPayload.options.trackingPriority, false);
+  assert.equal(calculationPayload.options.trackingOptimizationPolicy, undefined);
+  assert.equal(calculationContext.trackingQuantityMode, "calorie_fill");
+
+  await proService.calculateRemainingQuantities(
+    { id: client("pro").id },
+    {
+      date,
+      trackingQuantityMode: "constrained",
+      target: { kcal: 200 },
+      options: { trackingPriority: false },
+    }
+  );
   assert.equal(calculationPayload.options.trackingPriority, true);
   assert.equal(calculationPayload.options.trackingOptimizationPolicy, "tracking_remaining_v2");
+  assert.equal(calculationContext.trackingQuantityMode, "constrained");
 });
 
 test("confirmar cantidades calculadas usa una escritura batch idempotente", async () => {

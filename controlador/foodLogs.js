@@ -10,6 +10,9 @@ function sendError(res, error) {
   if (msg === "TRACKING_NOT_ALLOWED") return res.status(403).json({ error: "Tu cuenta no tiene habilitado el tracking de alimentos" });
   if (msg === "PAST_DAYS_NOT_ALLOWED") return res.status(403).json({ error: "No tenes habilitada la edicion de dias anteriores" });
   if (msg === "INVALID_DATE") return res.status(400).json({ error: "Fecha invalida" });
+  if (msg === "INVALID_TRACKING_QUANTITY_MODE") {
+    return res.status(400).json({ error: "Metodo de calculo de cantidades invalido" });
+  }
   if (msg === "INVALID_MEAL_TYPE") return res.status(400).json({ error: "Comida invalida" });
   if (msg === "FOOD_REQUIRED") return res.status(400).json({ error: "Falta el alimento" });
   if (msg === "REQUEST_ID_REQUIRED") return res.status(400).json({ error: "Falta el identificador de la operación" });

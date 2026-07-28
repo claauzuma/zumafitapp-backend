@@ -5,13 +5,31 @@ import ModelMongoDBUsuarios from "../model/DAO/usuariosMongoDB.js";
 import ModelMongoDBMenus from "../model/DAO/menusMongoDB.js";
 import ModelMongoDBAlimentos from "../model/DAO/alimentosMongoDB.js";
 import { TRACKING_OPTIMIZATION_POLICY } from "../menu2.js";
-import ServiciosAlimentos from "./alimentos.js";
+import ServiciosAlimentos, {
+  TRACKING_QUANTITY_INTERNAL_CONTEXT,
+} from "./alimentos.js";
 import { requireCapability, requireTrackingHistoryRange } from "./accessGates.js";
 
 const MEAL_TYPES = ["desayuno", "almuerzo", "merienda", "cena", "snack", "otra"];
 const MEAL_TYPE_SET = new Set(MEAL_TYPES);
 const AUTO_COMPLETE_REMAINING_MEALS_OPERATION = "auto_complete_remaining_meals";
 const CONFIGURE_MANUAL_COMPLETION_MEALS_OPERATION = "configure_manual_completion_meals";
+const TRACKING_QUANTITY_MODE_CONSTRAINED = "constrained";
+const TRACKING_QUANTITY_MODE_CALORIE_FILL = "calorie_fill";
+
+function trackingQuantityModeFromPayload(payload = {}) {
+  if (!Object.prototype.hasOwnProperty.call(payload, "trackingQuantityMode")) {
+    return TRACKING_QUANTITY_MODE_CALORIE_FILL;
+  }
+  const value = payload.trackingQuantityMode;
+  if (
+    value === TRACKING_QUANTITY_MODE_CONSTRAINED ||
+    value === TRACKING_QUANTITY_MODE_CALORIE_FILL
+  ) {
+    return value;
+  }
+  throw new Error("INVALID_TRACKING_QUANTITY_MODE");
+}
 
 function cleanString(value = "", max = 500) {
   if (value === null || value === undefined) return "";
@@ -700,6 +718,7 @@ class ServicioFoodLogs {
     const date = normalizeDate(payload.date);
     this._assertCanWriteTracking(actor, date);
     requireCapability(actor, "nutrition.autoCalculateTrackingQuantities");
+    const trackingQuantityMode = trackingQuantityModeFromPayload(payload);
     return await this.alimentosService.generarCantidades({
       ...payload,
       // Tracking optimiza un restante: kcal son techo, proteína es un mínimo
@@ -708,9 +727,14 @@ class ServicioFoodLogs {
       mode: "kcalProteina",
       options: {
         ...(payload.options || {}),
-        trackingPriority: true,
-        trackingOptimizationPolicy: TRACKING_OPTIMIZATION_POLICY,
+        trackingPriority: trackingQuantityMode === TRACKING_QUANTITY_MODE_CONSTRAINED,
+        trackingOptimizationPolicy: trackingQuantityMode === TRACKING_QUANTITY_MODE_CONSTRAINED
+          ? TRACKING_OPTIMIZATION_POLICY
+          : undefined,
       },
+    }, {
+      authorization: TRACKING_QUANTITY_INTERNAL_CONTEXT,
+      trackingQuantityMode,
     });
   }
 

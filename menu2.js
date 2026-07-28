@@ -9,8 +9,17 @@
 const EPS = 1e-9;
 const TRACKING_CALORIE_EPS = 1e-6;
 export const TRACKING_OPTIMIZATION_POLICY = "tracking_remaining_v2";
+export const TRACKING_CALORIE_FILL_POLICY = "tracking_calorie_fill_v1";
 const TRACKING_EXACT_OPTION_LIMIT = 250000;
 const TRACKING_PAIR_REFINEMENT_PASSES = 3;
+// Dentro de la tolerancia primaria de 1 kcal, dos propuestas son
+// caloricamente equivalentes y recién allí deciden proteína y C/G.
+const CALORIE_FILL_EQUIVALENT_KCAL = 1;
+const CALORIE_FILL_TARGET_TOLERANCE = 1;
+const CALORIE_FILL_EQUIVALENT_PROTEIN_G = 1;
+const CALORIE_FILL_PROTEIN_REACHED_TOLERANCE = 0.5;
+const CALORIE_FILL_EXACT_SMALL_SEARCH_LIMIT = 100000;
+const CALORIE_FILL_MAX_PAIR_ITERATIONS = 20000;
 const MAX_FOODS_PER_GROUP = 6;
 const MAX_TOTAL_FOODS = 15;
 
@@ -771,9 +780,12 @@ function solveQuantities(selection, objective, mode, opts = {}) {
   const pending = selection.filter((item) => !item.fixed);
   const fixedTotals = calculateTotals(fixed);
   const trackingPriority = trackingPriorityRequested(opts);
-  const errors = trackingPriority ? [] : validateFixedExcess(fixedTotals, objective, mode);
+  const calorieFill = trackingCalorieFillRequested(opts);
+  const errors = trackingPriority || calorieFill
+    ? []
+    : validateFixedExcess(fixedTotals, objective, mode);
 
-  if (trackingPriority && fixedTotals.calorias > objective.calorias + TRACKING_CALORIE_EPS) {
+  if ((trackingPriority || calorieFill) && fixedTotals.calorias > objective.calorias + TRACKING_CALORIE_EPS) {
     errors.push(
       `Las cantidades fijas superan el techo calorico: ${round(fixedTotals.calorias)} > ${round(objective.calorias)}.`
     );
@@ -794,6 +806,33 @@ function solveQuantities(selection, objective, mode, opts = {}) {
       fixedTotals,
       iterations: 0,
       score: 0,
+    };
+  }
+
+  if (calorieFill) {
+    const trackingOptimization = optimizeTrackingCalorieFillQuantities(
+      selection,
+      pending,
+      objective,
+      fixedTotals
+    );
+    if (trackingOptimization.error) {
+      return {
+        ok: false,
+        reason: trackingOptimization.error.code,
+        errors: [trackingOptimization.error.message],
+        fixedTotals,
+        trackingOptimization,
+      };
+    }
+    return {
+      ok: true,
+      fixedTotals,
+      totals: calculateTotals(selection),
+      trackingOptimization,
+      minimumsWarning: "",
+      iterations: trackingOptimization.iterations || 0,
+      score: scoreSelection(selection, objective, mode),
     };
   }
 
@@ -1117,6 +1156,14 @@ function trackingPriorityRequested(opts = {}) {
   );
 }
 
+function trackingCalorieFillRequested(opts = {}) {
+  return String(
+    opts.trackingOptimizationPolicy ??
+    opts.optimizationPolicy ??
+    ""
+  ) === TRACKING_CALORIE_FILL_POLICY;
+}
+
 function totalsForPendingQuantities(selection, pending, quantities) {
   const previous = pending.map((item) => item.cantidad);
   for (let index = 0; index < pending.length; index++) {
@@ -1127,6 +1174,817 @@ function totalsForPendingQuantities(selection, pending, quantities) {
     pending[index].cantidad = previous[index];
   }
   return totals;
+}
+
+function calorieFillDescriptor(item, index, calorieBudget) {
+  const raw = item?.food?.raw || {};
+  const unit = normalizedMeasurementUnit(raw) || normalizedMeasurementUnit(item) || "g";
+  const continuous = unit === "g" || unit === "ml";
+  const recommendedStep = Math.max(0, toNumber(item?.stepGramos, 0));
+  const fractionsExplicitlyAllowed = toBoolean(
+    firstValue(raw, [
+      "allowFractionalQuantity",
+      "fractionalQuantityAllowed",
+      "fractionalUnitsAllowed",
+      "allowsFractions",
+    ]),
+    false
+  ) || (recommendedStep > 0 && recommendedStep < 1);
+  const step = continuous
+    ? (fractionsExplicitlyAllowed && recommendedStep > 0 && recommendedStep < 1
+      ? recommendedStep
+      : 1)
+    : (fractionsExplicitlyAllowed
+      ? (recommendedStep > 0 ? recommendedStep : 0.1)
+      : 1);
+  const kcalPerQuantity = Number(item?.food?.calorias);
+  const proteinPerQuantity = Number(item?.food?.proteina);
+  const carbsPerQuantity = Number(item?.food?.carbohidratos);
+  const fatPerQuantity = Number(item?.food?.grasas);
+  const finiteMacros = [
+    proteinPerQuantity,
+    carbsPerQuantity,
+    fatPerQuantity,
+  ].every(Number.isFinite);
+  const valid = Number.isFinite(kcalPerQuantity) && kcalPerQuantity > EPS && finiteMacros;
+  const caloriesPerStep = valid ? kcalPerQuantity * step : 0;
+  const technicalMaxSteps = valid
+    ? Math.max(1, Math.ceil(Math.max(0, calorieBudget) / caloriesPerStep) + 2)
+    : 0;
+
+  return {
+    index,
+    item,
+    foodId: item?.food?.id || raw.foodId || raw.alimentoId || raw.id || raw._id || null,
+    name: item?.nombre || item?.food?.nombre || "Alimento",
+    unit,
+    kind: continuous ? "continuous" : "discrete",
+    continuous,
+    fractionsExplicitlyAllowed,
+    step,
+    valid,
+    kcalPerQuantity,
+    proteinPerQuantity,
+    carbsPerQuantity,
+    fatPerQuantity,
+    caloriesPerStep,
+    proteinPerStep: valid ? proteinPerQuantity * step : 0,
+    carbsPerStep: valid ? carbsPerQuantity * step : 0,
+    fatPerStep: valid ? fatPerQuantity * step : 0,
+    technicalMaxSteps,
+    recommendedMin: Math.max(0, toNumber(item?.minGramos, 0)),
+    recommendedMax: Math.max(0, toNumber(item?.maxGramos, 0)),
+    recommendedStep,
+  };
+}
+
+function calorieFillTotals(fixedTotals, descriptors, steps) {
+  const totals = { ...fixedTotals };
+  for (const descriptor of descriptors) {
+    if (!descriptor.valid) continue;
+    const count = Math.max(0, Math.floor(toNumber(steps[descriptor.index], 0) + EPS));
+    const quantity = count * descriptor.step;
+    totals.calorias += descriptor.kcalPerQuantity * quantity;
+    totals.proteina += descriptor.proteinPerQuantity * quantity;
+    totals.carbohidratos += descriptor.carbsPerQuantity * quantity;
+    totals.grasas += descriptor.fatPerQuantity * quantity;
+  }
+  return totals;
+}
+
+function calorieFillConcentrationScore(descriptors, steps, totals, fixedTotals) {
+  const automaticCalories = Math.max(EPS, totals.calorias - fixedTotals.calorias);
+  return descriptors.reduce((score, descriptor) => {
+    if (!descriptor.valid) return score;
+    const quantity = Math.max(0, toNumber(steps[descriptor.index], 0)) * descriptor.step;
+    const share = descriptor.kcalPerQuantity * quantity / automaticCalories;
+    return score + share ** 2;
+  }, 0);
+}
+
+function calorieFillCandidate(steps, descriptors, fixedTotals, objective) {
+  const normalizedSteps = new Array(descriptors.length).fill(0);
+  for (const descriptor of descriptors) {
+    normalizedSteps[descriptor.index] = Math.min(
+      descriptor.technicalMaxSteps,
+      Math.max(0, Math.floor(toNumber(steps[descriptor.index], 0) + EPS))
+    );
+  }
+  const totals = calorieFillTotals(fixedTotals, descriptors, normalizedSteps);
+  if (totals.calorias > objective.calorias + TRACKING_CALORIE_EPS) return null;
+  const calorieDeficit = Math.max(0, objective.calorias - totals.calorias);
+  const proteinDeficit = objective.proteina > 0
+    ? Math.max(0, objective.proteina - totals.proteina)
+    : 0;
+  const proteinDistance = objective.proteina > 0
+    ? Math.abs(objective.proteina - totals.proteina)
+    : 0;
+  return {
+    steps: normalizedSteps,
+    totals,
+    calorieDeficit,
+    proteinDeficit,
+    proteinDistance,
+    proteinReached:
+      objective.proteina <= 0 ||
+      proteinDeficit <= CALORIE_FILL_PROTEIN_REACHED_TOLERANCE + EPS,
+    secondaryError: trackingSecondaryMacroError(totals, objective),
+    concentrationScore: calorieFillConcentrationScore(
+      descriptors,
+      normalizedSteps,
+      totals,
+      fixedTotals
+    ),
+  };
+}
+
+function compareCalorieFillCandidates(left, right, objective) {
+  if (!left) return 1;
+  if (!right) return -1;
+  const leftCompletesCalories = left.calorieDeficit <= CALORIE_FILL_TARGET_TOLERANCE + EPS;
+  const rightCompletesCalories = right.calorieDeficit <= CALORIE_FILL_TARGET_TOLERANCE + EPS;
+  if (leftCompletesCalories !== rightCompletesCalories) {
+    return leftCompletesCalories ? -1 : 1;
+  }
+  const calorieDifference = left.calorieDeficit - right.calorieDeficit;
+  // Fuera de la zona de 1 kcal, cada mejora calórica gana antes de mirar
+  // macros. Dentro de la zona, todos completan el objetivo y recién allí
+  // se prioriza proteína. Esta comparación lexicográfica es transitiva y no
+  // depende del orden en el que aparezcan los candidatos.
+  if (!leftCompletesCalories && Math.abs(calorieDifference) > EPS) {
+    return calorieDifference;
+  }
+
+  if (objective.proteina > 0) {
+    if (left.proteinReached !== right.proteinReached) {
+      return left.proteinReached ? -1 : 1;
+    }
+    const leftProteinPriority = left.proteinReached
+      ? Math.max(0, left.proteinDistance - CALORIE_FILL_EQUIVALENT_PROTEIN_G)
+      : left.proteinDeficit;
+    const rightProteinPriority = right.proteinReached
+      ? Math.max(0, right.proteinDistance - CALORIE_FILL_EQUIVALENT_PROTEIN_G)
+      : right.proteinDeficit;
+    const proteinPriorityDifference = leftProteinPriority - rightProteinPriority;
+    // Una vez alcanzada P, todas las diferencias dentro de 1 g son realmente
+    // equivalentes y C/G pueden decidir. Por fuera de esa tolerancia, proteína
+    // mantiene la segunda prioridad solicitada por producto.
+    if (Math.abs(proteinPriorityDifference) > EPS) return proteinPriorityDifference;
+  }
+
+  const secondaryDifference = left.secondaryError - right.secondaryError;
+  if (Math.abs(secondaryDifference) > 1e-8) return secondaryDifference;
+  if (objective.proteina > 0 && left.proteinReached && right.proteinReached) {
+    const proteinDifference = left.proteinDistance - right.proteinDistance;
+    if (Math.abs(proteinDifference) > 1e-8) return proteinDifference;
+  }
+  if (Math.abs(calorieDifference) > 1e-8) return calorieDifference;
+  const concentrationDifference = left.concentrationScore - right.concentrationScore;
+  if (Math.abs(concentrationDifference) > 1e-8) return concentrationDifference;
+
+  for (let index = 0; index < Math.max(left.steps.length, right.steps.length); index++) {
+    const difference = (left.steps[index] || 0) - (right.steps[index] || 0);
+    if (difference) return difference;
+  }
+  return 0;
+}
+
+function exactSmallCalorieFillSearch({
+  descriptors,
+  baseSteps,
+  calorieBudget,
+  consider,
+}) {
+  if (!descriptors.length || descriptors.length > 3) {
+    return { executed: false, evaluated: 0, estimated: 0 };
+  }
+
+  const alternatives = descriptors.map((filler) => {
+    const outer = descriptors.filter((descriptor) => descriptor.index !== filler.index);
+    let outerOptions = 1;
+    for (const descriptor of outer) {
+      outerOptions *= Math.max(
+        1,
+        descriptor.technicalMaxSteps - (baseSteps[descriptor.index] || 0) + 1
+      );
+      if (outerOptions > CALORIE_FILL_EXACT_SMALL_SEARCH_LIMIT) break;
+    }
+    const fillerOptions = Math.max(
+      1,
+      filler.technicalMaxSteps - (baseSteps[filler.index] || 0) + 1
+    );
+    const calorieZoneOptions = Math.min(
+      fillerOptions,
+      Math.ceil(CALORIE_FILL_TARGET_TOLERANCE / filler.caloriesPerStep) + 2
+    );
+    return {
+      filler,
+      outer,
+      estimated: outerOptions * calorieZoneOptions,
+    };
+  }).sort((left, right) =>
+    left.estimated - right.estimated ||
+    right.filler.caloriesPerStep - left.filler.caloriesPerStep ||
+    left.filler.index - right.filler.index
+  );
+
+  const selected = alternatives[0];
+  if (!selected || selected.estimated > CALORIE_FILL_EXACT_SMALL_SEARCH_LIMIT) {
+    return {
+      executed: false,
+      evaluated: 0,
+      estimated: selected?.estimated || 0,
+    };
+  }
+
+  const steps = [...baseSteps];
+  let evaluated = 0;
+  const evaluate = () => {
+    consider(steps);
+    evaluated++;
+  };
+
+  function enumerateOuter(position, usedCalories) {
+    if (position >= selected.outer.length) {
+      const filler = selected.filler;
+      const fillerMinimum = baseSteps[filler.index] || 0;
+      const maximumFiller = Math.min(
+        filler.technicalMaxSteps,
+        Math.floor(
+          (calorieBudget - usedCalories + TRACKING_CALORIE_EPS) /
+          filler.caloriesPerStep
+        )
+      );
+      if (maximumFiller < fillerMinimum) return;
+
+      // El máximo asequible es siempre el mejor candidato cuando esta rama no
+      // llega a la zona calórica. Si entra en la zona, también se recorren las
+      // pocas cantidades vecinas que siguen a <=1 kcal para que P y luego C/G
+      // puedan decidir exactamente.
+      steps[filler.index] = maximumFiller;
+      evaluate();
+      const minimumInCalorieZone = Math.max(
+        fillerMinimum,
+        Math.ceil(
+          (
+            calorieBudget - usedCalories - CALORIE_FILL_TARGET_TOLERANCE -
+            TRACKING_CALORIE_EPS
+          ) / filler.caloriesPerStep
+        )
+      );
+      for (
+        let fillerSteps = minimumInCalorieZone;
+        fillerSteps < maximumFiller;
+        fillerSteps++
+      ) {
+        steps[filler.index] = fillerSteps;
+        evaluate();
+      }
+      steps[filler.index] = fillerMinimum;
+      return;
+    }
+
+    const descriptor = selected.outer[position];
+    const minimum = baseSteps[descriptor.index] || 0;
+    const remainingMinimumCalories = [
+      ...selected.outer.slice(position + 1),
+      selected.filler,
+    ].reduce(
+      (total, pendingDescriptor) =>
+        total +
+        (baseSteps[pendingDescriptor.index] || 0) * pendingDescriptor.caloriesPerStep,
+      0
+    );
+    const maximum = Math.min(
+      descriptor.technicalMaxSteps,
+      Math.floor(
+        (
+          calorieBudget - usedCalories - remainingMinimumCalories +
+          TRACKING_CALORIE_EPS
+        ) / descriptor.caloriesPerStep
+      )
+    );
+    if (maximum < minimum) return;
+
+    for (let descriptorSteps = minimum; descriptorSteps <= maximum; descriptorSteps++) {
+      steps[descriptor.index] = descriptorSteps;
+      enumerateOuter(
+        position + 1,
+        usedCalories + descriptorSteps * descriptor.caloriesPerStep
+      );
+    }
+    steps[descriptor.index] = minimum;
+  }
+
+  enumerateOuter(0, 0);
+  return { executed: true, evaluated, estimated: selected.estimated };
+}
+
+function normalizeCalorieFillSeed(seed, baseSteps, descriptors, calorieBudget) {
+  const normalized = new Array(baseSteps.length).fill(0);
+  for (const descriptor of descriptors) {
+    normalized[descriptor.index] = Math.min(
+      descriptor.technicalMaxSteps,
+      Math.max(baseSteps[descriptor.index] || 0, Math.floor(toNumber(seed[descriptor.index], 0) + EPS))
+    );
+  }
+  const caloriesFor = (values) => descriptors.reduce(
+    (total, descriptor) => total + values[descriptor.index] * descriptor.caloriesPerStep,
+    0
+  );
+  let calories = caloriesFor(normalized);
+  if (calories <= calorieBudget + TRACKING_CALORIE_EPS) return normalized;
+
+  const baseCalories = caloriesFor(baseSteps);
+  const extraCalories = Math.max(EPS, calories - baseCalories);
+  const allowedExtra = Math.max(0, calorieBudget - baseCalories);
+  const scale = Math.min(1, allowedExtra / extraCalories);
+  for (const descriptor of descriptors) {
+    const base = baseSteps[descriptor.index] || 0;
+    normalized[descriptor.index] = base + Math.floor((normalized[descriptor.index] - base) * scale);
+  }
+  calories = caloriesFor(normalized);
+
+  if (calories > calorieBudget + TRACKING_CALORIE_EPS) {
+    const removable = [...descriptors].sort((left, right) =>
+      right.caloriesPerStep - left.caloriesPerStep || left.index - right.index
+    );
+    for (const descriptor of removable) {
+      const base = baseSteps[descriptor.index] || 0;
+      if (normalized[descriptor.index] <= base) continue;
+      const needed = Math.ceil(
+        (calories - calorieBudget - TRACKING_CALORIE_EPS) / descriptor.caloriesPerStep
+      );
+      const removed = Math.min(needed, normalized[descriptor.index] - base);
+      normalized[descriptor.index] -= removed;
+      calories -= removed * descriptor.caloriesPerStep;
+      if (calories <= calorieBudget + TRACKING_CALORIE_EPS) break;
+    }
+  }
+  return normalized;
+}
+
+function calorieFillMacroSeeds(descriptors, baseSteps, fixedTotals, objective, calorieBudget) {
+  const seeds = [];
+  const add = (values) => seeds.push(
+    normalizeCalorieFillSeed(values, baseSteps, descriptors, calorieBudget)
+  );
+  add(baseSteps);
+
+  for (const descriptor of descriptors) {
+    for (const [targetKey, fixedKey, perStep] of [
+      ["proteina", "proteina", descriptor.proteinPerStep],
+      ["carbohidratos", "carbohidratos", descriptor.carbsPerStep],
+      ["grasas", "grasas", descriptor.fatPerStep],
+    ]) {
+      const remaining = Math.max(0, objective[targetKey] - fixedTotals[fixedKey]);
+      if (!(remaining > 0) || !(perStep > EPS)) continue;
+      const seed = [...baseSteps];
+      seed[descriptor.index] = Math.max(
+        seed[descriptor.index],
+        Math.round(remaining / perStep)
+      );
+      add(seed);
+    }
+  }
+
+  const roleSeed = [...baseSteps];
+  const targets = {
+    P: Math.max(0, objective.proteina - fixedTotals.proteina) * 4,
+    C: Math.max(0, objective.carbohidratos - fixedTotals.carbohidratos) * 4,
+    G: Math.max(0, objective.grasas - fixedTotals.grasas) * 9,
+  };
+  const roles = { P: [], C: [], G: [] };
+  for (const descriptor of descriptors) {
+    const energy = {
+      P: descriptor.proteinPerStep * 4,
+      C: descriptor.carbsPerStep * 4,
+      G: descriptor.fatPerStep * 9,
+    };
+    const role = Object.entries(energy).sort((left, right) =>
+      right[1] - left[1] || left[0].localeCompare(right[0])
+    )[0][0];
+    roles[role].push(descriptor);
+  }
+  for (const role of ["P", "C", "G"]) {
+    if (!roles[role].length || !(targets[role] > 0)) continue;
+    const allocatedCalories = Math.min(calorieBudget, targets[role]) / roles[role].length;
+    for (const descriptor of roles[role]) {
+      roleSeed[descriptor.index] = Math.max(
+        roleSeed[descriptor.index],
+        Math.round(allocatedCalories / descriptor.caloriesPerStep)
+      );
+    }
+  }
+  add(roleSeed);
+
+  const count = descriptors.length;
+  for (let mask = 1; mask < (1 << count); mask++) {
+    const active = descriptors.filter((_, index) => (mask & (1 << index)) !== 0);
+    const dimensions = [
+      { target: calorieBudget, scale: Math.max(calorieBudget, 1), weight: 4, key: "caloriesPerStep" },
+      { target: Math.max(0, objective.proteina - fixedTotals.proteina), scale: Math.max(objective.proteina, 10), weight: 2, key: "proteinPerStep" },
+      { target: Math.max(0, objective.carbohidratos - fixedTotals.carbohidratos), scale: Math.max(objective.carbohidratos, 20), weight: 1, key: "carbsPerStep" },
+      { target: Math.max(0, objective.grasas - fixedTotals.grasas), scale: Math.max(objective.grasas, 8), weight: 1, key: "fatPerStep" },
+    ];
+    const rows = dimensions.map((dimension) => active.map((descriptor) =>
+      descriptor[dimension.key] / dimension.scale * Math.sqrt(dimension.weight)
+    ));
+    const targetVector = dimensions.map((dimension) =>
+      dimension.target / dimension.scale * Math.sqrt(dimension.weight)
+    );
+    const solution = solveLeastSquares(rows, targetVector, 1e-8);
+    if (solution.some((value) => !Number.isFinite(value) || value < -1e-7)) continue;
+    const seed = [...baseSteps];
+    active.forEach((descriptor, activeIndex) => {
+      seed[descriptor.index] = Math.max(
+        seed[descriptor.index],
+        Math.round(Math.max(0, solution[activeIndex]))
+      );
+    });
+    add(seed);
+  }
+
+  const seen = new Set();
+  return seeds.filter((seed) => {
+    const key = seed.join("|");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function optimizeTrackingCalorieFillQuantities(selection, pending, objective, fixedTotals) {
+  const calorieCeiling = Math.max(0, objective.calorias);
+  const calorieBudget = Math.max(0, calorieCeiling - fixedTotals.calorias);
+  const allDescriptors = pending.map((item, index) =>
+    calorieFillDescriptor(item, index, calorieBudget)
+  );
+  const descriptors = allDescriptors.filter((descriptor) => descriptor.valid);
+  const invalidFoods = allDescriptors
+    .filter((descriptor) => !descriptor.valid)
+    .map((descriptor) => ({
+      foodId: descriptor.foodId,
+      name: descriptor.name,
+      unit: descriptor.unit,
+      reason: "invalid_calories",
+    }));
+
+  if (!descriptors.length) {
+    return {
+      profile: "tracking_calorie_fill",
+      policy: TRACKING_CALORIE_FILL_POLICY,
+      requestedMode: "calorie_fill",
+      mode: "calorie_fill",
+      invalidFoods,
+      error: {
+        code: "invalid_calorie_data",
+        message: invalidFoods.length === 1
+          ? `No se pudo calcular una cantidad para ${invalidFoods[0].name} porque no tiene informacion calorica valida.`
+          : "No se pudo calcular porque los alimentos seleccionados no tienen informacion calorica valida.",
+      },
+    };
+  }
+
+  const minimumUseCalories = descriptors.reduce(
+    (total, descriptor) => total + descriptor.caloriesPerStep,
+    0
+  );
+  const canUseEveryValidFood = minimumUseCalories <= calorieBudget + TRACKING_CALORIE_EPS;
+  const baseSteps = new Array(pending.length).fill(0);
+  if (canUseEveryValidFood) {
+    for (const descriptor of descriptors) baseSteps[descriptor.index] = 1;
+  }
+
+  let best = null;
+  let iterations = 0;
+  const candidateSeeds = new Map();
+  const consider = (steps) => {
+    iterations++;
+    const candidate = calorieFillCandidate(steps, allDescriptors, fixedTotals, objective);
+    if (!candidate) return null;
+    if (!best || compareCalorieFillCandidates(candidate, best, objective) < 0) best = candidate;
+    return candidate;
+  };
+  const rememberSeed = (seed) => {
+    const normalized = normalizeCalorieFillSeed(
+      seed,
+      baseSteps,
+      descriptors,
+      calorieBudget
+    );
+    const key = normalized.join("|");
+    if (!candidateSeeds.has(key)) candidateSeeds.set(key, normalized);
+    consider(normalized);
+
+    const seedCalories = descriptors.reduce(
+      (total, descriptor) => total + normalized[descriptor.index] * descriptor.caloriesPerStep,
+      0
+    );
+    for (const filler of descriptors) {
+      const filled = [...normalized];
+      const affordable = Math.floor(
+        (calorieBudget - seedCalories + TRACKING_CALORIE_EPS) / filler.caloriesPerStep
+      );
+      if (affordable > 0) {
+        filled[filler.index] = Math.min(
+          filler.technicalMaxSteps,
+          filled[filler.index] + affordable
+        );
+      }
+      const filledKey = filled.join("|");
+      if (!candidateSeeds.has(filledKey)) candidateSeeds.set(filledKey, filled);
+      consider(filled);
+    }
+  };
+
+  rememberSeed(baseSteps);
+  for (const descriptor of descriptors) {
+    const single = [...baseSteps];
+    const otherCalories = descriptors.reduce((total, current) =>
+      current.index === descriptor.index
+        ? total
+        : total + single[current.index] * current.caloriesPerStep,
+    0);
+    single[descriptor.index] = Math.min(
+      descriptor.technicalMaxSteps,
+      Math.floor((calorieBudget - otherCalories + TRACKING_CALORIE_EPS) / descriptor.caloriesPerStep)
+    );
+    rememberSeed(single);
+  }
+
+  const indexes = descriptors.map((descriptor) => descriptor.index);
+  const orders = [
+    indexes,
+    [...indexes].reverse(),
+    [...descriptors]
+      .sort((left, right) => left.caloriesPerStep - right.caloriesPerStep || left.index - right.index)
+      .map((descriptor) => descriptor.index),
+    [...descriptors]
+      .sort((left, right) => {
+        const leftDensity = left.proteinPerStep / left.caloriesPerStep;
+        const rightDensity = right.proteinPerStep / right.caloriesPerStep;
+        return rightDensity - leftDensity || left.index - right.index;
+      })
+      .map((descriptor) => descriptor.index),
+  ];
+  for (const order of orders) {
+    const greedy = [...baseSteps];
+    let calories = descriptors.reduce(
+      (total, descriptor) => total + greedy[descriptor.index] * descriptor.caloriesPerStep,
+      0
+    );
+    for (const index of order) {
+      const descriptor = allDescriptors[index];
+      const extra = Math.max(0, Math.floor(
+        (calorieBudget - calories + TRACKING_CALORIE_EPS) / descriptor.caloriesPerStep
+      ));
+      greedy[index] = Math.min(descriptor.technicalMaxSteps, greedy[index] + extra);
+      calories += extra * descriptor.caloriesPerStep;
+    }
+    rememberSeed(greedy);
+  }
+
+  for (const seed of calorieFillMacroSeeds(
+    descriptors,
+    baseSteps,
+    fixedTotals,
+    objective,
+    calorieBudget
+  )) {
+    rememberSeed(seed);
+  }
+
+  const rankedSeeds = [...candidateSeeds.values()]
+    .map((seed) => ({ seed, candidate: calorieFillCandidate(seed, allDescriptors, fixedTotals, objective) }))
+    .filter((entry) => entry.candidate)
+    .sort((left, right) => compareCalorieFillCandidates(left.candidate, right.candidate, objective))
+    .slice(0, descriptors.length >= 5 ? 3 : 6)
+    .map((entry) => entry.seed);
+  if (!rankedSeeds.some((seed) => seed.join("|") === baseSteps.join("|"))) {
+    rankedSeeds.push(baseSteps);
+  }
+
+  const scanPair = (seed, left, right) => {
+    const pairBase = [...seed];
+    const leftMinimum = baseSteps[left.index] || 0;
+    const rightMinimum = baseSteps[right.index] || 0;
+    pairBase[left.index] = leftMinimum;
+    pairBase[right.index] = rightMinimum;
+    const otherCalories = descriptors.reduce((total, descriptor) =>
+      total + pairBase[descriptor.index] * descriptor.caloriesPerStep,
+    0);
+    const maximumLeft = Math.min(
+      left.technicalMaxSteps,
+      Math.floor(
+        (calorieBudget - otherCalories + TRACKING_CALORIE_EPS) /
+        left.caloriesPerStep
+      ) + leftMinimum
+    );
+    if (maximumLeft < leftMinimum) return;
+    const range = maximumLeft - leftMinimum;
+    const stride = Math.max(1, Math.ceil((range + 1) / CALORIE_FILL_MAX_PAIR_ITERATIONS));
+    const sampled = new Set();
+    for (let leftSteps = leftMinimum; leftSteps <= maximumLeft; leftSteps += stride) {
+      sampled.add(leftSteps);
+    }
+    sampled.add(maximumLeft);
+    const seedLeft = Math.max(leftMinimum, Math.min(maximumLeft, seed[left.index] || 0));
+    for (let offset = -8; offset <= 8; offset++) sampled.add(
+      Math.max(leftMinimum, Math.min(maximumLeft, seedLeft + offset))
+    );
+
+    for (const leftSteps of [...sampled].sort((a, b) => a - b)) {
+      const used = otherCalories +
+        (leftSteps - leftMinimum) * left.caloriesPerStep;
+      const rightExtra = Math.max(0, Math.floor(
+        (calorieBudget - used + TRACKING_CALORIE_EPS) / right.caloriesPerStep
+      ));
+      const candidate = [...pairBase];
+      candidate[left.index] = leftSteps;
+      candidate[right.index] = Math.min(
+        right.technicalMaxSteps,
+        rightMinimum + rightExtra
+      );
+      consider(candidate);
+    }
+  };
+
+  for (const seed of rankedSeeds) {
+    for (let leftIndex = 0; leftIndex < descriptors.length; leftIndex++) {
+      for (let rightIndex = leftIndex + 1; rightIndex < descriptors.length; rightIndex++) {
+        const left = descriptors[leftIndex];
+        const right = descriptors[rightIndex];
+        scanPair(seed, left, right);
+        scanPair(seed, right, left);
+      }
+    }
+  }
+
+  // Refinamiento tridimensional acotado: fija un tercer alimento alrededor
+  // de la mejor semilla y vuelve a resolver el par restante. Evita concentrar
+  // todas las kcal en dos fuentes cuando una mezcla P/C/G equivalente mejora
+  // claramente los macros.
+  if (descriptors.length === 3 && best) {
+    const reference = [...best.steps];
+    for (const anchor of descriptors) {
+      for (let offset = -8; offset <= 8; offset++) {
+        const anchored = [...reference];
+        anchored[anchor.index] = Math.max(
+          baseSteps[anchor.index] || 0,
+          Math.min(anchor.technicalMaxSteps, (reference[anchor.index] || 0) + offset)
+        );
+        for (let leftIndex = 0; leftIndex < descriptors.length; leftIndex++) {
+          const left = descriptors[leftIndex];
+          if (left.index === anchor.index) continue;
+          for (let rightIndex = leftIndex + 1; rightIndex < descriptors.length; rightIndex++) {
+            const right = descriptors[rightIndex];
+            if (right.index === anchor.index) continue;
+            scanPair(anchored, left, right);
+          }
+        }
+      }
+    }
+  }
+
+  // Para selecciones pequeñas el espacio factible es suficientemente barato
+  // como para verificarlo de forma determinista. Se enumeran las dimensiones
+  // acotadas y se resuelve exactamente el último alimento contra el techo.
+  const exactSmallSearch = exactSmallCalorieFillSearch({
+    descriptors,
+    baseSteps,
+    calorieBudget,
+    consider,
+  });
+
+  if (!best) {
+    return {
+      profile: "tracking_calorie_fill",
+      policy: TRACKING_CALORIE_FILL_POLICY,
+      requestedMode: "calorie_fill",
+      mode: "calorie_fill",
+      invalidFoods,
+      error: {
+        code: "no_calorie_fill_solution",
+        message: "No se encontro una cantidad fisicamente valida por debajo del objetivo calorico.",
+      },
+    };
+  }
+
+  for (const descriptor of allDescriptors) {
+    const steps = descriptor.valid ? best.steps[descriptor.index] || 0 : 0;
+    const quantity = steps * descriptor.step;
+    pending[descriptor.index].cantidad = round(quantity, descriptor.step < 1 ? 6 : 2);
+  }
+
+  const totals = calculateTotals(selection);
+  const calorieDeficit = Math.max(0, calorieCeiling - totals.calorias);
+  const proteinDeficit = objective.proteina > 0
+    ? Math.max(0, objective.proteina - totals.proteina)
+    : 0;
+  const macroLimitations = [
+    {
+      macro: "proteina",
+      target: objective.proteina,
+      actual: totals.proteina,
+      deficit: proteinDeficit,
+      threshold: 0.5,
+    },
+    {
+      macro: "carbohidratos",
+      target: objective.carbohidratos,
+      actual: totals.carbohidratos,
+      deficit: Math.max(0, objective.carbohidratos - totals.carbohidratos),
+      threshold: Math.max(2, objective.carbohidratos * 0.05),
+    },
+    {
+      macro: "grasas",
+      target: objective.grasas,
+      actual: totals.grasas,
+      deficit: Math.max(0, objective.grasas - totals.grasas),
+      threshold: Math.max(1, objective.grasas * 0.05),
+    },
+  ]
+    .filter((entry) => entry.target > 0 && entry.deficit > entry.threshold + EPS)
+    .map(({ threshold: _threshold, ...entry }) => ({
+      ...entry,
+      target: round(entry.target, 2),
+      actual: round(entry.actual, 2),
+      deficit: round(entry.deficit, 2),
+    }));
+  const exceededRecommendedPortions = allDescriptors
+    .filter((descriptor) => descriptor.valid && descriptor.recommendedMax > 0)
+    .map((descriptor) => ({
+      descriptor,
+      proposedQuantity: (best.steps[descriptor.index] || 0) * descriptor.step,
+    }))
+    .filter(({ descriptor, proposedQuantity }) =>
+      proposedQuantity > descriptor.recommendedMax + EPS
+    )
+    .map(({ descriptor, proposedQuantity }) => ({
+      foodId: descriptor.foodId,
+      name: descriptor.name,
+      recommendedMax: round(descriptor.recommendedMax, 6),
+      proposedQuantity: round(proposedQuantity, 6),
+      unit: descriptor.unit,
+    }));
+  const skippedFoods = allDescriptors
+    .filter((descriptor) => descriptor.valid && !(best.steps[descriptor.index] > 0))
+    .map((descriptor) => ({
+      foodId: descriptor.foodId,
+      name: descriptor.name,
+      unit: descriptor.unit,
+      reason: "calorie_ceiling",
+    }));
+  const continuousFoodsAvailable = descriptors.some((descriptor) => descriptor.continuous);
+  const discreteOnly = descriptors.every((descriptor) => !descriptor.continuous);
+  const noFurtherStepFits = descriptors.every((descriptor) =>
+    descriptor.caloriesPerStep > calorieDeficit + TRACKING_CALORIE_EPS
+  );
+
+  return {
+    profile: "tracking_calorie_fill",
+    policy: TRACKING_CALORIE_FILL_POLICY,
+    requestedMode: "calorie_fill",
+    mode: "calorie_fill",
+    calorieCeiling: round(calorieCeiling, 2),
+    calorieCeilingSatisfied: totals.calorias <= calorieCeiling + TRACKING_CALORIE_EPS,
+    calorieTolerance: CALORIE_FILL_TARGET_TOLERANCE,
+    calorieEquivalentTolerance: CALORIE_FILL_EQUIVALENT_KCAL,
+    calorieDeficit: round(calorieDeficit, 6),
+    calorieTargetCompleted: calorieDeficit <= CALORIE_FILL_TARGET_TOLERANCE + TRACKING_CALORIE_EPS,
+    bestReachableCalories: round(totals.calorias, 6),
+    inCalorieZone: calorieDeficit <= CALORIE_FILL_TARGET_TOLERANCE + TRACKING_CALORIE_EPS,
+    normalCalorieZoneReached: calorieDeficit <= CALORIE_FILL_TARGET_TOLERANCE + TRACKING_CALORIE_EPS,
+    continuousFoodsAvailable,
+    discreteOnly,
+    discreteLimited: discreteOnly && calorieDeficit > CALORIE_FILL_TARGET_TOLERANCE + TRACKING_CALORIE_EPS,
+    granularityLimited: noFurtherStepFits && calorieDeficit > CALORIE_FILL_TARGET_TOLERANCE + TRACKING_CALORIE_EPS,
+    proteinTargetActive: objective.proteina > 0,
+    proteinReached:
+      objective.proteina <= 0 ||
+      proteinDeficit <= CALORIE_FILL_PROTEIN_REACHED_TOLERANCE + EPS,
+    proteinDeficit: round(proteinDeficit, 6),
+    macroScore: round(trackingSecondaryMacroError(totals, objective), 6),
+    macroLimitations,
+    exceededRecommendedPortions,
+    invalidFoods,
+    skippedFoods,
+    allSelectedFoodsUsed: skippedFoods.length === 0 && invalidFoods.length === 0,
+    constraints: allDescriptors.map((descriptor) => ({
+      foodId: descriptor.foodId,
+      name: descriptor.name,
+      unit: descriptor.unit,
+      kind: descriptor.kind,
+      step: descriptor.step,
+      recommendedMin: round(descriptor.recommendedMin, 6),
+      recommendedMax: round(descriptor.recommendedMax, 6),
+      recommendedStep: round(descriptor.recommendedStep, 6),
+      technicalMax: round(descriptor.technicalMaxSteps * descriptor.step, 6),
+    })),
+    exactSmallSearch,
+    iterations,
+  };
 }
 
 function trackingProteinAssessment(selection, pending, objective, minimumCalories = 0) {
@@ -2052,7 +2910,10 @@ function generarMenu(...args) {
   const solve = solveQuantities(selection, objective, mode, opts);
 
   if (!solve.ok) {
-    return buildResult(selection, objective, mode, warnings, solve.errors);
+    return {
+      ...buildResult(selection, objective, mode, warnings, solve.errors),
+      optimizacionTracking: solve.trackingOptimization || null,
+    };
   }
 
   if (solve.minimumsWarning) warnings.push(solve.minimumsWarning);
@@ -2072,7 +2933,11 @@ function generarMenu(...args) {
 
   const unusedSelected = selection.filter((item) => item.preferUse && item.cantidad <= EPS);
   for (const item of unusedSelected) {
-    warnings.push(`${item.nombre} no se incluyo porque empeoraba demasiado el objetivo con cantidades razonables.`);
+    warnings.push(
+      solve.trackingOptimization?.policy === TRACKING_CALORIE_FILL_POLICY
+        ? `${item.nombre} no recibio cantidad porque no entra fisicamente bajo el techo calorico junto con la seleccion actual.`
+        : `${item.nombre} no se incluyo porque empeoraba demasiado el objetivo con cantidades razonables.`
+    );
   }
 
   return {
