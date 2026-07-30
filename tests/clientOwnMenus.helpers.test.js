@@ -60,6 +60,37 @@ test("valida payload crudo antes de normalizar silenciosamente", () => {
   );
 });
 
+test("menu propio conserva meta opcional y origen Manual/Auto/Sugerido por alimento", () => {
+  const servicio = new ServicioClientOwnMenus();
+  const normalized = servicio._normalizePayload({
+    nombre: "Menu Pro",
+    comidas: [{
+      id: "meal-1",
+      nombre: "Almuerzo",
+      tipoComida: "almuerzo",
+      target: { kcal: 650, proteina: 45, carbs: 80, grasas: 17 },
+      items: [{
+        id: "item-1",
+        alimentoId: "food-1",
+        nombreSnapshot: "Arroz",
+        cantidad: 180,
+        unidad: "g",
+        kcal: 610,
+        proteina: 14,
+        carbs: 130,
+        grasas: 2,
+        source: "addedCandidate",
+        quantityMode: "suggested",
+        suggested: true,
+      }],
+    }],
+  }, { _id: "client-1", role: "cliente" });
+
+  assert.deepEqual(normalized.comidas[0].target, { kcal: 650, proteina: 45, carbs: 80, grasas: 17 });
+  assert.equal(normalized.comidas[0].items[0].quantityMode, "suggested");
+  assert.equal(normalized.comidas[0].items[0].suggested, true);
+});
+
 test("desactiva menu propio activo si excede los dias permitidos por Free", async () => {
   const servicio = new ServicioClientOwnMenus();
   const user = {

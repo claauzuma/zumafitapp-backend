@@ -33,6 +33,8 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     manualDayCompletion: true,
     planRemainingIntake: false,
     autoCalculateTrackingQuantities: false,
+    manualEquivalentMeals: false,
+    equivalentMealFoodsLimit: 0,
     exportPdf: false,
   },
   pro: {
@@ -58,6 +60,8 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     manualDayCompletion: true,
     planRemainingIntake: true,
     autoCalculateTrackingQuantities: true,
+    manualEquivalentMeals: true,
+    equivalentMealFoodsLimit: 6,
     exportPdf: false,
   },
   vip: {
@@ -83,6 +87,8 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     manualDayCompletion: true,
     planRemainingIntake: true,
     autoCalculateTrackingQuantities: true,
+    manualEquivalentMeals: true,
+    equivalentMealFoodsLimit: 10,
     exportPdf: false,
   },
 };
@@ -192,6 +198,7 @@ export function getClientNutritionCapabilities(user = {}, options = {}) {
     canUseManualDayCompletion: config.manualDayCompletion === true,
     canPlanRemainingIntake: config.planRemainingIntake === true,
     canAutoCalculateTrackingQuantities: config.autoCalculateTrackingQuantities === true,
+    canUseEquivalences: config.manualEquivalentMeals === true || hasCoach,
     canViewCoachAdherenceBreakdown: hasCoach,
     canExportMenuPdf: !!config.exportPdf,
     limits: {
@@ -202,6 +209,9 @@ export function getClientNutritionCapabilities(user = {}, options = {}) {
       trackingHistoryDays: config.trackingHistoryDays,
       manualObjectiveChangeDays: config.manualObjectiveChangeDays,
       manualObjectiveChangesPerWindow: config.manualObjectiveChangesPerWindow,
+      equivalentMealFoods: hasCoach
+        ? 6
+        : Number(config.equivalentMealFoodsLimit) || 0,
     },
     activeMenuSource: ["own", "coach"].includes(activeSource) ? activeSource : "none",
   };

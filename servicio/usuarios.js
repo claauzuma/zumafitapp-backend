@@ -14,6 +14,7 @@ import ModelMongoDBClientPlanConfigs from "../model/DAO/clientPlanConfigsMongoDB
 import ModelMongoDBImpersonationAudit from "../model/DAO/impersonationAuditMongoDB.js";
 import ModelMongoDBClientMenuTracking from "../model/DAO/clientMenuTrackingMongoDB.js";
 import ModelMongoDBFoodLogs from "../model/DAO/foodLogsMongoDB.js";
+import ModelMongoDBAccessAuditEvents from "../model/DAO/accessAuditEventsMongoDB.js";
 import ModelMongoDBMenus from "../model/DAO/menusMongoDB.js";
 import ModelMongoDBComidas from "../model/DAO/comidasMongoDB.js";
 import ModelMongoDBComidasGuardadas from "../model/DAO/comidasGuardadasMongoDB.js";
@@ -29,6 +30,13 @@ import {
   requireTrackingHistoryRange,
 } from "./accessGates.js";
 import { recordAccessAuditEvent } from "./accessAuditEvents.js";
+import ServicioFoodLogs from "./foodLogs.js";
+import {
+  equivalentApprovalRequired,
+  equivalentNotificationVisibility,
+  equivalentReview,
+  normalizeEquivalentTrackingSettings,
+} from "./trackingEquivalences.js";
 import { resolveClientAccessContext } from "./clientAccessContext.js";
 import {
   PROFESSIONAL_SUBSCRIPTION_PLANS,
@@ -1653,6 +1661,10 @@ function sanitizeTrackingEntry(entry = {}, fallbackSource = "manual_food", index
         carbs: numberOrNull(food.carbs ?? food.carbohidratos ?? food.carbohydrates, { min: 0, max: 2000 }),
         grasas: numberOrNull(food.grasas ?? food.fat, { min: 0, max: 1000 }),
         source: cleanString(food.source || "", 80),
+        quantityMode: ["manual", "automatic", "calculated", "suggested"].includes(String(food.quantityMode || food.mode || food.status || "").toLowerCase())
+          ? String(food.quantityMode || food.mode || food.status).toLowerCase()
+          : food.source === "addedCandidate" ? "suggested" : "manual",
+        suggested: food.suggested === true || food.source === "addedCandidate",
       }));
   const totals = roundTrackingTotals(entry.totals || entry);
   return {
@@ -1664,6 +1676,10 @@ function sanitizeTrackingEntry(entry = {}, fallbackSource = "manual_food", index
     generationRunId: entry.generationRunId ? cleanString(entry.generationRunId, 120) : null,
     runId: entry.runId ? cleanString(entry.runId, 120) : null,
     mode: entry.mode ? cleanString(entry.mode, 80) : null,
+    creationType: entry.creationType ? cleanString(entry.creationType, 80) : null,
+    strategy: ["selected_only", "assisted_food_addition"].includes(String(entry.strategy || "").toLowerCase())
+      ? String(entry.strategy).toLowerCase()
+      : "selected_only",
     scope: entry.scope ? cleanString(entry.scope, 40) : null,
     weekStart: entry.weekStart ? cleanString(entry.weekStart, 20) : null,
     weekEnd: entry.weekEnd ? cleanString(entry.weekEnd, 20) : null,
@@ -1681,6 +1697,30 @@ function sanitizeTrackingEntry(entry = {}, fallbackSource = "manual_food", index
       ? entry.replacesMealNames.map((name) => cleanString(name, 140)).filter(Boolean).slice(0, 20)
       : [],
     target: entry.target ? roundTrackingTotals(entry.target) : null,
+    resultTotals: entry.resultTotals ? roundTrackingTotals(entry.resultTotals) : null,
+    originalMealId: entry.originalMealId ? cleanString(entry.originalMealId, 100) : null,
+    originalMealName: entry.originalMealName ? cleanString(entry.originalMealName, 160) : null,
+    originalFoodId: entry.originalFoodId ? cleanString(entry.originalFoodId, 100) : null,
+    originalFoodIndex: hasNumber(entry.originalFoodIndex) ? Math.max(0, Math.trunc(Number(entry.originalFoodIndex))) : null,
+    menuId: entry.menuId ? cleanString(entry.menuId, 120) : null,
+    menuVersion: entry.menuVersion ? cleanString(entry.menuVersion, 120) : null,
+    requestId: entry.requestId ? cleanString(entry.requestId, 120) : null,
+    version: Math.max(1, Math.trunc(Number(entry.version) || 1)),
+    approvalStatus: ["approved", "pending_review", "rejected"].includes(String(entry.approvalStatus || "").toLowerCase())
+      ? String(entry.approvalStatus).toLowerCase()
+      : null,
+    approvalReason: entry.approvalReason ? cleanString(entry.approvalReason, 500) : "",
+    approvedAt: entry.approvedAt ? cleanString(entry.approvedAt, 40) : null,
+    rejectedAt: entry.rejectedAt ? cleanString(entry.rejectedAt, 40) : null,
+    warningAccepted: entry.warningAccepted === true,
+    acceptedWarnings: Array.isArray(entry.acceptedWarnings)
+      ? entry.acceptedWarnings.map((warning) => cleanString(warning, 160)).filter(Boolean).slice(0, 20)
+      : [],
+    warnings: Array.isArray(entry.warnings)
+      ? entry.warnings.map((warning) => cleanString(typeof warning === "string" ? warning : warning?.message || warning?.code, 220)).filter(Boolean).slice(0, 20)
+      : [],
+    favoriteOriginId: entry.favoriteOriginId ? cleanString(entry.favoriteOriginId, 120) : null,
+    targetVersionChanged: entry.targetVersionChanged === true,
     items: foods,
     foods,
     totals,
@@ -1697,12 +1737,205 @@ function sanitizeTrackingEntries(value = [], fallbackSource = "manual_food") {
     .slice(0, 20);
 }
 
+function trackingEntriesSignature(entries = [], fallbackSource = "manual_food") {
+  return JSON.stringify(sanitizeTrackingEntries(entries, fallbackSource));
+}
+
+function trackingEntriesChanged(nextEntries = [], currentEntries = [], fallbackSource = "manual_food") {
+  return trackingEntriesSignature(nextEntries, fallbackSource) !==
+    trackingEntriesSignature(currentEntries, fallbackSource);
+}
+
+function trackingTotalsClose(left = {}, right = {}, tolerance = 0.11) {
+  const a = roundTrackingTotals(left);
+  const b = roundTrackingTotals(right);
+  return ["kcal", "proteina", "carbs", "grasas"].every((key) => (
+    Math.abs(a[key] - b[key]) <= tolerance
+  ));
+}
+
+function replacementMealIndex(entry = {}) {
+  const match = String(entry?.id || "").match(/^client-meal-replacement-\d{4}-\d{2}-\d{2}-(\d+)-/);
+  return match ? Number(match[1]) : null;
+}
+
+function looksLikeAssignedMealAlternative(entry = {}, selectedMenu = null, availableMenus = []) {
+  const mealIndex = replacementMealIndex(entry);
+  const selectedSnapshot = selectedMenu?.menuSnapshot || {};
+  const originalMeals = Array.isArray(selectedSnapshot.meals) ? selectedSnapshot.meals : [];
+  const originalMeal = Number.isInteger(mealIndex) ? originalMeals[mealIndex] : null;
+  if (!originalMeal || !trackingTotalsClose(entry.target, snapshotMealTotals(originalMeal))) return false;
+
+  return (availableMenus || []).some((candidateMenu) => {
+    if (!candidateMenu || sameAssignedMenu(candidateMenu, selectedMenu)) return false;
+    const snapshot = candidateMenu.menuSnapshot || {};
+    const meals = Array.isArray(snapshot.meals) ? snapshot.meals : [];
+    return meals.some((candidateMeal) => {
+      const name = cleanString(candidateMeal?.nombre || candidateMeal?.name, 160).toLowerCase();
+      if (!name || name !== cleanString(entry.name, 160).toLowerCase()) return false;
+      const expectedDelta = subtractTrackingTotals(
+        snapshotMealTotals(candidateMeal),
+        snapshotMealTotals(originalMeal)
+      );
+      return trackingTotalsClose(entry.totals, expectedDelta);
+    });
+  });
+}
+
 function sumTrackingEntryTotals(entries = []) {
   return entries.reduce((acc, entry) => addTrackingTotals(acc, entry?.totals || entry), emptyTrackingTotals());
 }
 
+function consumedReplacementEntries(entries = [], completedMenuMeals = []) {
+  const completedIds = new Set(
+    (Array.isArray(completedMenuMeals) ? completedMenuMeals : [])
+      .map((meal) => cleanString(meal?.mealId || meal?.id, 100))
+      .filter(Boolean)
+  );
+  return (Array.isArray(entries) ? entries : []).filter((entry) => {
+    const replacedIds = Array.isArray(entry?.replacesMealIds)
+      ? entry.replacesMealIds.map((id) => cleanString(id, 100)).filter(Boolean)
+      : [];
+    // Compatibilidad: los reemplazos historicos se confirmaban al guardarse.
+    return !replacedIds.length || replacedIds.some((id) => completedIds.has(id));
+  });
+}
+
+function replacementFoodPosition(entry = {}) {
+  if (hasNumber(entry.originalFoodIndex)) return Math.max(0, Math.trunc(Number(entry.originalFoodIndex)));
+  const match = String(entry?.id || "").match(/^client-food-replacement-\d{4}-\d{2}-\d{2}-(\d+)-(\d+)-/);
+  return match ? Number(match[2]) : null;
+}
+
+function replacementMealForEntry(entry = {}, snapshot = {}) {
+  const meals = Array.isArray(snapshot?.meals) ? snapshot.meals : [];
+  const replaced = new Set((entry.replacesMealIds || []).map((id) => cleanString(id, 100)).filter(Boolean));
+  return meals
+    .map((meal, index) => ({ meal, index, id: snapshotMealId(meal, index) }))
+    .find((item) => replaced.has(item.id)) || null;
+}
+
+function sumValidatedFoodTotals(foods = []) {
+  return (Array.isArray(foods) ? foods : []).reduce((sum, food) => addTrackingTotals(sum, {
+    kcal: food?.kcal,
+    proteina: food?.proteina ?? food?.proteinas,
+    carbs: food?.carbs ?? food?.carbohidratos,
+    grasas: food?.grasas,
+  }), emptyTrackingTotals());
+}
+
+function equivalentContentSignature(entry = {}) {
+  return JSON.stringify({
+    id: entry.id,
+    strategy: entry.strategy,
+    target: roundTrackingTotals(entry.target || {}),
+    replacesMealIds: entry.replacesMealIds || [],
+    foods: (entry.foods || []).map((food) => ({
+      id: food.id,
+      quantity: Number(food.quantity),
+      unit: food.unit,
+      quantityMode: food.quantityMode,
+      suggested: food.suggested === true,
+    })),
+  });
+}
+
+function stableEquivalentRequestId(userId = "", date = "", menuId = "", entryId = "", version = 1) {
+  const source = [idToString(userId), date, idToString(menuId), entryId, Number(version) || 1].join("|");
+  return `menu-equivalent-${crypto.createHash("sha256").update(source).digest("hex").slice(0, 48)}`;
+}
+
+function existingEntryById(entries = [], id = "") {
+  return (Array.isArray(entries) ? entries : []).find((entry) => String(entry?.id || "") === String(id || "")) || null;
+}
+
+function canonicalEquivalentEntry({
+  entry,
+  existing,
+  foods,
+  user,
+  date,
+  dayKey,
+  weekStart,
+  weekEnd,
+  selectedMenu,
+  selectedSnapshot,
+  original,
+  originalFood = null,
+} = {}) {
+  const target = originalFood ? roundTrackingTotals(originalFood?.totals || originalFood) : snapshotMealTotals(original?.meal || {});
+  const resultTotals = sumValidatedFoodTotals(foods);
+  const contentProbe = { ...entry, target, foods };
+  const changed = !existing || equivalentContentSignature(existing) !== equivalentContentSignature(contentProbe);
+  const version = existing ? Math.max(1, Number(existing.version) || 1) + (changed ? 1 : 0) : 1;
+  const approvalStatus = changed
+    ? equivalentApprovalRequired(user) ? "pending_review" : "approved"
+    : existing?.approvalStatus || (equivalentApprovalRequired(user) ? "pending_review" : "approved");
+  const menuId = idToString(selectedMenu?.menuId || selectedSnapshot?.baseId || selectedSnapshot?.id || "");
+  const canonical = {
+    ...entry,
+    date,
+    dayKey,
+    weekStart,
+    weekEnd,
+    menuId,
+    menuVersion: cleanString(selectedSnapshot?.snapshotVersion || selectedSnapshot?.version || selectedMenu?.assignedAt || "1", 120),
+    originalMealId: original?.id || cleanString(entry.originalMealId, 100),
+    originalMealName: cleanString(original?.meal?.nombre || original?.meal?.name || entry.originalMealName, 160),
+    ...(originalFood ? {
+      originalFoodId: cleanString(originalFood?.alimentoId || originalFood?.id || originalFood?._id, 100),
+      originalFoodIndex: replacementFoodPosition(entry),
+    } : {}),
+    target,
+    resultTotals,
+    totals: subtractTrackingTotals(resultTotals, target),
+    foods,
+    version,
+    approvalStatus,
+    approvalReason: changed ? "" : existing?.approvalReason || "",
+    approvedAt: approvalStatus === "approved" ? existing?.approvedAt || new Date().toISOString() : null,
+    rejectedAt: approvalStatus === "rejected" ? existing?.rejectedAt || null : null,
+  };
+  canonical.requestId = stableEquivalentRequestId(user?._id || user?.id, date, menuId, canonical.id, version);
+  return canonical;
+}
+
+function effectiveFoodsForEquivalentMeal(snapshot = {}, mealInfo = null, mealReplacement = null, foodReplacements = []) {
+  if (!mealInfo) return [];
+  if (mealReplacement?.foods?.length) return mealReplacement.foods;
+  const replacementsByIndex = new Map(
+    (Array.isArray(foodReplacements) ? foodReplacements : [])
+      .map((entry) => [replacementFoodPosition(entry), entry?.foods?.[0]])
+      .filter(([index, food]) => Number.isInteger(index) && food)
+  );
+  const originalFoods = Array.isArray(mealInfo.meal?.items)
+    ? mealInfo.meal.items
+    : Array.isArray(mealInfo.meal?.foods)
+      ? mealInfo.meal.foods
+      : Array.isArray(mealInfo.meal?.alimentos)
+        ? mealInfo.meal.alimentos
+        : [];
+  return originalFoods.map((food, index) => replacementsByIndex.get(index) || {
+    id: cleanString(food?.alimentoId || food?.id || food?._id, 100),
+    alimentoId: cleanString(food?.alimentoId || food?.id || food?._id, 100),
+    name: cleanString(food?.nombreSnapshot || food?.nombre || food?.name, 160),
+    nombre: cleanString(food?.nombreSnapshot || food?.nombre || food?.name, 160),
+    quantity: numberOrNull(food?.cantidad ?? food?.quantity, { min: 0, max: 10000 }),
+    cantidad: numberOrNull(food?.cantidad ?? food?.quantity, { min: 0, max: 10000 }),
+    unit: cleanString(food?.unidad || food?.unit || "g", 24),
+    unidad: cleanString(food?.unidad || food?.unit || "g", 24),
+    kcal: numberOrNull(food?.kcal ?? food?.calorias, { min: 0, max: 20000 }),
+    proteina: numberOrNull(food?.proteina ?? food?.proteinas, { min: 0, max: 1000 }),
+    carbs: numberOrNull(food?.carbs ?? food?.carbohidratos, { min: 0, max: 2000 }),
+    grasas: numberOrNull(food?.grasas, { min: 0, max: 1000 }),
+    source: "assigned_menu_snapshot",
+    quantityMode: "manual",
+  });
+}
+
 function trackingTotalsByDate(entries = []) {
   return (Array.isArray(entries) ? entries : []).reduce((totalsByDate, entry) => {
+    if (entry?.source === "menu_equivalent_consumption") return totalsByDate;
     const date = String(entry?.date || "");
     if (!date) return totalsByDate;
     totalsByDate.set(date, addTrackingTotals(totalsByDate.get(date), entry));
@@ -1908,7 +2141,7 @@ function trackingPublic(doc = null, manualTrackingTotals = null) {
   };
 }
 
-function clientMenuTrackingPermissions(user = {}) {
+export function clientMenuTrackingPermissions(user = {}) {
   const permissions = user?.clientPermissions || {};
   const menu = isPlainObject(permissions.menu) ? permissions.menu : {};
   const tracking = isPlainObject(permissions.tracking) ? permissions.tracking : {};
@@ -1916,6 +2149,12 @@ function clientMenuTrackingPermissions(user = {}) {
   const activeSource = String(user?.menu?.activeSource || "none");
   const canViewAssignedMenus = activeSource === "own" ? true : hasCoach ? boolFrom(menu.canViewMenu, true) : true;
   const accessCapabilities = resolveClientAccessContext(user)?.capabilities || {};
+  const canUseMenuAlternatives = canViewAssignedMenus && boolFrom(tracking.canUseMenuAlternatives, true);
+  const canCreateEquivalentMeals =
+    canUseMenuAlternatives &&
+    boolFrom(tracking.canCreateEquivalentMeals, true) &&
+    accessCapabilities.canUseEquivalences === true;
+  const equivalentSettings = normalizeEquivalentTrackingSettings(tracking);
 
   return {
     canViewAssignedMenus,
@@ -1930,7 +2169,15 @@ function clientMenuTrackingPermissions(user = {}) {
       canViewAssignedMenus && accessCapabilities.canPlanRemainingIntake === true,
     canAutoCalculateTrackingQuantities:
       canViewAssignedMenus && accessCapabilities.canAutoCalculateTrackingQuantities === true,
-    canUseMenuAlternatives: canViewAssignedMenus && boolFrom(tracking.canUseMenuAlternatives, true),
+    canUseMenuAlternatives,
+    canCreateEquivalentMeals,
+    canCreateEquivalentFoods: canCreateEquivalentMeals,
+    canAutoCreateEquivalentMeals:
+      canCreateEquivalentMeals && accessCapabilities.canAutoCalculateTrackingQuantities === true,
+    equivalentMealFoodsLimit: canCreateEquivalentMeals
+      ? Math.max(1, Number(accessCapabilities?.limits?.equivalentMealFoods) || 6)
+      : 0,
+    ...equivalentSettings,
   };
 }
 
@@ -2029,6 +2276,11 @@ class ServicioUsuarios {
       this.menuTrackingModel.ensureIndexes().catch(() => {});
     }
     this.foodLogsModel = new ModelMongoDBFoodLogs();
+    this.foodLogsService = new ServicioFoodLogs();
+    this.accessAuditModel = new ModelMongoDBAccessAuditEvents();
+    if (typeof this.accessAuditModel.ensureIndexes === "function") {
+      this.accessAuditModel.ensureIndexes().catch(() => {});
+    }
     this.menusModel = new ModelMongoDBMenus();
     this.comidasModel = new ModelMongoDBComidas();
     this.comidasGuardadasModel = new ModelMongoDBComidasGuardadas();
@@ -3845,6 +4097,7 @@ class ServicioUsuarios {
     const menuInput = isPlainObject(permissions.menu) ? permissions.menu : {};
     const routineInput = isPlainObject(permissions.routine) ? permissions.routine : {};
     const progressInput = isPlainObject(permissions.progress) ? permissions.progress : {};
+    const trackingInput = isPlainObject(permissions.tracking) ? permissions.tracking : {};
 
     const specialties = coach?.coachProfile?.specialties || {};
     const features = effectiveCapabilities?.features || {};
@@ -3871,6 +4124,12 @@ class ServicioUsuarios {
           !!menuFeatures.semiAutomaticBuilder &&
           boolFrom(menuInput.canUseSemiAutomaticMenu, false),
         canRequestMenuChanges: canMenu && boolFrom(menuInput.canRequestMenuChanges, true),
+      },
+      tracking: {
+        canTrackFoods: canMenu && boolFrom(trackingInput.canTrackFoods, true),
+        canUseMenuAlternatives: canMenu && boolFrom(trackingInput.canUseMenuAlternatives, true),
+        canCreateEquivalentMeals: canMenu && boolFrom(trackingInput.canCreateEquivalentMeals, true),
+        ...normalizeEquivalentTrackingSettings(trackingInput),
       },
       routine: {
         canViewRoutine: canRoutine && boolFrom(routineInput.canViewRoutine, true),
@@ -6399,6 +6658,34 @@ class ServicioUsuarios {
     const assignedMenusByDay = isPlainObject(weeklyPlan?.assignedMenusByDay)
       ? await this._validatedCoachAssignedMenusByDay(coach, weeklyPlan.assignedMenusByDay)
       : null;
+    const trackingPermissionsInput = isPlainObject(payload?.clientPermissions?.tracking)
+      ? payload.clientPermissions.tracking
+      : null;
+    const nextClientPermissions = trackingPermissionsInput
+      ? {
+          ...(client?.clientPermissions || {}),
+          tracking: {
+            ...(client?.clientPermissions?.tracking || {}),
+            ...(trackingPermissionsInput.canUseMenuAlternatives !== undefined
+              ? { canUseMenuAlternatives: !!trackingPermissionsInput.canUseMenuAlternatives }
+              : {}),
+            ...(trackingPermissionsInput.canCreateEquivalentMeals !== undefined
+              ? { canCreateEquivalentMeals: !!trackingPermissionsInput.canCreateEquivalentMeals }
+              : {}),
+            ...(trackingPermissionsInput.canTrackFoods !== undefined
+              ? { canTrackFoods: !!trackingPermissionsInput.canTrackFoods }
+              : {}),
+            ...(trackingPermissionsInput.equivalentNotificationMode !== undefined ||
+              trackingPermissionsInput.equivalentNotifyImportantImmediately !== undefined ||
+              trackingPermissionsInput.equivalentApprovalMode !== undefined
+              ? normalizeEquivalentTrackingSettings({
+                  ...(client?.clientPermissions?.tracking || {}),
+                  ...trackingPermissionsInput,
+                })
+              : {}),
+          },
+        }
+      : null;
 
     const nextMenu = {
       ...current,
@@ -6464,6 +6751,7 @@ class ServicioUsuarios {
 
     const updated = await this.updateById(clientId, {
       menu: nextMenu,
+      ...(nextClientPermissions ? { clientPermissions: nextClientPermissions } : {}),
       updatedAt: now,
     });
 
@@ -6750,6 +7038,300 @@ class ServicioUsuarios {
     };
   };
 
+  _canonicalizeEquivalentEntries = async ({
+    user,
+    date,
+    dayKey,
+    selectedMenu,
+    selectedSnapshot,
+    replacementCandidates,
+    mealReplacements,
+    foodReplacements,
+    existingTracking,
+    equivalentFoodsLimit,
+  } = {}) => {
+    const weekStart = mondayOfWeek(date);
+    const weekEnd = addDaysIso(weekStart, 6);
+    const canonicalMeals = [];
+    for (const entry of mealReplacements) {
+      const assignedAlternative = entry?.mode !== "custom_equivalent" &&
+        looksLikeAssignedMealAlternative(entry, selectedMenu, replacementCandidates);
+      if (assignedAlternative) {
+        canonicalMeals.push({ ...entry, approvalStatus: "approved" });
+        continue;
+      }
+      const original = replacementMealForEntry(entry, selectedSnapshot);
+      if (!original || entry.replacesMealIds?.length !== 1) throw new Error("EQUIVALENT_SOURCE_MISMATCH");
+      if (entry.date && entry.date !== date) throw new Error("EQUIVALENT_DATE_MISMATCH");
+      if (!trackingTotalsClose(entry.target, snapshotMealTotals(original.meal), 0.25)) {
+        throw new Error("EQUIVALENT_TARGET_MISMATCH");
+      }
+      if ((Array.isArray(entry.foods) ? entry.foods.length : 0) > equivalentFoodsLimit) {
+        throw new Error("EQUIVALENT_MEAL_FOODS_LIMIT");
+      }
+      const foods = await this.foodLogsService.validateEquivalentItems(
+        { id: user._id || user.id },
+        entry.foods,
+        { maxItems: equivalentFoodsLimit }
+      );
+      const existing = existingEntryById(existingTracking?.mealReplacements, entry.id);
+      canonicalMeals.push(canonicalEquivalentEntry({
+        entry: { ...entry, mode: "custom_equivalent", source: "client_meal_replacement" },
+        existing,
+        foods,
+        user,
+        date,
+        dayKey,
+        weekStart,
+        weekEnd,
+        selectedMenu,
+        selectedSnapshot,
+        original,
+      }));
+    }
+
+    const canonicalFoods = [];
+    for (const entry of foodReplacements) {
+      const original = replacementMealForEntry(entry, selectedSnapshot);
+      const position = replacementFoodPosition(entry);
+      const originalFoods = Array.isArray(original?.meal?.items)
+        ? original.meal.items
+        : Array.isArray(original?.meal?.foods)
+          ? original.meal.foods
+          : Array.isArray(original?.meal?.alimentos)
+            ? original.meal.alimentos
+            : [];
+      const originalFood = Number.isInteger(position) ? originalFoods[position] : null;
+      if (!original || !originalFood || entry.replacesMealIds?.length !== 1) throw new Error("EQUIVALENT_SOURCE_MISMATCH");
+      if (entry.date && entry.date !== date) throw new Error("EQUIVALENT_DATE_MISMATCH");
+      if (!trackingTotalsClose(entry.target, roundTrackingTotals(originalFood?.totals || originalFood), 0.25)) {
+        throw new Error("EQUIVALENT_TARGET_MISMATCH");
+      }
+      const foods = await this.foodLogsService.validateEquivalentItems(
+        { id: user._id || user.id },
+        entry.foods,
+        { maxItems: 1 }
+      );
+      if (foods.length !== 1) throw new Error("EQUIVALENT_FOOD_ID_INVALID");
+      const existing = existingEntryById(existingTracking?.foodReplacements, entry.id);
+      canonicalFoods.push(canonicalEquivalentEntry({
+        entry: { ...entry, source: "client_food_replacement", creationType: "food_equivalent" },
+        existing,
+        foods,
+        user,
+        date,
+        dayKey,
+        weekStart,
+        weekEnd,
+        selectedMenu,
+        selectedSnapshot,
+        original,
+        originalFood,
+      }));
+    }
+    return { mealReplacements: canonicalMeals, foodReplacements: canonicalFoods };
+  };
+
+  _recordEquivalentActivity = async ({ user, entry, event, date, mealName = "", changeCount = 0 } = {}) => {
+    if (!entry || !event) return null;
+    const review = equivalentReview(entry, { changeCount });
+    const notification = equivalentNotificationVisibility(user, event, review);
+    const pending = event === "client_equivalent_pending_approval";
+    return await recordAccessAuditEvent({
+      subjectType: "client",
+      subjectId: user?._id || user?.id,
+      actorType: "client",
+      actorId: user?._id || user?.id,
+      event,
+      dedupeKey: `${event}:${entry.requestId || entry.id}:${entry.version || 1}`,
+      notificationVisible: pending || notification.visible,
+      notificationImmediate: pending || notification.immediate,
+      includeInWeeklyDigest: notification.digest,
+      reason: review.reasons.join(",") || event,
+      metadata: {
+        coachId: idToString(user?.coach?.entrenadorId || user?.coach?.coachId),
+        date,
+        mealId: entry.originalMealId || entry.replacesMealIds?.[0] || null,
+        mealName: mealName || entry.originalMealName || entry.name,
+        equivalenceId: entry.id,
+        requestId: entry.requestId,
+        version: entry.version,
+        mode: entry.mode || entry.creationType,
+        strategy: entry.strategy,
+        approvalStatus: entry.approvalStatus,
+        target: review.target,
+        result: review.result,
+        diff: review.diff,
+        warnings: entry.warnings || [],
+        acceptedWarnings: entry.acceptedWarnings || [],
+        reviewReasons: review.reasons,
+        foods: (entry.foods || []).map((food) => ({
+          id: food.id,
+          name: food.name,
+          quantity: food.quantity,
+          unit: food.unit,
+          quantityMode: food.quantityMode,
+          suggested: food.suggested === true,
+        })),
+      },
+    });
+  };
+
+  _consumeEquivalentMeals = async ({ user, date, selectedSnapshot, completedMenuMeals, mealReplacements, foodReplacements } = {}) => {
+    const completedIds = new Set((completedMenuMeals || []).map((meal) => String(meal?.mealId || "")));
+    const meals = Array.isArray(selectedSnapshot?.meals) ? selectedSnapshot.meals : [];
+    for (const [mealIndex, meal] of meals.entries()) {
+      const id = snapshotMealId(meal, mealIndex);
+      if (!completedIds.has(id)) continue;
+      const mealInfo = { meal, index: mealIndex, id };
+      const full = (mealReplacements || []).find((entry) => (
+        entry?.mode === "custom_equivalent" && entry.replacesMealIds?.includes(id)
+      ));
+      const foodsForMeal = (foodReplacements || []).filter((entry) => entry.replacesMealIds?.includes(id));
+      if (!full && !foodsForMeal.length) continue;
+      const entries = full ? [full] : foodsForMeal;
+      const blocked = entries.find((entry) => entry.approvalStatus !== "approved");
+      if (blocked) throw new Error(blocked.approvalStatus === "rejected" ? "EQUIVALENT_REJECTED" : "EQUIVALENT_PENDING_APPROVAL");
+      const foods = effectiveFoodsForEquivalentMeal(selectedSnapshot, mealInfo, full, foodsForMeal);
+      const versionKey = entries.map((entry) => `${entry.id}:${entry.version}`).sort().join("|");
+      const requestId = full?.requestId || stableEquivalentRequestId(
+        user?._id || user?.id,
+        date,
+        selectedSnapshot?.baseId || selectedSnapshot?.id,
+        `${id}:${crypto.createHash("sha1").update(versionKey).digest("hex").slice(0, 20)}`,
+        1
+      );
+      await this.foodLogsService.addSnapshotLogs({ id: user?._id || user?.id }, {
+        date,
+        mealType: cleanString(meal?.tipoComida || meal?.type || "snack", 60),
+        mealId: id,
+        mealName: cleanString(meal?.nombre || meal?.name || `Comida ${mealIndex + 1}`, 160),
+        items: foods,
+        requestId,
+        source: "menu_equivalent_consumption",
+        menuId: selectedSnapshot?.baseId || selectedSnapshot?.id || null,
+        originalMealId: id,
+        equivalenceId: entries.map((entry) => entry.id).join("|"),
+        warningsAccepted: entries.flatMap((entry) => entry.acceptedWarnings || []),
+      }, { requireRequestId: true });
+      for (const entry of entries) {
+        await this._recordEquivalentActivity({ user, entry, event: "client_equivalent_consumed", date });
+        const review = equivalentReview(entry);
+        if (review.important) {
+          await this._recordEquivalentActivity({ user, entry, event: "client_equivalent_needs_attention", date });
+        }
+      }
+    }
+  };
+
+  getCoachClientEquivalentActivity = async ({ coachId, clientId, query = {} } = {}) => {
+    const { client } = await this._getCoachClientPair({ coachId, clientId });
+    const data = await this.accessAuditModel.list({
+      subjectType: "client",
+      subjectId: clientId,
+      limit: Math.min(200, Math.max(1, Number(query.limit) || 100)),
+      skip: Math.max(0, Number(query.skip) || 0),
+    });
+    const eventNames = new Set([
+      "client_equivalent_created",
+      "client_equivalent_favorited",
+      "client_equivalent_consumed",
+      "client_equivalent_needs_attention",
+      "client_equivalent_pending_approval",
+      "client_equivalent_rejected",
+      "client_equivalent_approved",
+      "client_equivalent_recalculated_after_target_change",
+    ]);
+    const from = cleanString(query.from, 20);
+    const to = cleanString(query.to, 20);
+    const activity = (data.items || [])
+      .filter((item) => eventNames.has(String(item?.event || "")))
+      .filter((item) => {
+        const date = String(item?.metadata?.date || "");
+        return (!from || date >= from) && (!to || date <= to);
+      })
+      .map((item) => ({
+        id: idToString(item._id),
+        event: item.event,
+        createdAt: item.createdAt,
+        readAt: item.readAt || null,
+        notificationVisible: item.notificationVisible === true,
+        notificationImmediate: item.notificationImmediate === true,
+        includeInWeeklyDigest: item.includeInWeeklyDigest === true,
+        reason: item.reason || "",
+        metadata: item.metadata || {},
+      }));
+    const notifications = activity.filter((item) => item.notificationVisible);
+    const digestItems = activity.filter((item) => item.includeInWeeklyDigest);
+    const digest = Object.values(digestItems.reduce((groups, item) => {
+      const date = String(item?.metadata?.date || new Date(item.createdAt).toISOString().slice(0, 10));
+      const start = mondayOfWeek(date);
+      if (!groups[start]) groups[start] = { weekStart: start, weekEnd: addDaysIso(start, 6), total: 0, events: {} };
+      groups[start].total += 1;
+      groups[start].events[item.event] = (groups[start].events[item.event] || 0) + 1;
+      return groups;
+    }, {})).sort((a, b) => b.weekStart.localeCompare(a.weekStart));
+    return {
+      activity,
+      notifications,
+      weeklyDigest: digest,
+      settings: normalizeEquivalentTrackingSettings(client?.clientPermissions?.tracking),
+      total: activity.length,
+    };
+  };
+
+  coachReviewClientEquivalent = async ({ coachId, clientId, date, entryId, action, reason = "" } = {}) => {
+    const { coach, client } = await this._getCoachClientPair({ coachId, clientId });
+    const normalizedDate = normalizeMenuTrackingDate(date);
+    const normalizedAction = String(action || "").toLowerCase();
+    if (!["approve", "reject"].includes(normalizedAction)) throw new Error("EQUIVALENT_REVIEW_ACTION_INVALID");
+    const doc = await this.menuTrackingModel.getByUserDate(clientId, normalizedDate);
+    if (!doc) throw new Error("NOT_FOUND");
+    let reviewed = null;
+    const reviewList = (entries = []) => (entries || []).map((entry) => {
+      if (String(entry?.id || "") !== String(entryId || "")) return entry;
+      reviewed = {
+        ...entry,
+        approvalStatus: normalizedAction === "approve" ? "approved" : "rejected",
+        approvalReason: cleanString(reason, 500),
+        approvedAt: normalizedAction === "approve" ? new Date().toISOString() : null,
+        rejectedAt: normalizedAction === "reject" ? new Date().toISOString() : null,
+        reviewedByCoachId: idToString(coach?._id || coach?.id || coachId),
+      };
+      return reviewed;
+    });
+    const mealReplacements = reviewList(doc.mealReplacements);
+    const foodReplacements = reviewed ? doc.foodReplacements || [] : reviewList(doc.foodReplacements);
+    if (!reviewed) throw new Error("NOT_FOUND");
+    const updated = await this.menuTrackingModel.upsertDay({
+      ...doc,
+      clientId,
+      mealReplacements,
+      foodReplacements,
+    });
+    const event = normalizedAction === "approve" ? "client_equivalent_approved" : "client_equivalent_rejected";
+    await recordAccessAuditEvent({
+      subjectType: "client",
+      subjectId: clientId,
+      actorType: "coach",
+      actorId: coach?._id || coach?.id || coachId,
+      event,
+      dedupeKey: `${event}:${reviewed.requestId || reviewed.id}:${reviewed.version || 1}`,
+      notificationVisible: false,
+      notificationImmediate: false,
+      includeInWeeklyDigest: true,
+      reason: cleanString(reason, 500) || event,
+      metadata: {
+        coachId: idToString(coach?._id || coach?.id || coachId),
+        date: normalizedDate,
+        equivalenceId: reviewed.id,
+        requestId: reviewed.requestId,
+        approvalStatus: reviewed.approvalStatus,
+      },
+    });
+    return { ok: true, entry: reviewed, record: trackingPublic(updated) };
+  };
+
   upsertMyMenuTrackingDay = async (actor, payload = {}) => {
     const userId = actor?.id || actor?._id;
     if (!userId) throw new Error("NO_AUTENTICADO");
@@ -6785,14 +7367,76 @@ class ServicioUsuarios {
     const completedMealsCount = completedMenuMeals.length;
     const manualEntries = sanitizeTrackingEntries(payload.manualEntries, "manual_food");
     const generatedRemainingMeals = sanitizeTrackingEntries(payload.generatedRemainingMeals, "generated_remaining_meal");
-    const mealReplacements = sanitizeTrackingEntries(payload.mealReplacements, "client_meal_replacement");
-    const foodReplacements = sanitizeTrackingEntries(payload.foodReplacements, "client_food_replacement");
+    let mealReplacements = sanitizeTrackingEntries(payload.mealReplacements, "client_meal_replacement");
+    let foodReplacements = sanitizeTrackingEntries(payload.foodReplacements, "client_food_replacement");
+    const trackingPermissions = clientMenuTrackingPermissions(user);
+    const replacementCandidates = [primary, ...alternatives].filter(Boolean);
+    const equivalentMealDrafts = mealReplacements.filter((entry) => (
+      entry?.mode === "custom_equivalent" ||
+      !looksLikeAssignedMealAlternative(entry, selectedMenu, replacementCandidates)
+    ));
+    const hasEquivalentMealDraft = equivalentMealDrafts.length > 0;
+    const existingTracking = await this.menuTrackingModel.getByUserDate(userId, date);
+
+    if (
+      !trackingPermissions.canUseMenuAlternatives &&
+      trackingEntriesChanged(mealReplacements, existingTracking?.mealReplacements, "client_meal_replacement")
+    ) {
+      throw new Error("MENU_REPLACEMENTS_NOT_ALLOWED");
+    }
+    if (
+      !trackingPermissions.canCreateEquivalentMeals &&
+      trackingEntriesChanged(foodReplacements, existingTracking?.foodReplacements, "client_food_replacement")
+    ) {
+      throw new Error("FOOD_REPLACEMENTS_NOT_ALLOWED");
+    }
+    if (
+      !trackingPermissions.canCreateEquivalentMeals &&
+      hasEquivalentMealDraft &&
+      trackingEntriesChanged(mealReplacements, existingTracking?.mealReplacements, "client_meal_replacement")
+    ) {
+      throw new Error("EQUIVALENT_MEALS_NOT_ALLOWED");
+    }
+    const equivalentFoodsLimit = Number(trackingPermissions.equivalentMealFoodsLimit) || 0;
+    if (
+      hasEquivalentMealDraft &&
+      equivalentMealDrafts.some((entry) => (entry?.foods || []).length > equivalentFoodsLimit)
+    ) {
+      const error = new Error("EQUIVALENT_MEAL_FOODS_LIMIT");
+      error.limit = equivalentFoodsLimit;
+      throw error;
+    }
+    const canonical = await this._canonicalizeEquivalentEntries({
+      user,
+      date,
+      dayKey,
+      selectedMenu,
+      selectedSnapshot,
+      replacementCandidates,
+      mealReplacements,
+      foodReplacements,
+      existingTracking,
+      equivalentFoodsLimit,
+    });
+    mealReplacements = canonical.mealReplacements;
+    foodReplacements = canonical.foodReplacements;
+
+    const attemptedCompletedIds = new Set(completedMenuMeals.map((meal) => String(meal?.mealId || "")));
+    const blockedEquivalent = [...mealReplacements, ...foodReplacements].find((entry) => (
+      entry?.replacesMealIds?.some((id) => attemptedCompletedIds.has(String(id))) &&
+      entry?.approvalStatus && entry.approvalStatus !== "approved"
+    ));
+    if (blockedEquivalent) {
+      throw new Error(blockedEquivalent.approvalStatus === "rejected" ? "EQUIVALENT_REJECTED" : "EQUIVALENT_PENDING_APPROVAL");
+    }
     const targetTotals = targetToTrackingTotals(target || {});
+    const consumedMealReplacements = consumedReplacementEntries(mealReplacements, completedMenuMeals);
+    const consumedFoodReplacements = consumedReplacementEntries(foodReplacements, completedMenuMeals);
     const consumedTotals = addTrackingTotals(
       sumTrackingEntryTotals(completedMenuMeals),
       addTrackingTotals(
         addTrackingTotals(sumTrackingEntryTotals(manualEntries), sumTrackingEntryTotals(generatedRemainingMeals)),
-        addTrackingTotals(sumTrackingEntryTotals(mealReplacements), sumTrackingEntryTotals(foodReplacements))
+        addTrackingTotals(sumTrackingEntryTotals(consumedMealReplacements), sumTrackingEntryTotals(consumedFoodReplacements))
       )
     );
     const remainingTotals = subtractTrackingTotals(targetTotals, consumedTotals);
@@ -6860,6 +7504,32 @@ class ServicioUsuarios {
             }
         : null,
       },
+    });
+
+    const customEntries = [
+      ...mealReplacements.filter((entry) => entry?.mode === "custom_equivalent"),
+      ...foodReplacements,
+    ];
+    for (const entry of customEntries) {
+      const previous = existingEntryById(
+        entry.source === "client_food_replacement" ? existingTracking?.foodReplacements : existingTracking?.mealReplacements,
+        entry.id
+      );
+      if (!previous || equivalentContentSignature(previous) !== equivalentContentSignature(entry)) {
+        await this._recordEquivalentActivity({ user, entry, event: "client_equivalent_created", date });
+        if (entry.approvalStatus === "pending_review") {
+          await this._recordEquivalentActivity({ user, entry, event: "client_equivalent_pending_approval", date });
+        }
+      }
+    }
+
+    await this._consumeEquivalentMeals({
+      user,
+      date,
+      selectedSnapshot,
+      completedMenuMeals,
+      mealReplacements,
+      foodReplacements,
     });
 
     const recentDocs = await this.menuTrackingModel.listByUserDateRange(userId, addDaysIso(date, -6), date);

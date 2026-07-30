@@ -20,6 +20,8 @@ import {
   requireCoachSubscriptionActive,
   requireProfessionalScope,
 } from "./professionalAccessRules.js";
+import { resolveClientAccessContext } from "./clientAccessContext.js";
+import { filterEquivalentCandidateFoods } from "./trackingEquivalences.js";
 
 const MENU_OBJECTIVES = new Set([
   "definicion",
@@ -432,6 +434,17 @@ function normalizeFoodDoc(raw = {}) {
   const categoria =
     cleanString(raw.Fuente || raw.fuente || raw.Categoria || raw.categoria || raw["Categoría"] || raw.Grupo || raw.grupo, 120) ||
     inferFoodRole({ nombre: name, kcal, proteina, carbs, grasas });
+  const unitToken = normalizeToken(raw.Unidad || raw.unidad || raw.unit || "g");
+  const explicitBasis = normalizeToken(raw.macroBasis || raw.baseMacro || raw.Base || raw.base || raw.Por || raw.por || "");
+  const macroBasis = ["perunit", "per_unit", "unidad", "por_unidad"].includes(explicitBasis)
+    ? "perUnit"
+    : ["pergram", "per_gram", "gramo", "por_gramo"].includes(explicitBasis)
+      ? "perGram"
+      : ["per100", "per_100", "por_100", "100g"].includes(explicitBasis)
+        ? "per100"
+        : ["g", "gr", "grs", "gramo", "gramos", "ml", "mililitro", "mililitros"].includes(unitToken)
+          ? "per100"
+          : "perUnit";
 
   return {
     id,
@@ -443,6 +456,7 @@ function normalizeFoodDoc(raw = {}) {
     carbs,
     grasas,
     categoria,
+    macroBasis,
   };
 }
 
@@ -475,7 +489,7 @@ function equivalentObjective(raw = "", food = {}) {
 
 function quantityForEquivalent(original = {}, candidate = {}, objetivo = "general") {
   const originalQty = numberOrDefault(original.cantidad ?? original.amount, 100, { min: 1, max: 100000, decimals: 2 });
-  const candidateBaseQty = 100;
+  const candidateBaseQty = candidate.macroBasis === "per100" ? 100 : 1;
   const key = objetivo === "proteina" ? "proteina" : objetivo === "grasas" ? "grasas" : objetivo === "carbs" ? "carbs" : "kcal";
   const originalTarget = Number(original[key] || 0);
   const candidateTarget = Number(candidate[key] || 0);
@@ -488,7 +502,9 @@ function quantityForEquivalent(original = {}, candidate = {}, objetivo = "genera
 }
 
 function scaledFoodTotals(candidate = {}, cantidad = 100) {
-  const factor = (Number(cantidad) || 0) / 100;
+  const factor = candidate.macroBasis === "per100"
+    ? (Number(cantidad) || 0) / 100
+    : Number(cantidad) || 0;
   return {
     kcal: roundMacro(candidate.kcal * factor),
     proteina: roundMacro(candidate.proteina * factor),
@@ -1050,10 +1066,19 @@ class ServicioMenus {
 
   async getFoodEquivalents(user, payload = {}) {
     const actor = await this._actor(user);
-    await this._assertNutritionAccess(actor, { feature: "foodLibrarySearch" });
+    if (this._isClient(actor)) {
+      const access = resolveClientAccessContext(actor)?.capabilities || {};
+      const permissions = actor?.clientPermissions?.tracking || {};
+      if (access.canUseEquivalences !== true || permissions.canCreateEquivalentMeals === false) {
+        throw new Error("EQUIVALENT_MEALS_NOT_ALLOWED");
+      }
+    } else {
+      await this._assertNutritionAccess(actor, { feature: "foodLibrarySearch" });
+    }
 
     const originalRaw = payload.alimentoOriginal || payload.original || payload.item || {};
     const original = {
+      id: idToString(originalRaw.alimentoId || originalRaw.foodId || originalRaw.id || originalRaw._id),
       nombre: cleanText(originalRaw.nombreSnapshot || originalRaw.nombre || originalRaw.name, "Alimento", 180),
       cantidad: numberOrDefault(payload.cantidad ?? originalRaw.cantidad, 100, { min: 1, max: 100000, decimals: 2 }),
       unidad: cleanText(payload.unidad || originalRaw.unidad, "g", 40),
@@ -1063,14 +1088,31 @@ class ServicioMenus {
       grasas: macroNumber(originalRaw.grasas ?? originalRaw.fat),
       categoria: cleanString(originalRaw.categoriaSnapshot || originalRaw.categoria || originalRaw.fuente, 120),
     };
-    const objetivo = equivalentObjective(payload.objetivo, original);
-    const originalRole = inferFoodRole(original);
     const alimentos = await this.alimentosModel.obtenerAlimentos();
-    const normalized = (Array.isArray(alimentos) ? alimentos : []).map(normalizeFoodDoc);
+    const sourceFoods = Array.isArray(alimentos) ? alimentos : [];
+    if (this._isClient(actor)) {
+      const exactOriginal = sourceFoods.find((food) => idToString(food?._id || food?.id) === original.id);
+      if (!exactOriginal) throw new Error("EQUIVALENT_FOOD_ID_INVALID");
+      const canonicalOriginal = normalizeFoodDoc(exactOriginal);
+      const canonicalTotals = scaledFoodTotals(canonicalOriginal, original.cantidad);
+      Object.assign(original, canonicalOriginal, canonicalTotals, {
+        cantidad: original.cantidad,
+        unidad: canonicalOriginal.unidad,
+      });
+    }
+    const objetivo = equivalentObjective(this._isClient(actor) ? "" : payload.objetivo, original);
+    const originalRole = inferFoodRole(original);
+    const allowedFoods = this._isClient(actor)
+      ? filterEquivalentCandidateFoods(actor, sourceFoods, {
+          selectedFoodIds: [original.id],
+          rejectedFoodIds: payload.rejectedFoodIds,
+        })
+      : sourceFoods;
+    const normalized = allowedFoods.map(normalizeFoodDoc);
     const originalName = normalizeToken(original.nombre);
 
     const candidates = normalized
-      .filter((food) => food.nombre && normalizeToken(food.nombre) !== originalName)
+      .filter((food) => food.nombre && food.id !== original.id && normalizeToken(food.nombre) !== originalName)
       .filter((food) => {
         if (originalRole === "general") return true;
         return inferFoodRole(food) === originalRole;

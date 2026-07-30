@@ -57,6 +57,7 @@ import {
   requireCoachSubscriptionActive,
   requireProfessionalScope,
 } from "./professionalAccessRules.js";
+import { isEquivalentFoodAllowed } from "./trackingEquivalences.js";
 
 function cleanString(value = "", max = 500) {
   return String(value || "").trim().slice(0, max);
@@ -81,6 +82,65 @@ function totalsFromMealDoc(doc = {}) {
     grasas: number(totals.grasas ?? totals.fat),
     fibra: number(totals.fibra),
   };
+}
+
+function equivalentTargetFromFilters(filters = {}) {
+  const target = {
+    kcal: number(filters.targetKcal ?? filters.kcal),
+    proteina: number(filters.targetProteina ?? filters.targetProtein ?? filters.proteina),
+    carbs: number(filters.targetCarbs ?? filters.targetCarbohidratos ?? filters.carbs),
+    grasas: number(filters.targetGrasas ?? filters.targetFat ?? filters.grasas),
+  };
+  return Object.values(target).some((value) => value > 0) ? target : null;
+}
+
+function equivalentMealScore(meal = {}, target = {}, requestedType = "") {
+  const source = meal.totales || meal.macrosTotales || {};
+  const result = {
+    kcal: number(source.kcal),
+    proteina: number(source.proteina ?? source.proteinas),
+    carbs: number(source.carbs ?? source.carbohidratos),
+    grasas: number(source.grasas),
+  };
+  const diff = {
+    kcal: result.kcal - target.kcal,
+    proteina: result.proteina - target.proteina,
+    carbs: result.carbs - target.carbs,
+    grasas: result.grasas - target.grasas,
+  };
+  const normalized = (value, base, fallback) => Math.abs(value) / Math.max(Math.abs(base), fallback);
+  const typePenalty = requestedType && requestedType !== "todos" && meal.tipoComida !== requestedType ? 0.25 : 0;
+  const score =
+    normalized(diff.kcal, target.kcal, 200) * 10 +
+    normalized(diff.proteina, target.proteina, 20) * 4 +
+    normalized(diff.carbs, target.carbs, 30) * 1.5 +
+    normalized(diff.grasas, target.grasas, 10) * 1.5 +
+    typePenalty;
+  return {
+    target,
+    result,
+    diff,
+    score: Math.round(score * 10000) / 10000,
+    requiresAdjustment:
+      Math.abs(diff.kcal) > 1 ||
+      (target.proteina > 0 && Math.abs(diff.proteina) > 1) ||
+      (target.carbs > 0 && Math.abs(diff.carbs) > 2) ||
+      (target.grasas > 0 && Math.abs(diff.grasas) > 1),
+  };
+}
+
+function mealCompatibleWithRestrictions(actor = {}, meal = {}) {
+  if (!isClient(actor)) return true;
+  const items = Array.isArray(meal.items) ? meal.items : [];
+  return items.length > 0 && items.every((item) => isEquivalentFoodAllowed(actor, {
+    ...item,
+    id: item.alimentoId || item.id,
+    nombre: item.nombre || item.nombreSnapshot,
+    kcal: item.kcal,
+    proteina: item.proteina ?? item.proteinas,
+    carbs: item.carbs ?? item.carbohidratos,
+    grasas: item.grasas,
+  }));
 }
 
 function totalsFromMenuDoc(doc = {}) {
@@ -438,25 +498,40 @@ class ServicioNutritionLibrary {
     const actor = await this._actor(user);
     this._assertLibraryScope(actor, filters, "meal");
     const { limit, skip, page } = paging(filters);
+    const equivalentTarget = equivalentTargetFromFilters(filters);
+    const fetchLimit = equivalentTarget ? 100 : limit;
+    const fetchSkip = equivalentTarget ? 0 : skip;
     const data = await this.comidasModel.list({
       ...filters,
-      limit,
-      skip,
+      limit: fetchLimit,
+      skip: fetchSkip,
       query: this._mealQuery(actor, filters),
     });
 
-    const comidas = (data.items || [])
+    let comidas = (data.items || [])
       .filter((doc) => canViewNutritionItem(actor, doc, { assignmentField: "asignadaA", kind: "meal" }))
-      .map((doc) => normalizeMealForLibrary(doc, actor));
+      .map((doc) => normalizeMealForLibrary(doc, actor))
+      .filter((meal) => mealCompatibleWithRestrictions(actor, meal));
+
+    if (equivalentTarget) {
+      comidas = comidas
+        .map((meal) => ({
+          ...meal,
+          equivalence: equivalentMealScore(meal, equivalentTarget, String(filters.tipoComida || "")),
+        }))
+        .sort((a, b) => a.equivalence.score - b.equivalence.score)
+        .slice(skip, skip + limit);
+    }
 
     return {
       comidas,
-      total: data.total || comidas.length,
+      total: equivalentTarget ? Math.min(Number(data.total) || comidas.length, fetchLimit) : data.total || comidas.length,
       limit,
       skip,
       page,
       scope: isCoach(actor) && normalizeScope(filters.scope) === "all" ? "mine" : normalizeScope(filters.scope),
       permissions: getNutritionLibraryLimits(actor),
+      ...(equivalentTarget ? { equivalentTarget, matchingWindowLimited: Number(data.total || 0) > fetchLimit } : {}),
     };
   }
 
@@ -834,3 +909,9 @@ class ServicioNutritionLibrary {
 }
 
 export default ServicioNutritionLibrary;
+
+export {
+  equivalentMealScore,
+  equivalentTargetFromFilters,
+  mealCompatibleWithRestrictions,
+};

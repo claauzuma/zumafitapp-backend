@@ -20,6 +20,9 @@ function sendError(res, error) {
   if (msg === "COACH_FEATURE_NOT_ALLOWED") {
     return res.status(403).json({ error: "Tu plan no permite esta accion" });
   }
+  if (msg === "EQUIVALENT_MEALS_NOT_ALLOWED") {
+    return res.status(403).json({ error: "No tenes habilitadas las equivalencias propias" });
+  }
   if (msg === "COACH_MENU_LIMIT_EXCEEDED") {
     return res.status(409).json({
       code: msg,

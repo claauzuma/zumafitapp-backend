@@ -252,6 +252,19 @@ function adminError(res, error) {
   if (msg === "MENU_DAY_ALREADY_COMPLETED") return res.status(409).json({ error: "Todas las comidas del menu ya estan realizadas" });
   if (msg === "MANUAL_DAY_COMPLETION_NOT_ALLOWED") return res.status(403).json({ error: "No tenes habilitado completar el dia por tu cuenta" });
   if (msg === "REMAINING_INTAKE_PLAN_NOT_ALLOWED") return res.status(403).json({ error: "Organizar lo que queda esta disponible en Pro" });
+  if (msg === "MENU_REPLACEMENTS_NOT_ALLOWED") return res.status(403).json({ error: "No tenes habilitados los cambios de comida para este menu" });
+  if (msg === "EQUIVALENT_MEALS_NOT_ALLOWED") return res.status(403).json({ error: "Crear comidas equivalentes no esta disponible para este acceso" });
+  if (msg === "FOOD_REPLACEMENTS_NOT_ALLOWED") return res.status(403).json({ error: "No tenes habilitados los cambios de alimentos para este menu" });
+  if (msg === "EQUIVALENT_MEAL_FOODS_LIMIT") return res.status(409).json({ error: `Esta comida admite hasta ${Number(error?.limit) || 0} alimentos`, limit: Number(error?.limit) || 0 });
+  if (["EQUIVALENT_SOURCE_MISMATCH", "EQUIVALENT_TARGET_MISMATCH", "EQUIVALENT_DATE_MISMATCH"].includes(msg)) {
+    return res.status(409).json({ code: msg, error: "La equivalencia ya no coincide con la comida y fecha originales. Volve a abrirla." });
+  }
+  if (["EQUIVALENT_FOOD_ID_INVALID", "EQUIVALENT_FOOD_NOT_ALLOWED"].includes(msg)) {
+    return res.status(403).json({ code: msg, error: "Uno de los alimentos no esta habilitado para esta equivalencia" });
+  }
+  if (msg === "EQUIVALENT_PENDING_APPROVAL") return res.status(409).json({ code: msg, error: "Esta equivalencia esta pendiente de aprobacion del coach" });
+  if (msg === "EQUIVALENT_REJECTED") return res.status(409).json({ code: msg, error: "El coach rechazo esta equivalencia. Podes duplicarla y corregirla." });
+  if (msg === "EQUIVALENT_REVIEW_ACTION_INVALID") return res.status(400).json({ code: msg, error: "Accion de revision invalida" });
   if (msg === "USER_NOT_CLIENT") return res.status(400).json({ error: "El usuario no es cliente" });
   if (msg === "NO_AUTENTICADO") return res.status(401).json({ error: "No autenticado" });
 
@@ -1721,6 +1734,39 @@ class ControladorUsuarios {
         coachId,
         clientId,
         query: req.query || {},
+      });
+      return res.json(data);
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  getCoachClientEquivalentActivity = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const { clientId } = req.params;
+      const data = await this.servicio.getCoachClientEquivalentActivity({
+        coachId,
+        clientId,
+        query: req.query || {},
+      });
+      return res.json(data);
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  coachReviewClientEquivalent = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const { clientId, date, entryId } = req.params;
+      const data = await this.servicio.coachReviewClientEquivalent({
+        coachId,
+        clientId,
+        date,
+        entryId,
+        action: req.body?.action,
+        reason: req.body?.reason,
       });
       return res.json(data);
     } catch (error) {

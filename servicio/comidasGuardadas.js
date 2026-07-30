@@ -6,6 +6,8 @@ import ModelMongoDBAlimentos from "../model/DAO/alimentosMongoDB.js";
 import ModelMongoDBUsuarios from "../model/DAO/usuariosMongoDB.js";
 import ModelMongoDBCoachPlanConfigs from "../model/DAO/coachPlanConfigsMongoDB.js";
 import ServicioFoodLogs from "./foodLogs.js";
+import { recordAccessAuditEvent } from "./accessAuditEvents.js";
+import { equivalentNotificationVisibility, equivalentReview } from "./trackingEquivalences.js";
 import { requireQuota } from "./accessGates.js";
 import {
   coachResourceLimitError,
@@ -35,7 +37,7 @@ import {
 
 const MEAL_TYPES = new Set(["desayuno", "almuerzo", "merienda", "cena", "snack", "preEntreno", "postEntreno", "otro"]);
 const VISIBILITIES = new Set(["privada", "asignada", "clientesAsignados", "gimnasio", "global", "premium"]);
-const ORIGINS = new Set(["creadaManual", "guardadaDesdeMenu", "guardadaDesdeTracking", "plantillaCoach", "plantillaGym", "plantillaGlobal"]);
+const ORIGINS = new Set(["creadaManual", "guardadaDesdeMenu", "guardadaDesdeTracking", "menuPropioEquivalente", "plantillaCoach", "plantillaGym", "plantillaGlobal"]);
 
 function cleanString(value = "", max = 1000) {
   if (value === null || value === undefined) return "";
@@ -122,6 +124,7 @@ function normalizeOrigin(value = "", fallback = "creadaManual") {
     creada_manual: "creadaManual",
     guardada_desde_menu: "guardadaDesdeMenu",
     guardada_desde_tracking: "guardadaDesdeTracking",
+    menu_propio_equivalente: "menuPropioEquivalente",
     plantilla_coach: "plantillaCoach",
     plantilla_gym: "plantillaGym",
     plantilla_global: "plantillaGlobal",
@@ -256,9 +259,39 @@ function snapshotFromExistingItem(raw = {}, index = 0) {
     categoriaSnapshot: cleanString(raw.categoriaSnapshot || raw.categoria || raw.category || raw.fuente, 120),
     imagenUrl: cleanString(raw.imagenUrl || raw.imageUrl || raw.imagen?.url, 260),
     imagenAlt: cleanString(raw.imagenAlt || raw.imageAlt || raw.imagen?.alt || nombre, 180),
+    source: cleanString(raw.source || raw.origenItem || "", 60),
+    quantityMode: ["manual", "automatic", "calculated", "suggested"].includes(lowerToken(raw.quantityMode || raw.mode || raw.status))
+      ? lowerToken(raw.quantityMode || raw.mode || raw.status)
+      : "manual",
+    suggested: raw.suggested === true || raw.source === "addedCandidate",
   };
   if (!item.imagenUrl) item.imagenUrl = placeholderForCategory(item.categoria);
   return item;
+}
+
+function normalizeEquivalenceReference(value = null) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const target = value.target && typeof value.target === "object" ? value.target : {};
+  return {
+    origin: cleanString(value.origin || "client_equivalent_meal", 80),
+    menuId: cleanString(value.menuId, 120) || null,
+    menuVersion: cleanString(value.menuVersion || value.snapshotVersion, 120) || null,
+    originalMealId: cleanString(value.originalMealId, 120) || null,
+    originalMealName: cleanString(value.originalMealName, 180) || null,
+    mealType: normalizeMealType(value.mealType || "otro"),
+    sourceDate: cleanString(value.sourceDate || value.date, 20) || null,
+    target: {
+      kcal: macro(target.kcal ?? target.calorias),
+      proteina: macro(target.proteina ?? target.proteinas ?? target.protein),
+      carbs: macro(target.carbs ?? target.carbohidratos),
+      grasas: macro(target.grasas ?? target.fat),
+    },
+    strategy: ["selected_only", "assisted_food_addition"].includes(lowerToken(value.strategy))
+      ? lowerToken(value.strategy)
+      : "selected_only",
+    templateVersion: Math.max(1, Math.trunc(toNumber(value.templateVersion, 1))),
+    createdAt: value.createdAt || new Date(),
+  };
 }
 
 function totalsFromItems(items = []) {
@@ -300,6 +333,7 @@ function normalizeDoc(doc = null) {
     tags: Array.isArray(doc.tags) ? doc.tags : [],
     favorita: !!doc.favorita,
     activo: doc.activo !== false,
+    equivalenceReference: doc.equivalenceReference || null,
   };
 }
 
@@ -402,6 +436,11 @@ class ServicioComidasGuardadas {
       categoriaSnapshot: dbFood.categoria,
       imagenUrl: dbFood.imagenUrl,
       imagenAlt: dbFood.imagenAlt,
+      source: cleanString(raw.source || raw.origenItem || "", 60),
+      quantityMode: ["manual", "automatic", "calculated", "suggested"].includes(lowerToken(raw.quantityMode || raw.mode || raw.status))
+        ? lowerToken(raw.quantityMode || raw.mode || raw.status)
+        : "manual",
+      suggested: raw.suggested === true || raw.source === "addedCandidate",
     };
   }
 
@@ -460,6 +499,7 @@ class ServicioComidasGuardadas {
         ? templateTier === "global_premium" ? "vip" : templateTier === "global_pro" ? "pro" : "free"
         : cleanString(payload.planMinimo || "free", 40),
       activo: payload.activo !== false,
+      equivalenceReference: normalizeEquivalenceReference(payload.equivalenceReference),
     };
   }
 
@@ -557,7 +597,42 @@ class ServicioComidasGuardadas {
       throw new Error("SAVED_MEAL_LIMIT");
     }
     const doc = await this._normalizePayload(actor, payload, context);
-    return normalizeDoc(await this.model.create(doc));
+    const created = normalizeDoc(await this.model.create(doc));
+    if (isClient(actor) && created.favorita && doc.equivalenceReference) {
+      const entry = {
+        id: created.id,
+        requestId: `favorite-${created.id}`,
+        target: doc.equivalenceReference.target || {},
+        resultTotals: created.totales || {},
+        foods: created.items || [],
+        strategy: doc.equivalenceReference.strategy || "selected_only",
+        approvalStatus: "approved",
+      };
+      const review = equivalentReview(entry);
+      const notification = equivalentNotificationVisibility(actor, "client_equivalent_favorited", review);
+      await recordAccessAuditEvent({
+        subjectType: "client",
+        subjectId: this._actorId(actor),
+        actorType: "client",
+        actorId: this._actorId(actor),
+        event: "client_equivalent_favorited",
+        dedupeKey: `client_equivalent_favorited:${created.id}`,
+        notificationVisible: notification.visible,
+        notificationImmediate: notification.immediate,
+        includeInWeeklyDigest: notification.digest,
+        reason: review.reasons.join(",") || "favorite_saved",
+        metadata: {
+          coachId: idToString(actor?.coach?.entrenadorId || actor?.coach?.coachId),
+          equivalenceId: created.id,
+          mealName: created.nombre,
+          target: review.target,
+          result: review.result,
+          diff: review.diff,
+          strategy: entry.strategy,
+        },
+      });
+    }
+    return created;
   }
 
   async createProfessionalTemplate(user, payload = {}) {

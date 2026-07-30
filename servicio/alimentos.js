@@ -136,7 +136,7 @@ function normalizeMode(value = "kcalProteina") {
 
 function normalizeGenerationType(value = "selectedOnly") {
   const type = cleanText(value);
-  if (["complete", "completar", "completar comida", "completemeal"].includes(type)) return "completeMeal";
+  if (["complete", "completar", "completar comida", "completemeal", "assisted food addition", "assisted_food_addition"].includes(type)) return "completeMeal";
   return "selectedOnly";
 }
 
@@ -748,6 +748,9 @@ class ServicioAlimentos {
         : payload.options?.trackingOptimizationPolicy === TRACKING_OPTIMIZATION_POLICY
           ? TRACKING_OPTIMIZATION_POLICY
           : undefined;
+    const internalCandidateRoles = trackingContextAllowed && Array.isArray(internalContext?.candidateRoles)
+      ? internalContext.candidateRoles.filter((role) => ["proteicos", "carbohidratos", "grasas"].includes(role)).slice(0, 3)
+      : [];
     const fixedFoods = Array.isArray(payload.fixedFoods) ? payload.fixedFoods : [];
     const pendingFoods = Array.isArray(payload.pendingFoods) ? payload.pendingFoods : [];
     const explicitCandidates = Array.isArray(payload.candidateFoods) ? payload.candidateFoods : [];
@@ -784,7 +787,7 @@ class ServicioAlimentos {
     const addedCandidateNames = new Set();
     const addedCandidateIds = new Set();
     if (generationType === "completeMeal") {
-      const neededRoles = [];
+      const neededRoles = [...internalCandidateRoles];
       if (!groups.proteicos.length && mode !== "kcal") neededRoles.push("proteicos");
       if (!groups.carbohidratos.length) neededRoles.push("carbohidratos");
       if (!groups.grasas.length) neededRoles.push("grasas");

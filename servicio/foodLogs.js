@@ -9,6 +9,7 @@ import ServiciosAlimentos, {
   TRACKING_QUANTITY_INTERNAL_CONTEXT,
 } from "./alimentos.js";
 import { requireCapability, requireTrackingHistoryRange } from "./accessGates.js";
+import { filterEquivalentCandidateFoods, isEquivalentFoodAllowed } from "./trackingEquivalences.js";
 
 const MEAL_TYPES = ["desayuno", "almuerzo", "merienda", "cena", "snack", "otra"];
 const MEAL_TYPE_SET = new Set(MEAL_TYPES);
@@ -633,6 +634,50 @@ class ServicioFoodLogs {
     throw new Error("FOOD_REQUIRED");
   }
 
+  async validateEquivalentItems(user, items = [], { maxItems = 10 } = {}) {
+    const actor = await this._actor(user);
+    this._assertClient(actor);
+    const source = Array.isArray(items) ? items.slice(0, Math.max(1, Number(maxItems) || 10)) : [];
+    if (!source.length) throw new Error("FOOD_REQUIRED");
+    const seen = new Set();
+    const snapshots = [];
+    for (const item of source) {
+      const id = cleanString(item?.id || item?.alimentoId || item?.foodId, 120);
+      if (!id || seen.has(id)) throw new Error("EQUIVALENT_FOOD_ID_INVALID");
+      const dbFood = await this._findFoodById(id);
+      if (!dbFood || !isEquivalentFoodAllowed(actor, dbFood)) throw new Error("EQUIVALENT_FOOD_NOT_ALLOWED");
+      const snapshot = buildFoodSnapshot(
+        dbFood,
+        item?.quantity ?? item?.cantidad,
+        item?.unit || item?.unidad || dbFood.unidad
+      );
+      if (!(Number(snapshot.cantidad) > 0)) throw new Error("CANTIDAD_INVALIDA");
+      snapshots.push({
+        id,
+        alimentoId: id,
+        name: snapshot.nombreSnapshot,
+        nombre: snapshot.nombreSnapshot,
+        quantity: snapshot.cantidad,
+        cantidad: snapshot.cantidad,
+        unit: snapshot.unidad,
+        unidad: snapshot.unidad,
+        kcal: snapshot.kcal,
+        proteina: snapshot.proteina,
+        proteinas: snapshot.proteina,
+        carbs: snapshot.carbs,
+        carbohidratos: snapshot.carbs,
+        grasas: snapshot.grasas,
+        source: cleanString(item?.source, 80),
+        quantityMode: ["manual", "automatic", "calculated", "suggested"].includes(normalizeToken(item?.quantityMode || item?.mode || item?.status))
+          ? normalizeToken(item?.quantityMode || item?.mode || item?.status)
+          : item?.source === "addedCandidate" ? "suggested" : "manual",
+        suggested: item?.suggested === true || item?.source === "addedCandidate",
+      });
+      seen.add(id);
+    }
+    return snapshots;
+  }
+
   async _ensureMealConfig(day = null, meal = {}) {
     if (!day?._id) return day;
     const current = normalizeMealsConfig(day.mealsConfig || []);
@@ -719,12 +764,15 @@ class ServicioFoodLogs {
     this._assertCanWriteTracking(actor, date);
     requireCapability(actor, "nutrition.autoCalculateTrackingQuantities");
     const trackingQuantityMode = trackingQuantityModeFromPayload(payload);
-    return await this.alimentosService.generarCantidades({
+    const requestedGeneration = normalizeToken(payload.generationType || payload.alcance || "selected_only");
+    const assisted = ["assisted_food_addition", "complete_meal", "completemeal", "completar_comida"].includes(requestedGeneration);
+    const basePayload = {
       ...payload,
       // Tracking optimiza un restante: kcal son techo, proteína es un mínimo
       // prioritario y C/G son objetivos secundarios. Admin/Coach conservan
       // sus modos configurables al usar directamente ServicioAlimentos.
       mode: "kcalProteina",
+      generationType: "selectedOnly",
       options: {
         ...(payload.options || {}),
         trackingPriority: trackingQuantityMode === TRACKING_QUANTITY_MODE_CONSTRAINED,
@@ -732,10 +780,75 @@ class ServicioFoodLogs {
           ? TRACKING_OPTIMIZATION_POLICY
           : undefined,
       },
-    }, {
+    };
+    delete basePayload.candidateFoods;
+
+    const internalContext = {
       authorization: TRACKING_QUANTITY_INTERNAL_CONTEXT,
       trackingQuantityMode,
+    };
+    const selectedResult = await this.alimentosService.generarCantidades(basePayload, internalContext);
+    if (!assisted || selectedResult?.status === "error") return selectedResult;
+
+    const diff = selectedResult?.diff || {};
+    const candidateRoles = [];
+    if (toNumber(diff.proteina ?? diff.protein, 0) < -1) candidateRoles.push("proteicos");
+    if (toNumber(diff.carbs ?? diff.carbohidratos, 0) < -3) candidateRoles.push("carbohidratos");
+    if (toNumber(diff.grasas ?? diff.fat, 0) < -2) candidateRoles.push("grasas");
+    if (!candidateRoles.length && toNumber(diff.calorias ?? diff.kcal, 0) < -1) {
+      const target = payload.target || payload.mealTarget || {};
+      const normalizedTargets = [
+        ["proteicos", toNumber(target.proteina ?? target.protein, 0)],
+        ["carbohidratos", toNumber(target.carbs ?? target.carbohidratos, 0)],
+        ["grasas", toNumber(target.grasas ?? target.fat, 0)],
+      ].sort((a, b) => b[1] - a[1]);
+      if (normalizedTargets[0]?.[1] > 0) candidateRoles.push(normalizedTargets[0][0]);
+    }
+    if (!candidateRoles.length) {
+      return {
+        ...selectedResult,
+        generationType: "assisted_food_addition",
+        assisted: { attempted: true, added: 0, reason: "selected_foods_already_sufficient" },
+      };
+    }
+
+    const selectedFoodIds = [
+      ...(Array.isArray(payload.fixedFoods) ? payload.fixedFoods : []),
+      ...(Array.isArray(payload.pendingFoods) ? payload.pendingFoods : []),
+    ].map((food) => food?.foodId || food?.alimentoId || food?.id || food?._id).filter(Boolean);
+    const catalog = await this.alimentosModel.obtenerAlimentos();
+    const candidates = filterEquivalentCandidateFoods(actor, catalog, {
+      selectedFoodIds,
+      rejectedFoodIds: payload.rejectedSuggestionFoodIds,
     });
+    if (!candidates.length) {
+      return {
+        ...selectedResult,
+        generationType: "assisted_food_addition",
+        warnings: [...new Set([...(selectedResult?.warnings || []), "No hay sugerencias compatibles con tus restricciones."])],
+        assisted: { attempted: true, added: 0, reason: "no_allowed_candidates", candidateRoles },
+      };
+    }
+
+    const assistedResult = await this.alimentosService.generarCantidades({
+      ...basePayload,
+      generationType: "completeMeal",
+      candidateFoods: candidates,
+    }, {
+      ...internalContext,
+      candidateRoles,
+    });
+    const added = (assistedResult?.foods || []).filter((food) => food?.source === "addedCandidate").length;
+    return {
+      ...assistedResult,
+      generationType: "assisted_food_addition",
+      assisted: {
+        attempted: true,
+        added,
+        candidateRoles,
+        filteredCandidates: candidates.length,
+      },
+    };
   }
 
   async deleteMeal(user, mealId, payload = {}) {
@@ -843,6 +956,12 @@ class ServicioFoodLogs {
           source: payload.source || "saved_meal",
           savedMealId: payload.savedMealId || null,
           savedMealName: payload.savedMealName || "",
+          menuId: payload.menuId || null,
+          originalMealId: cleanString(payload.originalMealId, 120) || null,
+          equivalenceId: cleanString(payload.equivalenceId, 240) || null,
+          warningsAccepted: Array.isArray(payload.warningsAccepted)
+            ? payload.warningsAccepted.map((warning) => cleanString(warning, 180)).filter(Boolean).slice(0, 20)
+            : [],
           notas: cleanString(payload.notas || payload.notes || "", 1000),
           ...(writeRequestId ? { writeRequestId, writeItemIndex } : {}),
         });

@@ -51,6 +51,7 @@ export const PERSONAL_PLAN_CATALOG = {
       favorites: 3,
       manualObjectiveChangeDays: 30,
       manualObjectiveChangesPerWindow: 2,
+      equivalentMealFoods: 0,
     },
     library: "basic",
     nutrition: {
@@ -89,6 +90,7 @@ export const PERSONAL_PLAN_CATALOG = {
       favorites: 20,
       manualObjectiveChangeDays: null,
       manualObjectiveChangesPerWindow: null,
+      equivalentMealFoods: 6,
     },
     library: "global",
     nutrition: {
@@ -127,6 +129,7 @@ export const PERSONAL_PLAN_CATALOG = {
       favorites: 100,
       manualObjectiveChangeDays: null,
       manualObjectiveChangesPerWindow: null,
+      equivalentMealFoods: 10,
     },
     library: "premium",
     nutrition: {
@@ -160,6 +163,7 @@ export const PROFESSIONAL_SERVICE_CATALOG = {
     label: "Coach Pro",
     billingOwner: "coach",
     scopes: ["training", "nutrition"],
+    limits: { equivalentMealFoods: 6 },
     library: "global",
     nutrition: {
       coachAuthority: true,
@@ -184,6 +188,7 @@ export const PROFESSIONAL_SERVICE_CATALOG = {
     label: "Coach VIP",
     billingOwner: "coach",
     scopes: ["training", "nutrition"],
+    limits: { equivalentMealFoods: 10 },
     library: "premium",
     nutrition: {
       coachAuthority: true,
@@ -247,6 +252,7 @@ function personalPlanConfigFor(plan = "free") {
       favorites: setting.limits.maxFavorites,
       manualObjectiveChangeDays: setting.limits.goalChangesWindowDays,
       manualObjectiveChangesPerWindow: setting.limits.goalChangesPerWindow,
+      equivalentMealFoods: base.limits.equivalentMealFoods,
     },
     library: setting.libraryAccess,
   };
@@ -575,6 +581,7 @@ function capabilityFromCatalog(planConfig = {}, baseCapabilities = {}) {
       trackingHistoryDays: planConfig.limits?.trackingHistoryDays,
       manualObjectiveChangeDays: planConfig.limits?.manualObjectiveChangeDays,
       manualObjectiveChangesPerWindow: planConfig.limits?.manualObjectiveChangesPerWindow,
+      equivalentMealFoods: planConfig.limits?.equivalentMealFoods,
     },
     canUseBasicLibrary: ["basic", "global", "premium"].includes(planConfig.library),
     canUseGlobalLibrary: ["global", "premium"].includes(planConfig.library),
@@ -754,6 +761,11 @@ export function resolveClientAccessContext(user = {}, { now = new Date() } = {})
           canUseManualDayCompletion: true,
           canPlanRemainingIntake: advancedCapabilities.canPlanRemainingIntake,
           canAutoCalculateTrackingQuantities: advancedCapabilities.canAutoCalculateTrackingQuantities,
+          canUseEquivalences: true,
+          limits: {
+            ...(personalCapabilities.limits || {}),
+            equivalentMealFoods: effectiveService?.limits?.equivalentMealFoods || 6,
+          },
           canViewCoachAdherenceBreakdown: true,
           primaryAuthority: "coach",
           canTrack: true,

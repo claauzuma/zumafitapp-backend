@@ -246,6 +246,19 @@ class RouterUsuarios {
       requireRole("coach"),
       this.controladorUsuarios.getCoachClientMenuTracking
     );
+    users.get(
+      "/me/coach-clients/:clientId/equivalent-activity",
+      authMiddleware,
+      requireRole("coach"),
+      this.controladorUsuarios.getCoachClientEquivalentActivity
+    );
+    users.patch(
+      "/me/coach-clients/:clientId/equivalents/:date/:entryId/review",
+      authMiddleware,
+      requireRole("coach"),
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.coachReviewClientEquivalent
+    );
     users.patch(
       "/me/coach-clients/:clientId/end-service",
       authMiddleware,

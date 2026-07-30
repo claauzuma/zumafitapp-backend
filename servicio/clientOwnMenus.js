@@ -135,7 +135,23 @@ function normalizeItem(raw = {}, index = 0) {
     categoriaSnapshot: cleanString(raw.categoriaSnapshot || raw.categoria || snapshot.categoria, 120),
     imagenUrl: cleanString(raw.imagenUrl || raw.imageUrl || raw.imagen?.url || snapshot.imagen?.url || snapshot.imagen, 500),
     notas: cleanString(raw.notas || raw.notes, 1000),
+    source: cleanString(raw.source, 80),
+    quantityMode: ["manual", "automatic", "calculated", "suggested"].includes(token(raw.quantityMode || raw.mode))
+      ? token(raw.quantityMode || raw.mode)
+      : "manual",
+    suggested: raw.suggested === true || raw.source === "addedCandidate",
   };
+}
+
+function normalizeMealTarget(raw = {}) {
+  const source = raw && typeof raw === "object" ? raw : {};
+  const target = {
+    kcal: number(source.kcal ?? source.calorias, { min: 0, max: 20000 }),
+    proteina: number(source.proteina ?? source.proteinas ?? source.p, { min: 0, max: 1000 }),
+    carbs: number(source.carbs ?? source.carbohidratos ?? source.c, { min: 0, max: 2000 }),
+    grasas: number(source.grasas ?? source.g, { min: 0, max: 1000 }),
+  };
+  return Object.values(target).some((value) => value > 0) ? target : null;
 }
 
 function mealTotals(items = []) {
@@ -154,6 +170,7 @@ function normalizeMeal(raw = {}, index = 0) {
     tipoComida: normalizeMealType(raw.tipoComida || raw.type || raw.nombre),
     items,
     totales: totals,
+    target: normalizeMealTarget(raw.target || raw.meta || raw.objetivo),
     notas: cleanString(raw.notas || raw.notes, 1000),
   };
 }

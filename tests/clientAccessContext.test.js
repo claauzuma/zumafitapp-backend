@@ -26,6 +26,8 @@ test("cliente free autogestionado queda en Free Lite con limites bajos", () => {
   assert.equal(context.capabilities.canUseGlobalLibrary, false);
   assert.equal(context.capabilities.canAutoCompleteRemainingMeals, false);
   assert.equal(context.capabilities.canUseFlexibleMarginRecommendations, false);
+  assert.equal(context.capabilities.canUseEquivalences, false);
+  assert.equal(context.capabilities.limits.equivalentMealFoods, 0);
   assert.equal(context.featureAvailability.nutrition.autoMenus.status, "blocked");
   assert.equal(context.featureAvailability.nutrition.autoCompleteRemainingMeals.status, "blocked");
 });
@@ -38,8 +40,12 @@ test("premium y premium2 se normalizan como pro/vip", () => {
   assert.equal(vip.personalPlan, "vip");
   assert.equal(pro.capabilities.canAutoCompleteRemainingMeals, true);
   assert.equal(pro.capabilities.canUseFlexibleMarginRecommendations, true);
+  assert.equal(pro.capabilities.canUseEquivalences, true);
+  assert.equal(pro.capabilities.limits.equivalentMealFoods, 6);
   assert.equal(vip.capabilities.canAutoCompleteRemainingMeals, true);
   assert.equal(vip.capabilities.canUseFlexibleMarginRecommendations, true);
+  assert.equal(vip.capabilities.canUseEquivalences, true);
+  assert.equal(vip.capabilities.limits.equivalentMealFoods, 10);
 });
 
 test("trial Pro activo modifica solo el plan efectivo", () => {
@@ -261,10 +267,14 @@ test("cliente Free con coach recibe automatismos solo del servicio profesional e
   assert.equal(coachPro.capabilities.canUseManualDayCompletion, true);
   assert.equal(coachPro.capabilities.canPlanRemainingIntake, true);
   assert.equal(coachPro.capabilities.canAutoCalculateTrackingQuantities, true);
+  assert.equal(coachPro.capabilities.canUseEquivalences, true);
+  assert.equal(coachPro.capabilities.limits.equivalentMealFoods, 6);
   assert.equal(coachVip.capabilities.canAutoCompleteRemainingMeals, true);
   assert.equal(coachVip.capabilities.canUseFlexibleMarginRecommendations, true);
   assert.equal(coachVip.capabilities.canPlanRemainingIntake, true);
   assert.equal(coachVip.capabilities.canAutoCalculateTrackingQuantities, true);
+  assert.equal(coachVip.capabilities.canUseEquivalences, true);
+  assert.equal(coachVip.capabilities.limits.equivalentMealFoods, 10);
 });
 
 test("cliente Free con coach legacy queda fail-closed sin paquete profesional explícito", () => {

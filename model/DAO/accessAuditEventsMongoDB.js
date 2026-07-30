@@ -44,6 +44,11 @@ class ModelMongoDBAccessAuditEvents {
       actorType: cleanString(event.actorType, 80) || "system",
       actorId: toMongoIdOrString(event.actorId),
       event: cleanString(event.event, 120),
+      dedupeKey: cleanString(event.dedupeKey, 220) || null,
+      notificationVisible: event.notificationVisible === true,
+      notificationImmediate: event.notificationImmediate === true,
+      includeInWeeklyDigest: event.includeInWeeklyDigest === true,
+      readAt: event.readAt || null,
       previousValue: safeObject(event.previousValue),
       nextValue: safeObject(event.nextValue),
       reason: cleanString(event.reason, 500),
@@ -51,8 +56,15 @@ class ModelMongoDBAccessAuditEvents {
       createdAt: event.createdAt || now,
     };
 
-    const result = await this._col().insertOne(payload);
-    return { ...payload, _id: result.insertedId };
+    try {
+      const result = await this._col().insertOne(payload);
+      return { ...payload, _id: result.insertedId };
+    } catch (error) {
+      if (payload.dedupeKey && Number(error?.code) === 11000) {
+        return await this._col().findOne({ dedupeKey: payload.dedupeKey });
+      }
+      throw error;
+    }
   }
 
   async ensureIndexes() {
@@ -60,6 +72,12 @@ class ModelMongoDBAccessAuditEvents {
     await col.createIndex({ subjectType: 1, subjectId: 1, createdAt: -1 });
     await col.createIndex({ event: 1, createdAt: -1 });
     await col.createIndex({ actorType: 1, actorId: 1, createdAt: -1 });
+    await col.createIndex(
+      { dedupeKey: 1 },
+      { unique: true, partialFilterExpression: { dedupeKey: { $type: "string" } } }
+    );
+    await col.createIndex({ subjectType: 1, subjectId: 1, notificationVisible: 1, createdAt: -1 });
+    await col.createIndex({ subjectType: 1, subjectId: 1, includeInWeeklyDigest: 1, createdAt: -1 });
   }
 
   async list({ subjectType = "", subjectId = "", actorType = "", actorId = "", event = "", limit = 50, skip = 0 } = {}) {
@@ -78,6 +96,13 @@ class ModelMongoDBAccessAuditEvents {
     ]);
 
     return { items, total, limit: safeLimit, skip: safeSkip };
+  }
+
+  async markRead(id, readAt = new Date()) {
+    const _id = ObjectId.isValid(cleanString(id, 120)) ? new ObjectId(cleanString(id, 120)) : null;
+    if (!_id) throw new Error("ID_INVALIDO");
+    await this._col().updateOne({ _id }, { $set: { readAt } });
+    return await this._col().findOne({ _id });
   }
 }
 
