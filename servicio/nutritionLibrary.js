@@ -43,6 +43,15 @@ import {
 } from "./comidasGuardadasPermisos.js";
 import { nextUniqueName } from "./clientOwnMenus.js";
 import {
+  CONTEXTUAL_MENU_MATCH_POLICY,
+  compareContextualMenuMatches,
+  contextualMenuMatch,
+  contextualMenuStateAllowed,
+  rankContextualMenus,
+  reconstructContextualMenu,
+  resolveAutomaticMenuMatch,
+} from "./nutritionLibraryRanking.js";
+import {
   getAccessLimit,
   requireMenuDaysLimit,
   requireQuota,
@@ -73,6 +82,93 @@ function number(value = 0) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function booleanFilter(value) {
+  return value === true || ["true", "1", "si", "sí"].includes(String(value || "").trim().toLowerCase());
+}
+
+function positiveFilter(value) {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function facetStep(kind = "menu", field = "kcal") {
+  if (field === "kcal") return kind === "meal" ? 50 : 100;
+  return kind === "meal" ? 5 : 10;
+}
+
+function nutritionFacetBucket(value, { kind = "menu", field = "kcal" } = {}) {
+  const parsed = positiveFilter(value);
+  if (parsed === null) return null;
+  const step = facetStep(kind, field);
+  return Math.round(parsed / step) * step;
+}
+
+function facetOptions(items = [], { kind = "menu", field = "kcal" } = {}) {
+  const counts = new Map();
+  for (const item of items) {
+    const source = item?.totales || item?.macrosTotales || {};
+    const value = field === "kcal"
+      ? source.kcal ?? source.calorias
+      : source.proteina ?? source.proteinas ?? source.protein;
+    const bucket = nutritionFacetBucket(value, { kind, field });
+    if (bucket === null) continue;
+    counts.set(bucket, (counts.get(bucket) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([value, count]) => ({ value, count }));
+}
+
+function mealTypeOptions(items = []) {
+  const counts = new Map();
+  for (const item of items) {
+    const value = cleanString(item?.tipoComida || item?.mealType || "otra", 40).toLowerCase() || "otra";
+    counts.set(value, (counts.get(value) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort(([left], [right]) => left.localeCompare(right, "es"))
+    .map(([value, count]) => ({ value, count }));
+}
+
+function filterWithNutritionFacets(items = [], filters = {}, { kind = "menu" } = {}) {
+  const source = Array.isArray(items) ? items : [];
+  const requestedType = kind === "meal" ? cleanString(filters.tipoComida || filters.type, 40).toLowerCase() : "";
+  const selectedType = requestedType && requestedType !== "todos" ? requestedType : "";
+  const selectedKcal = positiveFilter(filters.calorieBucket ?? filters.kcalBucket);
+  const selectedProtein = positiveFilter(filters.proteinBucket ?? filters.proteinaBucket);
+  const types = kind === "meal" ? mealTypeOptions(source) : [];
+  const byType = selectedType
+    ? source.filter((item) => cleanString(item?.tipoComida || item?.mealType || "otra", 40).toLowerCase() === selectedType)
+    : source;
+  const calories = facetOptions(byType, { kind, field: "kcal" });
+  const byCalories = selectedKcal === null
+    ? byType
+    : byType.filter((item) => nutritionFacetBucket(item?.totales?.kcal ?? item?.macrosTotales?.kcal, { kind, field: "kcal" }) === selectedKcal);
+  const proteins = facetOptions(byCalories, { kind, field: "proteina" });
+  const filtered = selectedProtein === null
+    ? byCalories
+    : byCalories.filter((item) => nutritionFacetBucket(
+        item?.totales?.proteina ?? item?.totales?.proteinas ?? item?.macrosTotales?.proteina ?? item?.macrosTotales?.proteinas,
+        { kind, field: "proteina" }
+      ) === selectedProtein);
+  return {
+    items: filtered,
+    facets: {
+      kind,
+      totalAvailable: source.length,
+      types,
+      calories,
+      proteins,
+      selected: {
+        type: selectedType || null,
+        calorieBucket: selectedKcal,
+        proteinBucket: selectedProtein,
+      },
+    },
+  };
+}
+
 function totalsFromMealDoc(doc = {}) {
   const totals = doc.totales || doc.macrosTotales || doc.macros || {};
   return {
@@ -94,6 +190,19 @@ function equivalentTargetFromFilters(filters = {}) {
   return Object.values(target).some((value) => value > 0) ? target : null;
 }
 
+function contextualTargetFromFilters(filters = {}) {
+  const raw = [
+    filters.targetKcal ?? filters.kcal,
+    filters.targetProteina ?? filters.targetProtein ?? filters.proteina,
+    filters.targetCarbs ?? filters.targetCarbohidratos ?? filters.carbs,
+    filters.targetGrasas ?? filters.targetFat ?? filters.grasas,
+  ];
+  if (raw.some((value) => value === undefined || value === null || String(value).trim() === "")) return null;
+  const parsed = raw.map(Number);
+  if (!parsed.every(Number.isFinite) || parsed[0] <= 0 || parsed.slice(1).some((value) => value < 0)) return null;
+  return { kcal: parsed[0], proteina: parsed[1], carbs: parsed[2], grasas: parsed[3] };
+}
+
 function equivalentMealScore(meal = {}, target = {}, requestedType = "") {
   const source = meal.totales || meal.macrosTotales || {};
   const result = {
@@ -111,10 +220,10 @@ function equivalentMealScore(meal = {}, target = {}, requestedType = "") {
   const normalized = (value, base, fallback) => Math.abs(value) / Math.max(Math.abs(base), fallback);
   const typePenalty = requestedType && requestedType !== "todos" && meal.tipoComida !== requestedType ? 0.25 : 0;
   const score =
-    normalized(diff.kcal, target.kcal, 200) * 10 +
-    normalized(diff.proteina, target.proteina, 20) * 4 +
-    normalized(diff.carbs, target.carbs, 30) * 1.5 +
-    normalized(diff.grasas, target.grasas, 10) * 1.5 +
+    (target.kcal > 0 ? normalized(diff.kcal, target.kcal, 200) * 10 : 0) +
+    (target.proteina > 0 ? normalized(diff.proteina, target.proteina, 20) * 4 : 0) +
+    (target.carbs > 0 ? normalized(diff.carbs, target.carbs, 30) * 1.5 : 0) +
+    (target.grasas > 0 ? normalized(diff.grasas, target.grasas, 10) * 1.5 : 0) +
     typePenalty;
   return {
     target,
@@ -141,6 +250,57 @@ function mealCompatibleWithRestrictions(actor = {}, meal = {}) {
     carbs: item.carbs ?? item.carbohidratos,
     grasas: item.grasas,
   }));
+}
+
+function menuCompatibleWithRestrictions(actor = {}, menu = {}) {
+  if (!isClient(actor)) return true;
+  const meals = Array.isArray(menu?.comidas) ? menu.comidas : [];
+  if (!meals.length) return false;
+  return meals.every((meal) => mealCompatibleWithRestrictions(actor, meal));
+}
+
+function isContextualMenuRequest(filters = {}) {
+  return String(filters.context || filters.view || "").trim().toLowerCase() === "day-menu";
+}
+
+function contextualSelectedDate(filters = {}) {
+  const value = String(filters.selectedDate || filters.date || "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
+function contextualMenuOrigin(actor = {}, menu = {}) {
+  if (isOwner(actor, menu)) return { code: "user_owned", label: "Mi menú" };
+  if (isAdminOwned(menu)) return { code: "admin_library", label: "Biblioteca ZumaFit" };
+  return null;
+}
+
+function contextualMenuCandidate(actor = {}, menu = {}) {
+  const origin = contextualMenuOrigin(actor, menu);
+  if (!origin) return { allowed: false, reason: "SOURCE_NOT_ALLOWED", origin: null };
+  if (!canViewNutritionItem(actor, menu, { assignmentField: "asignadoA", kind: "menu" })) {
+    return { allowed: false, reason: "FORBIDDEN", origin };
+  }
+  if (!contextualMenuStateAllowed(menu, { admin: origin.code === "admin_library" })) {
+    return { allowed: false, reason: origin.code === "admin_library" ? "NOT_PUBLISHED" : "INACTIVE_OR_DRAFT", origin };
+  }
+  if (!menuCompatibleWithRestrictions(actor, menu)) {
+    return { allowed: false, reason: "RESTRICTION_MISMATCH", origin };
+  }
+  return { allowed: true, reason: null, origin };
+}
+
+function normalizeContextualMenu(menu = {}, actor = {}, { eligibility = null, equivalence = null, totals = null } = {}) {
+  const origin = contextualMenuOrigin(actor, menu);
+  const normalized = normalizeMenuForLibrary(totals ? { ...menu, macrosTotales: totals } : menu, actor);
+  const originLabel = origin?.label || "Biblioteca";
+  return {
+    ...normalized,
+    libraryOrigin: origin?.code || "unknown",
+    originLabel,
+    badges: [originLabel, ...(normalized.badges || []).filter((badge) => badge !== originLabel)],
+    ...(eligibility ? { contextualEligibility: eligibility } : {}),
+    ...(equivalence ? { equivalence } : {}),
+  };
 }
 
 function totalsFromMenuDoc(doc = {}) {
@@ -317,6 +477,7 @@ function normalizeScope(value = "") {
   if (["admin", "zumafit", "library", "biblioteca"].includes(scope)) return "admin";
   if (["assigned", "asignadas", "coach"].includes(scope)) return "assigned";
   if (["favorites", "favoritos", "favoritas"].includes(scope)) return "favorites";
+  if (["discover", "explorar", "publicas", "publicos"].includes(scope)) return "discover";
   return "all";
 }
 
@@ -438,7 +599,7 @@ class ServicioNutritionLibrary {
 
   _assertLibraryScope(actor, filters = {}, kind = "menu") {
     const scope = normalizeScope(filters.scope);
-    if (!isCoach(actor) || scope !== "admin") return;
+    if (!isCoach(actor) || !["admin", "discover"].includes(scope)) return;
     const capabilities = resolveProfessionalLibraryCapabilities(actor);
     const allowed = kind === "meal"
       ? capabilities.canUseGlobalMealTemplates === true
@@ -453,6 +614,9 @@ class ServicioNutritionLibrary {
     if (isCoach(actor) && scope === "all") return mergeAndQuery(active, buildOwnerQuery(actor));
     if (scope === "mine") return mergeAndQuery(active, buildOwnerQuery(actor));
     if (scope === "admin") return mergeAndQuery(active, buildAdminLibraryQuery(actor, { kind: "meal" }));
+    if (scope === "discover") {
+      return mergeAndQuery(active, mergeOrQuery(buildOwnerQuery(actor), buildAdminLibraryQuery(actor, { kind: "meal" })));
+    }
     if (scope === "assigned") return mergeAndQuery(active, buildAssignedQuery(actor, "asignadaA"));
     if (scope === "favorites") {
       const userId = libraryUserId(actor);
@@ -480,6 +644,9 @@ class ServicioNutritionLibrary {
     if (isCoach(actor) && scope === "all") return mergeAndQuery(active, buildOwnerQuery(actor));
     if (scope === "mine") return mergeAndQuery(active, buildOwnerQuery(actor));
     if (scope === "admin") return mergeAndQuery(active, buildAdminLibraryQuery(actor, { kind: "menu" }));
+    if (scope === "discover") {
+      return mergeAndQuery(active, mergeOrQuery(buildOwnerQuery(actor), buildAdminLibraryQuery(actor, { kind: "menu" })));
+    }
     if (scope === "assigned") return mergeAndQuery(active, buildAssignedQuery(actor, "asignadoA"));
     if (scope === "favorites") {
       return mergeAndQuery(active, { favoritoPara: { $in: idValues(libraryUserId(actor)) } });
@@ -499,10 +666,12 @@ class ServicioNutritionLibrary {
     this._assertLibraryScope(actor, filters, "meal");
     const { limit, skip, page } = paging(filters);
     const equivalentTarget = equivalentTargetFromFilters(filters);
-    const fetchLimit = equivalentTarget ? 100 : limit;
-    const fetchSkip = equivalentTarget ? 0 : skip;
+    const includeFacets = booleanFilter(filters.includeFacets);
+    const fetchLimit = includeFacets ? 500 : equivalentTarget ? 100 : limit;
+    const fetchSkip = includeFacets || equivalentTarget ? 0 : skip;
     const data = await this.comidasModel.list({
       ...filters,
+      ...(includeFacets ? { tipoComida: "todos", type: "todos", max: 500 } : {}),
       limit: fetchLimit,
       skip: fetchSkip,
       query: this._mealQuery(actor, filters),
@@ -512,6 +681,24 @@ class ServicioNutritionLibrary {
       .filter((doc) => canViewNutritionItem(actor, doc, { assignmentField: "asignadaA", kind: "meal" }))
       .map((doc) => normalizeMealForLibrary(doc, actor))
       .filter((meal) => mealCompatibleWithRestrictions(actor, meal));
+
+    if (includeFacets) {
+      const filtered = filterWithNutritionFacets(comidas, filters, { kind: "meal" });
+      comidas = filtered.items.slice(skip, skip + limit);
+      return {
+        comidas,
+        total: filtered.items.length,
+        limit,
+        skip,
+        page,
+        scope: normalizeScope(filters.scope),
+        facets: {
+          ...filtered.facets,
+          complete: Number(data.total || 0) <= fetchLimit,
+        },
+        permissions: getNutritionLibraryLimits(actor),
+      };
+    }
 
     if (equivalentTarget) {
       comidas = comidas
@@ -540,6 +727,178 @@ class ServicioNutritionLibrary {
     this._assertLibraryScope(actor, filters, "menu");
     const { limit, skip, page } = paging(filters);
     const scope = normalizeScope(filters.scope);
+    const contextual = isContextualMenuRequest(filters);
+    const automaticMatchRequested = contextual && booleanFilter(filters.automaticMatch);
+    const prioritizeFavorites = !automaticMatchRequested || booleanFilter(filters.preferFavorites);
+    const equivalentTarget = contextual ? contextualTargetFromFilters(filters) : equivalentTargetFromFilters(filters);
+    const includeFacets = !contextual && booleanFilter(filters.includeFacets);
+    const selectedDate = contextualSelectedDate(filters);
+    const targetMeals = Number(filters.targetMeals || filters.cantidadComidas || filters.meals);
+    const fetchLimit = includeFacets ? 500 : equivalentTarget ? 200 : limit;
+    const fetchSkip = includeFacets || equivalentTarget ? 0 : skip;
+    if (contextual && (!equivalentTarget || !selectedDate)) {
+      const error = new Error("INVALID_CONTEXT_TARGET");
+      error.details = { selectedDate, equivalentTarget };
+      throw error;
+    }
+
+    if (contextual && scope !== "assigned") {
+      let rawMenus = [];
+      let sourceTotal = 0;
+      let matchingWindowLimited = false;
+
+      if (scope === "all") {
+        const [adminData, ownData] = await Promise.all([
+          this.menusModel.listBase({
+            ...filters,
+            limit: fetchLimit,
+            skip: 0,
+            includeComidas: true,
+            visibilityQuery: this._menuQuery(actor, { ...filters, scope: "admin" }),
+          }),
+          this.menusModel.listBase({
+            ...filters,
+            limit: fetchLimit,
+            skip: 0,
+            includeComidas: true,
+            visibilityQuery: this._menuQuery(actor, { ...filters, scope: "mine" }),
+          }),
+        ]);
+        rawMenus = [...(adminData.items || []), ...(ownData.items || [])];
+        sourceTotal = Number(adminData.total || 0) + Number(ownData.total || 0);
+        matchingWindowLimited = Number(adminData.total || 0) > fetchLimit || Number(ownData.total || 0) > fetchLimit;
+      } else {
+        const data = await this.menusModel.listBase({
+          ...filters,
+          limit: fetchLimit,
+          skip: 0,
+          includeComidas: true,
+          visibilityQuery: this._menuQuery(actor, filters),
+        });
+        rawMenus = data.items || [];
+        sourceTotal = Number(data.total || 0);
+        matchingWindowLimited = sourceTotal > fetchLimit;
+      }
+
+      if (scope === "mine") {
+        const mine = rawMenus
+          .filter((menu) => isOwner(actor, menu))
+          .filter((menu) => canViewNutritionItem(actor, menu, { assignmentField: "asignadoA", kind: "menu" }))
+          .map((menu) => {
+            const reconstruction = reconstructContextualMenu(menu);
+            const stateAllowed = contextualMenuStateAllowed(menu, { admin: false });
+            const restrictionsAllowed = menuCompatibleWithRestrictions(actor, menu);
+            const eligible = reconstruction.valid && stateAllowed && restrictionsAllowed;
+            const equivalence = reconstruction.valid
+              ? contextualMenuMatch(menu, equivalentTarget, {
+                  reconstructed: reconstruction,
+                  targetMeals,
+                  ownOrFavorite: true,
+                })
+              : null;
+            return normalizeContextualMenu(menu, actor, {
+              totals: reconstruction.valid ? reconstruction.totals : null,
+              equivalence,
+              eligibility: {
+                eligible,
+                reason: !reconstruction.valid
+                  ? reconstruction.reason
+                  : !stateAllowed
+                    ? "INACTIVE_OR_DRAFT"
+                    : !restrictionsAllowed
+                      ? "RESTRICTION_MISMATCH"
+                      : equivalence?.level === "outside"
+                        ? "OUTSIDE_RANGE"
+                        : null,
+              },
+            });
+          })
+          .sort((left, right) => {
+            if (left.equivalence && right.equivalence) return compareContextualMenuMatches(left.equivalence, right.equivalence);
+            if (left.equivalence) return -1;
+            if (right.equivalence) return 1;
+            return String(left.id).localeCompare(String(right.id));
+          });
+        return {
+          menus: mine.slice(skip, skip + limit),
+          total: mine.length,
+          limit,
+          skip,
+          page,
+          scope,
+          selectedDate,
+          equivalentTarget,
+          contextual: true,
+          levelUsed: "saved",
+          excludedInvalid: mine.filter((menu) => !menu.contextualEligibility?.eligible).length,
+          outOfRangeCount: mine.filter((menu) => menu.equivalence?.level === "outside").length,
+          matchingWindowLimited,
+          policy: CONTEXTUAL_MENU_MATCH_POLICY,
+          permissions: getNutritionLibraryLimits(actor),
+        };
+      }
+
+      const eligible = [];
+      const excludedByPolicy = [];
+      for (const menu of rawMenus) {
+        const candidate = contextualMenuCandidate(actor, menu);
+        if (!candidate.allowed) {
+          excludedByPolicy.push({ id: idToString(menu._id || menu.id), reason: candidate.reason });
+          continue;
+        }
+        eligible.push({
+          ...menu,
+          isOwned: candidate.origin.code === "user_owned",
+          favorito: prioritizeFavorites && isFavoriteForUser(actor, menu, "favoritoPara"),
+        });
+      }
+      const ranked = rankContextualMenus(eligible, equivalentTarget, { targetMeals });
+      const menus = ranked.menus
+        .slice(skip, skip + limit)
+        .map((menu) => normalizeContextualMenu(menu, actor, {
+          totals: menu._reconstructedTotals,
+          equivalence: menu.equivalence,
+          eligibility: { eligible: true, reason: null },
+        }));
+      const automaticResolutionRaw = automaticMatchRequested
+        ? resolveAutomaticMenuMatch(ranked, equivalentTarget)
+        : null;
+      const automaticResolution = automaticResolutionRaw
+        ? {
+            ...automaticResolutionRaw,
+            candidate: automaticResolutionRaw.candidate
+              ? normalizeContextualMenu(automaticResolutionRaw.candidate, actor, {
+                  totals: automaticResolutionRaw.candidate._reconstructedTotals,
+                  equivalence: automaticResolutionRaw.candidate.equivalence,
+                  eligibility: { eligible: true, reason: null },
+                })
+              : null,
+          }
+        : null;
+      return {
+        menus,
+        total: ranked.compatibleCount,
+        limit,
+        skip,
+        page,
+        scope,
+        selectedDate,
+        equivalentTarget,
+        contextual: true,
+        levelUsed: ranked.levelUsed,
+        highCount: ranked.highCount,
+        compatibleCount: ranked.compatibleCount,
+        outOfRangeCount: ranked.outside.length,
+        excludedInvalid: ranked.invalid.length + excludedByPolicy.length,
+        deduplicatedCount: ranked.deduplicatedCount,
+        sourceTotal,
+        matchingWindowLimited,
+        policy: CONTEXTUAL_MENU_MATCH_POLICY,
+        ...(automaticResolution ? { automaticResolution } : {}),
+        permissions: getNutritionLibraryLimits(actor),
+      };
+    }
+
     if (scope === "assigned") {
       const actorId = libraryUserId(actor);
       const currentCoachId = isClient(actor)
@@ -553,42 +912,76 @@ class ServicioNutritionLibrary {
         : "";
       const data = await this.menusModel.listAssigned({
         ...filters,
-        limit,
-        skip,
+        limit: fetchLimit,
+        skip: fetchSkip,
         ...(isCoach(actor) ? { coachId: actorId } : {}),
         ...(isClient(actor) ? { clienteId: actorId, coachId: currentCoachId || "__none__" } : {}),
       });
-      const menus = (data.items || []).map((doc) => normalizeMenuForLibrary(assignedMenuAsLibraryDoc(doc), actor));
+      let menus = (data.items || []).map((doc) => normalizeMenuForLibrary(assignedMenuAsLibraryDoc(doc), actor));
+      if (equivalentTarget) {
+        menus = menus
+          .map((menu) => ({ ...menu, equivalence: equivalentMealScore(menu, equivalentTarget) }))
+          .sort((a, b) => a.equivalence.score - b.equivalence.score)
+          .slice(skip, skip + limit);
+      }
       return {
         menus,
-        total: data.total || menus.length,
+        total: equivalentTarget ? Math.min(Number(data.total) || menus.length, fetchLimit) : data.total || menus.length,
         limit,
         skip,
         page,
         scope,
         permissions: getNutritionLibraryLimits(actor),
+        ...(equivalentTarget ? { equivalentTarget, matchingWindowLimited: Number(data.total || 0) > fetchLimit } : {}),
       };
     }
     const data = await this.menusModel.listBase({
       ...filters,
-      limit,
-      skip,
+      limit: fetchLimit,
+      skip: fetchSkip,
+      ...(includeFacets ? { max: 500 } : {}),
       includeComidas: filters.includeComidas === "true" || filters.includeComidas === true,
       visibilityQuery: this._menuQuery(actor, filters),
     });
 
-    const menus = (data.items || [])
+    let menus = (data.items || [])
       .filter((doc) => canViewNutritionItem(actor, doc, { assignmentField: "asignadoA", kind: "menu" }))
       .map((doc) => normalizeMenuForLibrary(doc, actor));
 
+    if (includeFacets) {
+      const filtered = filterWithNutritionFacets(menus, filters, { kind: "menu" });
+      menus = filtered.items.slice(skip, skip + limit);
+      return {
+        menus,
+        total: filtered.items.length,
+        limit,
+        skip,
+        page,
+        scope,
+        facets: {
+          ...filtered.facets,
+          complete: Number(data.total || 0) <= fetchLimit,
+        },
+        permissions: getNutritionLibraryLimits(actor),
+      };
+    }
+
+    if (equivalentTarget) {
+      menus = menus
+        .map((menu) => ({ ...menu, equivalence: equivalentMealScore(menu, equivalentTarget) }))
+        .sort((a, b) => a.equivalence.score - b.equivalence.score)
+        .slice(skip, skip + limit);
+    }
+
     return {
       menus,
-      total: data.total || menus.length,
+      total: equivalentTarget ? Math.min(Number(data.total) || menus.length, fetchLimit) : data.total || menus.length,
       limit,
       skip,
       page,
       scope: isCoach(actor) && scope === "all" ? "mine" : scope,
       permissions: getNutritionLibraryLimits(actor),
+      ...(equivalentTarget ? { equivalentTarget, matchingWindowLimited: Number(data.total || 0) > fetchLimit } : {}),
     };
   }
 
@@ -674,6 +1067,9 @@ class ServicioNutritionLibrary {
       ? nextUniqueName(payload.nombre || current.nombre || "Menu", (ownMenus.items || []).map((menu) => menu.nombre))
       : cleanString(payload.nombre || current.nombre || "Menu", 180);
     const now = new Date();
+    const requestedStartDate = /^\d{4}-\d{2}-\d{2}$/.test(cleanString(payload.fechaInicio || payload.selectedDate || "", 10))
+      ? cleanString(payload.fechaInicio || payload.selectedDate, 10)
+      : null;
     const copy = {
       ...current,
       nombre: copyName,
@@ -716,6 +1112,7 @@ class ServicioNutritionLibrary {
     delete copy.historialCambios;
     delete copy.totalesActuales;
     delete copy.sourceTemplateTier;
+    if (requestedStartDate) copy.fechaInicio = requestedStartDate;
 
     const created = await this.menusModel.createBase(copy);
     if (isClient(actor)) {
@@ -912,6 +1309,9 @@ export default ServicioNutritionLibrary;
 
 export {
   equivalentMealScore,
+  filterWithNutritionFacets,
+  normalizeMenuForLibrary,
+  nutritionFacetBucket,
   equivalentTargetFromFilters,
   mealCompatibleWithRestrictions,
 };

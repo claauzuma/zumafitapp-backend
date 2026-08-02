@@ -912,6 +912,59 @@ function summarizeProgress(checkins = []) {
   };
 }
 
+function localDateKey(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+}
+
+function buildSelfWeightProgressPatch(user = {}, payload = {}, { now = new Date() } = {}) {
+  const date = cleanString(payload.date || payload.fecha || localDateKey(now), 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > localDateKey(now)) {
+    throw new Error("PROGRESS_DATE_INVALID");
+  }
+  const rawWeight = Number(payload.weightKg ?? payload.pesoKg);
+  if (!Number.isFinite(rawWeight) || rawWeight < 20 || rawWeight > 350) throw new Error("PROGRESS_WEIGHT_INVALID");
+  const weightKg = Math.round(rawWeight * 10) / 10;
+  const currentProgress = isPlainObject(user?.progress) ? user.progress : {};
+  const checkins = Array.isArray(currentProgress.checkins) ? currentProgress.checkins : [];
+  const existingIndex = checkins.findIndex((item) => String(item?.date || item?.fecha || "").slice(0, 10) === date);
+  const existing = existingIndex >= 0 ? checkins[existingIndex] : null;
+  const normalized = normalizeProgressCheckin({
+    ...(existing || {}),
+    id: existing?.id || `self-weight:${date}`,
+    date,
+    weightKg,
+    note: payload.note ?? payload.nota ?? existing?.note ?? "",
+    source: existing?.source && existing.source !== "self" ? existing.source : "self",
+  }, { id: `self-weight:${date}`, date, createdAt: existing?.createdAt || now });
+  const nextCheckins = existingIndex >= 0
+    ? checkins.map((item, index) => index === existingIndex ? normalized : item)
+    : [...checkins, normalized];
+  const sorted = sortProgressCheckins(nextCheckins);
+  return {
+    progress: {
+      ...currentProgress,
+      checkins: sorted,
+      ...summarizeProgress(sorted),
+      updatedAt: now,
+    },
+    antropometriaActual: {
+      ...(user?.antropometriaActual || {}),
+      pesoKg: weightKg,
+      updatedAt: now,
+    },
+    stats: {
+      ...(user?.stats || {}),
+      pesoActualKg: weightKg,
+      updatedAt: now,
+    },
+    record: normalized,
+    created: existingIndex < 0,
+  };
+}
+
 function normalizeAssignedMenuPlanningMeta(entry = {}) {
   const targetMacros = isPlainObject(entry?.targetMacros) ? entry.targetMacros : {};
   const macroPending = isPlainObject(entry?.macroPending) ? entry.macroPending : {};
@@ -2231,6 +2284,7 @@ function inferTipoFromRole(role) {
 class ServicioUsuarios {
   constructor(persistencia) {
     this.model = ModelFactory.get(persistencia);
+    this.authActivityTouchScheduledAt = new Map();
 
     console.log("MODEL REAL =", this.model?.constructor?.name);
     console.log("METODOS DEL MODEL =", Object.getOwnPropertyNames(Object.getPrototypeOf(this.model)));
@@ -3358,6 +3412,14 @@ class ServicioUsuarios {
   // -------------------------
   // AUTH
   // -------------------------
+  scheduleLoginMetadataUpdate = (userId, patch = {}) => {
+    if (!userId || !patch || !Object.keys(patch).length) return;
+    const timer = setTimeout(() => {
+      void this._updateById(userId, patch).catch(() => {});
+    }, 750);
+    timer.unref?.();
+  };
+
   login = async (email, password) => {
     if (!process.env.JWT_SECRET) throw new Error("Falta JWT_SECRET en .env");
 
@@ -3390,12 +3452,8 @@ class ServicioUsuarios {
       { expiresIn: "7d" }
     );
 
-    try {
-      await this._updateById(user._id, { lastLoginAt: new Date() });
-    } catch {}
-
-    const refreshed = await this.getById(user._id);
-    return { user: this._buildCompatUser(refreshed || user), token };
+    this.scheduleLoginMetadataUpdate(user._id, { lastLoginAt: new Date() });
+    return { user: this._buildCompatUser(user), token };
   };
 
   // -------------------------
@@ -3658,7 +3716,7 @@ class ServicioUsuarios {
   // -------------------------
   // LAST ACTIVITY
   // -------------------------
-  touchLastActivity = async (userId) => {
+  touchLastActivity = async (userId, loadedUser = null) => {
     if (!userId) return null;
 
     if (typeof this.model.obtenerPorId !== "function") {
@@ -3666,7 +3724,7 @@ class ServicioUsuarios {
       return null;
     }
 
-    const user = await this.model.obtenerPorId(userId);
+    const user = loadedUser || await this.model.obtenerPorId(userId);
     if (!user) return null;
 
     const now = new Date();
@@ -3685,6 +3743,23 @@ class ServicioUsuarios {
     return await this.model.touchLastActivityById(userId, now);
   };
 
+  scheduleAuthActivityTouch = (userId, loadedUser = null) => {
+    const key = idToString(userId);
+    if (!key) return;
+    const now = Date.now();
+    const previous = Number(this.authActivityTouchScheduledAt.get(key)) || 0;
+    if (now - previous < 5 * 60 * 1000) return;
+    this.authActivityTouchScheduledAt.set(key, now);
+    if (this.authActivityTouchScheduledAt.size > 5000) {
+      const oldest = this.authActivityTouchScheduledAt.keys().next().value;
+      if (oldest) this.authActivityTouchScheduledAt.delete(oldest);
+    }
+    const timer = setTimeout(() => {
+      void this.touchLastActivity(userId, loadedUser).catch(() => {});
+    }, 750);
+    timer.unref?.();
+  };
+
   // -------------------------
   // GOOGLE LOGIN / REGISTER
   // -------------------------
@@ -3693,10 +3768,13 @@ class ServicioUsuarios {
 
     email = String(email || "").toLowerCase().trim();
 
-    const pending = await this.pendingModel.findByEmail(email);
+    const [pending, existingUser] = await Promise.all([
+      this.pendingModel.findByEmail(email),
+      this._findUserByEmail(email),
+    ]);
     if (pending) throw new Error("EMAIL_PENDIENTE");
 
-    let userRaw = await this._findUserByEmail(email);
+    let userRaw = existingUser;
 
     if (!userRaw) {
       const invite = await this._findInviteByEmail(email);
@@ -3783,7 +3861,11 @@ class ServicioUsuarios {
       const patch = { lastLoginAt: new Date() };
       if (!user.googleId && googleId) patch.googleId = googleId;
       if (avatarUrl) patch["profile.avatarUrl"] = avatarUrl;
-      if (Object.keys(patch).length) await this._updateById(user._id, patch);
+      if (!user.googleId && googleId) {
+        await this._updateById(user._id, patch);
+      } else {
+        this.scheduleLoginMetadataUpdate(user._id, patch);
+      }
     } catch {}
 
     const token = jwt.sign(
@@ -3792,9 +3874,8 @@ class ServicioUsuarios {
       { expiresIn: "7d" }
     );
 
-    const refreshed = await this.getById(user._id);
     return {
-      user: this._buildCompatUser(refreshed || user),
+      user: this._buildCompatUser(user),
       token,
     };
   };
@@ -3807,6 +3888,18 @@ class ServicioUsuarios {
       throw new Error("El modelo no implementa obtenerPorId");
     }
     const user = await this.model.obtenerPorId(id);
+    const repaired = await this._repairAcceptedCoachInviteOnboarding(user);
+    return await this._withEffectiveCapabilities(repaired);
+  };
+
+  getByIdForAuth = async (id) => {
+    if (typeof this.model.obtenerPorId !== "function") {
+      throw new Error("El modelo no implementa obtenerPorId");
+    }
+    const user = await this.model.obtenerPorId(id);
+    if (!user) return null;
+
+    this.scheduleAuthActivityTouch(id, user);
     const repaired = await this._repairAcceptedCoachInviteOnboarding(user);
     return await this._withEffectiveCapabilities(repaired);
   };
@@ -5992,6 +6085,20 @@ class ServicioUsuarios {
         ? incoming.macros
         : {};
     const now = new Date();
+    const recalculation = isPlainObject(incoming?.recalculation) ? incoming.recalculation : {};
+    const shouldUpdateProfile = recalculation.mode === "update_data" && recalculation.confirmProfileUpdate === true;
+    const weightPatch = shouldUpdateProfile && (recalculation.weightKg !== undefined || recalculation.pesoKg !== undefined)
+      ? buildSelfWeightProgressPatch(user, recalculation, { now })
+      : null;
+    const nextProfile = shouldUpdateProfile && recalculation.activity !== undefined
+      ? {
+          ...(user?.profile || {}),
+          basics: {
+            ...(user?.profile?.basics || {}),
+            actividadDiaria: cleanString(recalculation.activity, 80) || null,
+          },
+        }
+      : null;
 
     const nextMetas = {
       ...(user?.metasActuales || {}),
@@ -6050,7 +6157,7 @@ class ServicioUsuarios {
       goalsSignature({}, user?.metasActuales || {}) !== goalsSignature({}, nextMetas) || weeklyPlanChanged;
     const trainingChanged = goalsSignature(user?.goal || {}, {}) !== goalsSignature(nextGoal, {});
 
-    if (previousSignature === nextSignature && !weeklyPlanChanged) {
+    if (previousSignature === nextSignature && !weeklyPlanChanged && !weightPatch && !nextProfile) {
       return user;
     }
 
@@ -6062,6 +6169,12 @@ class ServicioUsuarios {
       ...(trainingChanged ? { goal: nextGoal } : {}),
       ...(nutritionChanged ? { metasActuales: nextMetas } : {}),
       ...(nextMenu ? { menu: nextMenu } : {}),
+      ...(weightPatch ? {
+        progress: weightPatch.progress,
+        antropometriaActual: weightPatch.antropometriaActual,
+        stats: weightPatch.stats,
+      } : {}),
+      ...(nextProfile ? { profile: nextProfile } : {}),
       ...(nutritionChanged
         ? {
             goalsMetadata: {
@@ -6091,6 +6204,45 @@ class ServicioUsuarios {
     });
 
     return updated;
+  };
+
+  getMyProgress = async (userId) => {
+    const user = await this.getById(userId);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(user)) throw new Error("USER_NOT_CLIENT");
+    const checkins = sortProgressCheckins(Array.isArray(user?.progress?.checkins) ? user.progress.checkins : []);
+    return {
+      checkins,
+      summary: summarizeProgress(checkins),
+      antropometriaActual: user?.antropometriaActual || {},
+      goal: user?.goal || {},
+    };
+  };
+
+  upsertMyWeight = async (userId, payload = {}) => {
+    const user = await this.getById(userId);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(user)) throw new Error("USER_NOT_CLIENT");
+    const now = new Date();
+    const patch = buildSelfWeightProgressPatch(user, payload, { now });
+    const updated = await this.updateById(userId, {
+      progress: patch.progress,
+      antropometriaActual: patch.antropometriaActual,
+      stats: patch.stats,
+      updatedAt: now,
+    });
+    await recordAccessAuditEvent({
+      subjectType: "client",
+      subjectId: user._id || user.id || userId,
+      actorType: "client",
+      actorId: user._id || user.id || userId,
+      event: patch.created ? "self_weight_created" : "self_weight_updated",
+      previousValue: { weightKg: user?.antropometriaActual?.pesoKg ?? null },
+      nextValue: { weightKg: patch.record.weightKg, date: patch.record.date },
+      reason: "client_progress_weight",
+      metadata: { idempotentDateKey: patch.record.date },
+    });
+    return { user: updated, record: patch.record, created: patch.created };
   };
 
   actualizarPerfil = async (id, updates = {}) => {
@@ -8041,6 +8193,7 @@ class ServicioUsuarios {
 }
 
 export {
+  buildSelfWeightProgressPatch,
   buildNutritionAssignmentImpact,
   buildSelfGoalsBackup,
   moveInvalidatedAssignments,

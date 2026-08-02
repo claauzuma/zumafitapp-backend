@@ -604,6 +604,12 @@ class ServicioClientOwnMenus {
       nombre,
       nombreNormalizado: normalizedName(nombre),
       descripcion: cleanString(payload.descripcion || payload.description || current?.descripcion || "", 2500),
+      fechaInicio: /^\d{4}-\d{2}-\d{2}$/.test(cleanString(payload.fechaInicio || current?.fechaInicio || "", 10))
+        ? cleanString(payload.fechaInicio || current?.fechaInicio, 10)
+        : null,
+      estrategiaObjetivo: ["current", "custom"].includes(token(payload.estrategiaObjetivo || current?.estrategiaObjetivo))
+        ? token(payload.estrategiaObjetivo || current?.estrategiaObjetivo)
+        : "current",
       kcalObjetivo: number(payload.kcalObjetivo ?? payload.kcal ?? totals.kcal, { min: 0, max: 20000 }),
       macrosObjetivo: {
         proteina: number(payload.macrosObjetivo?.proteina ?? payload.macros?.proteina ?? totals.proteina, { min: 0, max: 1000 }),
@@ -643,6 +649,27 @@ class ServicioClientOwnMenus {
     const hasCoachMenu = await this._hasCoachMenuActive(actor);
     const activeSource = hasCoachMenu ? "coach" : actor?.menu?.activeSource || "none";
     return this._capabilitiesFromAccessContext(actor, { activeMenuSource: activeSource });
+  }
+
+  async authorizeAutomaticGeneration(user) {
+    const actor = await this._actor(user);
+    const capabilities = await this.capabilities(actor);
+    if (capabilities.hasCoach || capabilities.clientType === "with_coach") {
+      throw serviceError("CLIENT_MENU_FORBIDDEN", "El menu autonomo no esta disponible mientras tu coach gestiona la planificacion");
+    }
+    if (capabilities.canGenerateAutomaticMenu !== true || capabilities.canAutoCalculateTrackingQuantities !== true) {
+      throw serviceError("PLAN_CAPABILITY_REQUIRED", "La generacion automatica esta disponible en Pro y VIP", {
+        resource: "nutrition.autoMenus",
+        plan: capabilities.plan,
+      });
+    }
+    return {
+      authorized: true,
+      policy: "tracking_calorie_fill_v1",
+      plan: capabilities.plan,
+      limits: capabilities.limits,
+      previewOnly: true,
+    };
   }
 
   _capabilitiesFromAccessContext(user, { activeMenuSource = null } = {}) {
@@ -785,6 +812,9 @@ class ServicioClientOwnMenus {
     requireMenuDaysLimit(actor, current);
     const copyName = await this._uniqueNameForUser(actor, payload.nombre || current.nombre || "Mi menu");
     const now = new Date();
+    const requestedStartDate = /^\d{4}-\d{2}-\d{2}$/.test(cleanString(payload.fechaInicio || payload.selectedDate || "", 10))
+      ? cleanString(payload.fechaInicio || payload.selectedDate, 10)
+      : null;
     const copy = {
       ...current,
       nombre: copyName,
@@ -806,6 +836,7 @@ class ServicioClientOwnMenus {
       createdAt: now,
       updatedAt: now,
     };
+    if (requestedStartDate) copy.fechaInicio = requestedStartDate;
     delete copy._id;
     delete copy.id;
 

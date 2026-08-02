@@ -104,13 +104,13 @@ test("prueba Pro activa eleva capabilities sin cambiar plan legacy", () => {
   assert.equal(capabilities.limits.equivalentMealFoods, 6);
 });
 
-test("VIP accede a biblioteca premium pero no declara PDF/generacion automatica como lista", () => {
+test("VIP accede a biblioteca premium y generacion automatica, sin habilitar PDF", () => {
   const capabilities = getClientNutritionCapabilities({ role: "cliente", plan: "premium2" });
 
   assert.equal(capabilities.plan, "vip");
   assert.equal(capabilities.canUseGlobalLibrary, true);
   assert.equal(capabilities.canUsePremiumLibrary, true);
-  assert.equal(capabilities.canGenerateAutomaticMenu, false);
+  assert.equal(capabilities.canGenerateAutomaticMenu, true);
   assert.equal(capabilities.canAutoCompleteRemainingMeals, true);
   assert.equal(capabilities.canUseFlexibleMarginRecommendations, true);
   assert.equal(capabilities.canUseEquivalences, true);

@@ -134,3 +134,50 @@ test("desactiva menu propio activo si excede los dias permitidos por Free", asyn
   assert.equal(repaired.menu.lastIncompatibleReason, "MENU_DAYS_LIMIT");
   assert.equal(persistedPatch.menu.lastIncompatibleReason, "MENU_DAYS_LIMIT");
 });
+
+test("autoriza generacion automatica solo a clientes Pro/VIP autogestionados", async () => {
+  const servicio = new ServicioClientOwnMenus();
+  servicio._actor = async (user) => user;
+  servicio.capabilities = async (user) => user.capabilities;
+
+  const authorized = await servicio.authorizeAutomaticGeneration({
+    capabilities: {
+      plan: "pro",
+      hasCoach: false,
+      clientType: "self_managed",
+      canGenerateAutomaticMenu: true,
+      canAutoCalculateTrackingQuantities: true,
+      limits: { automaticMealFoods: 6 },
+    },
+  });
+
+  assert.equal(authorized.authorized, true);
+  assert.equal(authorized.policy, "tracking_calorie_fill_v1");
+  assert.equal(authorized.previewOnly, true);
+
+  await assert.rejects(
+    () => servicio.authorizeAutomaticGeneration({
+      capabilities: {
+        plan: "free",
+        hasCoach: false,
+        clientType: "self_managed",
+        canGenerateAutomaticMenu: false,
+        canAutoCalculateTrackingQuantities: false,
+      },
+    }),
+    (error) => error.code === "PLAN_CAPABILITY_REQUIRED"
+  );
+
+  await assert.rejects(
+    () => servicio.authorizeAutomaticGeneration({
+      capabilities: {
+        plan: "vip",
+        hasCoach: true,
+        clientType: "with_coach",
+        canGenerateAutomaticMenu: true,
+        canAutoCalculateTrackingQuantities: true,
+      },
+    }),
+    (error) => error.code === "CLIENT_MENU_FORBIDDEN"
+  );
+});

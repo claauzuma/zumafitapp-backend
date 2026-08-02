@@ -89,6 +89,12 @@ class RouterClienteMenus {
       authMiddleware,
       this.controladorClientOwnMenus.capabilities
     );
+    this.router.post(
+      "/me/menus/generation-authorize",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorClientOwnMenus.authorizeAutomaticGeneration
+    );
     this.router.get(
       "/me/menus",
       authMiddleware,

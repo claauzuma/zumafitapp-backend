@@ -41,6 +41,14 @@ class ControladorClientOwnMenus {
     }
   };
 
+  authorizeAutomaticGeneration = async (req, res) => {
+    try {
+      return res.json(await this.servicio.authorizeAutomaticGeneration(req.user));
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
   list = async (req, res) => {
     try {
       const data = await this.servicio.list(req.user, req.query || {});

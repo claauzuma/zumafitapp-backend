@@ -475,15 +475,16 @@ test("coachAccess finalizado prevalece sobre campos legacy de coach", () => {
   assert.equal(context.professionalService, null);
 });
 
-test("funciones no implementadas quedan coming_soon sin habilitarse", () => {
+test("menus automaticos estan disponibles en VIP y las funciones restantes siguen coming_soon", () => {
   const context = resolveClientAccessContext({
     role: "cliente",
     personalPlan: "vip",
   }, { now });
 
-  assert.equal(context.featureAvailability.nutrition.autoMenus.available, false);
-  assert.equal(context.featureAvailability.nutrition.autoMenus.enabled, false);
-  assert.equal(context.featureAvailability.nutrition.autoMenus.status, "coming_soon");
+  assert.equal(context.featureAvailability.nutrition.autoMenus.available, true);
+  assert.equal(context.featureAvailability.nutrition.autoMenus.enabled, true);
+  assert.equal(context.featureAvailability.nutrition.autoMenus.status, "available");
+  assert.equal(context.featureAvailability.nutrition.autoMenus.mode, "tracking_calorie_fill_v1");
   assert.equal(context.featureAvailability.training.routines.generate.status, "coming_soon");
   assert.equal(context.featureAvailability.progress.analytics.status, "coming_soon");
 });

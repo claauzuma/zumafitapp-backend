@@ -193,6 +193,13 @@ class RouterUsuarios {
       denyWriteWhenReadOnlyImpersonation,
       this.controladorUsuarios.clientUpdateGoals
     );
+    users.get("/me/progress", authMiddleware, this.controladorUsuarios.getMyProgress);
+    users.patch(
+      "/me/progress/weight",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.upsertMyWeight
+    );
     users.get("/me/coach-clients", authMiddleware, this.controladorUsuarios.getMyCoachClients);
     users.get(
       "/me/client-invitations",

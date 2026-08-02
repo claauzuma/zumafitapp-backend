@@ -173,6 +173,8 @@ function adminError(res, error) {
     return res.status(409).json({ error: "La invitacion todavia no fue aceptada por el cliente" });
   }
   if (msg === "PAYLOAD_INVALIDO") return res.status(400).json({ error: "Datos invalidos" });
+  if (msg === "PROGRESS_DATE_INVALID") return res.status(400).json({ code: msg, error: "La fecha del peso no es valida ni puede ser futura" });
+  if (msg === "PROGRESS_WEIGHT_INVALID") return res.status(400).json({ code: msg, error: "Ingresa un peso valido entre 20 y 350 kg" });
   if (msg === "CANNOT_ASSIGN_SELF") {
     return res.status(400).json({ error: "No podés asignar el mismo usuario como coach y cliente" });
   }
@@ -522,11 +524,9 @@ class ControladorUsuarios {
 
       const { id } = req.user;
 
-      if (!req.user?.impersonation) {
-        await this.servicio.touchLastActivity(id);
-      }
-
-      const user = await this.servicio.getById(id);
+      const user = req.user?.impersonation
+        ? await this.servicio.getById(id)
+        : await this.servicio.getByIdForAuth(id);
       if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
 
       return res.json({
@@ -1479,6 +1479,25 @@ class ControladorUsuarios {
       const userId = req.user?.id || req.user?._id || null;
       const user = await this.servicio.clientUpdateGoals(userId, req.body || {});
       return res.json({ ok: true, user: mapUserPublic(user) });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  getMyProgress = async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?._id || null;
+      return res.json(await this.servicio.getMyProgress(userId));
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  upsertMyWeight = async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?._id || null;
+      const data = await this.servicio.upsertMyWeight(userId, req.body || {});
+      return res.json({ ok: true, ...data, user: mapUserPublic(data.user) });
     } catch (error) {
       return adminError(res, error);
     }

@@ -4,7 +4,9 @@ import test from "node:test";
 import {
   equivalentMealScore,
   equivalentTargetFromFilters,
+  filterWithNutritionFacets,
   mealCompatibleWithRestrictions,
+  nutritionFacetBucket,
 } from "../servicio/nutritionLibrary.js";
 
 test("biblioteca ordena primero kcal, luego proteina y despues C/G", () => {
@@ -15,6 +17,41 @@ test("biblioteca ordena primero kcal, luego proteina y despues C/G", () => {
   assert.ok(close.score < farCalories.score);
   assert.ok(close.score < wrongType.score);
   assert.equal(close.diff.kcal, 0);
+});
+
+test("un filtro exclusivo de calorias no penaliza macros que el usuario dejo libres", () => {
+  const target = equivalentTargetFromFilters({ targetKcal: 2500 });
+  const highProtein = equivalentMealScore({ totales: { kcal: 2500, proteina: 180, carbs: 280, grasas: 70 } }, target);
+  const lowProtein = equivalentMealScore({ totales: { kcal: 2500, proteina: 20, carbs: 30, grasas: 5 } }, target);
+  assert.equal(highProtein.score, lowProtein.score);
+  assert.equal(highProtein.score, 0);
+});
+
+test("los menus generan solamente los rangos caloricos y proteicos que existen", () => {
+  const items = [
+    { id: "a", kind: "menu", totales: { kcal: 2560, proteina: 154 } },
+    { id: "b", kind: "menu", totales: { kcal: 1920, proteina: 118 } },
+  ];
+  const all = filterWithNutritionFacets(items, {}, { kind: "menu" });
+  assert.deepEqual(all.facets.calories, [{ value: 1900, count: 1 }, { value: 2600, count: 1 }]);
+  assert.deepEqual(all.facets.proteins, [{ value: 120, count: 1 }, { value: 150, count: 1 }]);
+  const selected = filterWithNutritionFacets(items, { calorieBucket: 2600 }, { kind: "menu" });
+  assert.deepEqual(selected.items.map((item) => item.id), ["a"]);
+  assert.deepEqual(selected.facets.proteins, [{ value: 150, count: 1 }]);
+});
+
+test("las comidas redondean a 50 kcal, ofrecen solo tipos existentes y encadenan filtros", () => {
+  const items = [
+    { id: "a", kind: "comida", tipoComida: "almuerzo", totales: { kcal: 500, proteina: 32 } },
+    { id: "b", kind: "comida", tipoComida: "snack", totales: { kcal: 360, proteina: 17 } },
+    { id: "c", kind: "comida", tipoComida: "snack", totales: { kcal: 390, proteina: 24 } },
+  ];
+  assert.equal(nutritionFacetBucket(360, { kind: "meal", field: "kcal" }), 350);
+  const snack = filterWithNutritionFacets(items, { tipoComida: "snack" }, { kind: "meal" });
+  assert.deepEqual(snack.facets.types, [{ value: "almuerzo", count: 1 }, { value: "snack", count: 2 }]);
+  assert.deepEqual(snack.facets.calories, [{ value: 350, count: 1 }, { value: 400, count: 1 }]);
+  const selected = filterWithNutritionFacets(items, { tipoComida: "snack", calorieBucket: 400, proteinBucket: 25 }, { kind: "meal" });
+  assert.deepEqual(selected.items.map((item) => item.id), ["c"]);
 });
 
 test("biblioteca cliente excluye comidas con alimentos restringidos por ID o semantica", () => {

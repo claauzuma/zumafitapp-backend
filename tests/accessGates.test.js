@@ -155,10 +155,11 @@ test("coach con scope de entrenamiento no bloquea edicion nutricional del client
   }));
 });
 
-test("funciones automaticas se mantienen coming soon", () => {
+test("menus automaticos quedan habilitados solo desde Pro", () => {
+  assert.doesNotThrow(() => requireCapability({ role: "cliente", plan: "pro" }, "nutrition.autoMenus"));
   assert.throws(
-    () => requireCapability({ role: "cliente", plan: "pro" }, "nutrition.autoMenus"),
-    (error) => error.code === "FEATURE_COMING_SOON" && error.feature === "nutrition.autoMenus"
+    () => requireCapability({ role: "cliente", plan: "free" }, "nutrition.autoMenus"),
+    (error) => error.code === "PLAN_CAPABILITY_REQUIRED" && error.feature === "nutrition.autoMenus"
   );
 });
 

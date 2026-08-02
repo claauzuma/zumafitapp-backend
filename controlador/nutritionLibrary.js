@@ -9,6 +9,7 @@ function sendError(res, error) {
   if (msg === "FORBIDDEN") return res.status(403).json({ error: "No tenes permisos para este contenido" });
   if (msg === "NOT_FOUND") return res.status(404).json({ error: "Contenido no encontrado" });
   if (msg === "ID_INVALIDO") return res.status(400).json({ error: "ID invalido" });
+  if (msg === "INVALID_CONTEXT_TARGET") return res.status(400).json({ error: "Fecha u objetivo nutricional contextual invalido" });
   if (msg === "CLIENTES_REQUERIDOS") return res.status(400).json({ error: "Selecciona al menos un cliente" });
   if (msg === "CLIENTE_INVALIDO") return res.status(400).json({ error: "Cliente invalido" });
   if (msg === "CLIENT_NOT_ASSIGNED_TO_COACH") {

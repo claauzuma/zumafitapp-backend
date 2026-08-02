@@ -97,8 +97,8 @@ export const PERSONAL_PLAN_CATALOG = {
       tracking: true,
       weeklyPlanning: true,
       equivalences: true,
-      automaticMeals: "coming_soon",
-      automaticMenus: "coming_soon",
+      automaticMeals: true,
+      automaticMenus: true,
       mealTargets: true,
       autoCompleteRemainingMeals: true,
       flexibleMarginRecommendations: true,
@@ -136,8 +136,8 @@ export const PERSONAL_PLAN_CATALOG = {
       tracking: true,
       weeklyPlanning: true,
       equivalences: true,
-      automaticMeals: "coming_soon",
-      automaticMenus: "coming_soon",
+      automaticMeals: true,
+      automaticMenus: true,
       mealTargets: true,
       autoCompleteRemainingMeals: true,
       flexibleMarginRecommendations: true,
@@ -513,7 +513,9 @@ function buildFeatureAvailability({
   const autoCoachAvailability = autoCoachMode === "disabled"
     ? blockedFeature("disabled")
     : futureFeature(autoCoachMode);
-  const automaticAvailability = isFree ? blockedFeature("plan_upgrade_required") : futureFeature("generation");
+  const automaticAvailability = isFree
+    ? blockedFeature("plan_upgrade_required")
+    : includedFeature("tracking_calorie_fill_v1");
   const canAutoCompleteRemainingMeals = hasCoach
     ? effectiveService?.nutrition?.autoCompleteRemainingMeals === true
     : planConfig?.nutrition?.autoCompleteRemainingMeals === true;
@@ -587,7 +589,11 @@ function capabilityFromCatalog(planConfig = {}, baseCapabilities = {}) {
     canUseGlobalLibrary: ["global", "premium"].includes(planConfig.library),
     canUsePremiumLibrary: planConfig.library === "premium",
     canGenerateAutomaticMenu: planConfig.nutrition?.automaticMenus === true,
-    automaticMenusStatus: planConfig.nutrition?.automaticMenus === "coming_soon" ? "coming_soon" : "blocked",
+    automaticMenusStatus: planConfig.nutrition?.automaticMenus === true
+      ? "available"
+      : planConfig.nutrition?.automaticMenus === "coming_soon"
+        ? "coming_soon"
+        : "blocked",
     automaticRoutineStatus: planConfig.training?.automaticRoutine === "coming_soon" ? "coming_soon" : "blocked",
     canUseEquivalences: planConfig.nutrition?.equivalences === true,
     canUseMealTargets: planConfig.nutrition?.mealTargets === true,
