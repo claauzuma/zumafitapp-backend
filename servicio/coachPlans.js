@@ -1,9 +1,21 @@
+import { normalizeClientAutonomyPlanConfig } from "./clientMenuAutonomy.js";
+
 export const COACH_PLAN_CODES = ["trial_pro", "pro", "vip"];
 
 export const COACH_LIMIT_MAXIMUMS = Object.freeze({
   maxActiveClients: 10000,
   maxCoachOwnedMenus: 100000,
   maxCoachOwnedMeals: 250000,
+});
+
+const DEFAULT_CLIENT_AUTONOMY = Object.freeze({
+  defaultPreset: "equivalences",
+  availablePresets: Object.freeze({
+    total: true,
+    equivalences: true,
+    coach_only: true,
+    view_only: true,
+  }),
 });
 
 export const BASE_COACH_PLAN_CONFIGS = {
@@ -14,6 +26,7 @@ export const BASE_COACH_PLAN_CONFIGS = {
     maxClients: 3,
     maxCoachOwnedMenus: 10,
     maxCoachOwnedMeals: 30,
+    clientAutonomy: DEFAULT_CLIENT_AUTONOMY,
     features: {
       clients: {
         canAssign: true,
@@ -62,6 +75,7 @@ export const BASE_COACH_PLAN_CONFIGS = {
     maxClients: 25,
     maxCoachOwnedMenus: 100,
     maxCoachOwnedMeals: 300,
+    clientAutonomy: DEFAULT_CLIENT_AUTONOMY,
     features: {
       clients: {
         canAssign: true,
@@ -110,6 +124,7 @@ export const BASE_COACH_PLAN_CONFIGS = {
     maxClients: 100,
     maxCoachOwnedMenus: 500,
     maxCoachOwnedMeals: 1000,
+    clientAutonomy: DEFAULT_CLIENT_AUTONOMY,
     features: {
       clients: {
         canAssign: true,
@@ -218,6 +233,15 @@ export function createEmptyCoachOverrides() {
     maxCoachOwnedMenus: null,
     maxCoachOwnedMeals: null,
     trialEndsAt: null,
+    clientAutonomy: {
+      defaultPreset: null,
+      availablePresets: {
+        total: null,
+        equivalences: null,
+        coach_only: null,
+        view_only: null,
+      },
+    },
     features: {
       routines: {
         manualBuilder: null,
@@ -276,6 +300,10 @@ function mergeConfig(base, patch) {
   if (patch.maxCoachOwnedMeals !== undefined) {
     out.maxCoachOwnedMeals = Math.max(0, Number(patch.maxCoachOwnedMeals) || 0);
   }
+  out.clientAutonomy = normalizeClientAutonomyPlanConfig(
+    patch.clientAutonomy,
+    out.clientAutonomy || DEFAULT_CLIENT_AUTONOMY
+  );
 
   for (const section of Object.keys(out.features || {})) {
     if (!isPlainObject(patch.features?.[section])) continue;
@@ -324,8 +352,21 @@ function mergeNullableOverrides(base, raw) {
   if (!isPlainObject(raw)) return out;
 
   for (const key of Object.keys(out)) {
-    if (key === "features") continue;
+    if (key === "features" || key === "clientAutonomy") continue;
     if (raw[key] !== undefined) out[key] = raw[key];
+  }
+
+  if (isPlainObject(raw.clientAutonomy)) {
+    if (raw.clientAutonomy.defaultPreset !== undefined) {
+      out.clientAutonomy.defaultPreset = raw.clientAutonomy.defaultPreset;
+    }
+    if (isPlainObject(raw.clientAutonomy.availablePresets)) {
+      for (const key of Object.keys(out.clientAutonomy.availablePresets || {})) {
+        if (raw.clientAutonomy.availablePresets[key] !== undefined) {
+          out.clientAutonomy.availablePresets[key] = raw.clientAutonomy.availablePresets[key];
+        }
+      }
+    }
   }
 
   for (const section of Object.keys(out.features || {})) {
@@ -404,6 +445,22 @@ export function resolveEffectiveCoachCapabilities({
       : Number(base.maxCoachOwnedMeals || 0);
 
   let features = applyOverridesToFeatures(base.features || {}, overrides, sources);
+  const baseClientAutonomy = normalizeClientAutonomyPlanConfig(base.clientAutonomy, DEFAULT_CLIENT_AUTONOMY);
+  const clientAutonomyOverride = overrides.clientAutonomy || {};
+  const clientAutonomy = normalizeClientAutonomyPlanConfig({
+    defaultPreset: clientAutonomyOverride.defaultPreset || baseClientAutonomy.defaultPreset,
+    availablePresets: Object.fromEntries(Object.keys(baseClientAutonomy.availablePresets).map((key) => [
+      key,
+      clientAutonomyOverride.availablePresets?.[key] ?? baseClientAutonomy.availablePresets[key],
+    ])),
+  }, baseClientAutonomy);
+  sources.clientAutonomy = {
+    defaultPreset: clientAutonomyOverride.defaultPreset ? "override" : "plan",
+    availablePresets: Object.fromEntries(Object.keys(clientAutonomy.availablePresets).map((key) => [
+      key,
+      clientAutonomyOverride.availablePresets?.[key] == null ? "plan" : "override",
+    ])),
+  };
 
   const specialties = coach?.coachProfile?.specialties || {};
   const hasTraining = !!specialties.training;
@@ -486,9 +543,10 @@ export function resolveEffectiveCoachCapabilities({
       sources.maxClients === "override" ||
       sources.maxCoachOwnedMenus === "override" ||
       sources.maxCoachOwnedMeals === "override" ||
-      hasFeatureOverrides(overrides),
+      hasFeatureOverrides(overrides) || hasClientAutonomyOverrides(overrides),
     sources,
     disabledBySpecialty,
+    clientAutonomy,
     features,
   };
 }
@@ -500,6 +558,11 @@ function hasFeatureOverrides(overrides) {
     }
   }
   return false;
+}
+
+function hasClientAutonomyOverrides(overrides) {
+  if (overrides?.clientAutonomy?.defaultPreset) return true;
+  return Object.values(overrides?.clientAutonomy?.availablePresets || {}).some((value) => value !== null && value !== undefined);
 }
 
 export function createTrialSubscription({ planCode, now = new Date(), existing = {}, durationDays = 7 }) {

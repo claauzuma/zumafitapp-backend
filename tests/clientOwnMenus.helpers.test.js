@@ -135,7 +135,7 @@ test("desactiva menu propio activo si excede los dias permitidos por Free", asyn
   assert.equal(persistedPatch.menu.lastIncompatibleReason, "MENU_DAYS_LIMIT");
 });
 
-test("autoriza generacion automatica solo a clientes Pro/VIP autogestionados", async () => {
+test("autoriza generación automática por capability, incluso con coach, y falla cerrado sin permiso", async () => {
   const servicio = new ServicioClientOwnMenus();
   servicio._actor = async (user) => user;
   servicio.capabilities = async (user) => user.capabilities;
@@ -168,16 +168,23 @@ test("autoriza generacion automatica solo a clientes Pro/VIP autogestionados", a
     (error) => error.code === "PLAN_CAPABILITY_REQUIRED"
   );
 
+  const coached = await servicio.authorizeAutomaticGeneration({
+    capabilities: {
+      plan: "free",
+      hasCoach: true,
+      clientType: "with_coach",
+      canGenerateAutomaticMenu: true,
+      canAutoCalculateTrackingQuantities: true,
+      limits: { automaticMealFoods: 6 },
+    },
+  });
+  assert.equal(coached.authorized, true);
+  assert.equal(coached.previewOnly, true);
+
   await assert.rejects(
     () => servicio.authorizeAutomaticGeneration({
-      capabilities: {
-        plan: "vip",
-        hasCoach: true,
-        clientType: "with_coach",
-        canGenerateAutomaticMenu: true,
-        canAutoCalculateTrackingQuantities: true,
-      },
+      capabilities: { hasCoach: true, clientType: "with_coach" },
     }),
-    (error) => error.code === "CLIENT_MENU_FORBIDDEN"
+    (error) => error.code === "PLAN_CAPABILITY_REQUIRED"
   );
 });

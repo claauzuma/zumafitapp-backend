@@ -66,6 +66,13 @@ import {
   professionalTemplateSource,
   resolveProfessionalLibraryCapabilities,
 } from "./professionalLibraryCapabilities.js";
+import { normalizeClientMenuAutonomyPreset, resolveClientMenuAutonomyPermissions } from "./clientMenuAutonomy.js";
+import {
+  ageFromBirthDate,
+  calculateActivityFactor,
+  calculateMaintenancePreview,
+  calculateNutritionGoalPreview,
+} from "./nutritionGoalCalculator.js";
 
 const COACH_INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 const COACH_INVITATION_REJECT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
@@ -2618,9 +2625,13 @@ class ServicioUsuarios {
 
     const coachIdToStore = toMongoIdOrString(coachRealId);
     const servicePackage = normalizeServicePackage(invite.servicePackage || invite.coachAccess?.servicePackage || "service_pro");
+    requireCoachCanOfferService(coach, servicePackage);
     const serviceScopes = Array.isArray(invite.serviceScopes || invite.coachAccess?.serviceScopes) && (invite.serviceScopes || invite.coachAccess.serviceScopes).length
       ? (invite.serviceScopes || invite.coachAccess.serviceScopes).map((scope) => String(scope || "").trim().toLowerCase()).filter(Boolean)
       : ["training", "nutrition"];
+    for (const scope of serviceScopes.filter((value) => ["training", "nutrition"].includes(value))) {
+      requireProfessionalScope(coach, scope);
+    }
     const now = new Date();
     const pendingCoachAccess = {
       status: "accepted_pending_activation",
@@ -4187,7 +4198,6 @@ class ServicioUsuarios {
 
   _sanitizeClientPermissionsForCoach(coach, effectiveCapabilities, raw = {}) {
     const permissions = isPlainObject(raw) ? raw : {};
-    const menuInput = isPlainObject(permissions.menu) ? permissions.menu : {};
     const routineInput = isPlainObject(permissions.routine) ? permissions.routine : {};
     const progressInput = isPlainObject(permissions.progress) ? permissions.progress : {};
     const trackingInput = isPlainObject(permissions.tracking) ? permissions.tracking : {};
@@ -4203,14 +4213,30 @@ class ServicioUsuarios {
     const canMenu = !!specialties.nutrition && !trialExpired && anyTruthy(menuFeatures);
     const canRoutine = !!specialties.training && !trialExpired && anyTruthy(routineFeatures);
     const canProgress = (canMenu || canRoutine) && !trialExpired;
+    const autonomy = resolveClientMenuAutonomyPermissions(permissions, effectiveCapabilities?.clientAutonomy || {});
+    const menuInput = autonomy.menu;
+    const autonomyTracking = autonomy.tracking;
+    const canClientGenerateMenu = !!menuFeatures.automaticGenerator || !!menuFeatures.semiAutomaticBuilder;
 
     return {
       menu: {
+        autonomyPreset: autonomy.preset,
+        autonomySource: cleanString(permissions?.menu?.autonomySource, 40) || (
+          Object.prototype.hasOwnProperty.call(permissions?.menu || {}, "autonomyPreset")
+            ? "relationship_override"
+            : "coach_plan_default"
+        ),
+        autonomyDefaultPreset: effectiveCapabilities?.clientAutonomy?.defaultPreset || "equivalences",
+        availableAutonomyPresets: effectiveCapabilities?.clientAutonomy?.availablePresets || {},
         canViewMenu: canMenu && boolFrom(menuInput.canViewMenu, true),
         canEditPreferences: canMenu && boolFrom(menuInput.canEditPreferences, true),
+        canUseLibrary: canMenu && menuInput.canUseLibrary === true,
+        canCreateOwnMenu: canMenu && menuInput.canCreateOwnMenu === true,
+        canActivateOwnMenuOverCoachPlan:
+          canMenu && menuInput.canActivateOwnMenuOverCoachPlan === true,
         canUseAutomaticMenu:
           canMenu &&
-          !!menuFeatures.automaticGenerator &&
+          canClientGenerateMenu &&
           boolFrom(menuInput.canUseAutomaticMenu, false),
         canUseSemiAutomaticMenu:
           canMenu &&
@@ -4219,9 +4245,9 @@ class ServicioUsuarios {
         canRequestMenuChanges: canMenu && boolFrom(menuInput.canRequestMenuChanges, true),
       },
       tracking: {
-        canTrackFoods: canMenu && boolFrom(trackingInput.canTrackFoods, true),
-        canUseMenuAlternatives: canMenu && boolFrom(trackingInput.canUseMenuAlternatives, true),
-        canCreateEquivalentMeals: canMenu && boolFrom(trackingInput.canCreateEquivalentMeals, true),
+        canTrackFoods: canMenu && boolFrom(autonomyTracking.canTrackFoods, true),
+        canUseMenuAlternatives: canMenu && boolFrom(autonomyTracking.canUseMenuAlternatives, true),
+        canCreateEquivalentMeals: canMenu && boolFrom(autonomyTracking.canCreateEquivalentMeals, true),
         ...normalizeEquivalentTrackingSettings(trackingInput),
       },
       routine: {
@@ -4703,6 +4729,165 @@ class ServicioUsuarios {
     return { invitations };
   };
 
+  _activateAcceptedCoachInvitation = async ({
+    client,
+    invitation,
+    acceptance,
+    actorType = "client",
+    actorId = null,
+  }) => {
+    const coach = acceptance?.coach;
+    if (!coach || !acceptance?.activeCoachAccess || !acceptance?.coachAssignment) {
+      throw new Error("INVITATION_NOT_FOUND");
+    }
+    const resolvedCoachId = coach._id || coach.id || invitation?.assignedCoachId;
+    const nextCoachId = idToString(acceptance.coachAssignment.entrenadorId);
+    const clientId = client?._id || client?.id;
+    const currentCoachId = activeCoachIdFromUser(client);
+    if (currentCoachId && currentCoachId !== nextCoachId) {
+      throw new Error("CLIENT_ALREADY_HAS_ACTIVE_COACH");
+    }
+    if (currentCoachId === nextCoachId && String(client?.coachAccess?.status || "") === "active") {
+      throw new Error("CLIENT_ALREADY_ACTIVE_WITH_COACH");
+    }
+    if (await this.clientCoachBlocksModel.isBlocked({ clientId, coachId: nextCoachId })) {
+      throw new Error("COACH_BLOCKED_BY_CLIENT");
+    }
+
+    requireCoachCanOfferService(coach, acceptance.activeCoachAccess.servicePackage);
+    const currentActiveClients = await this._countClientsForCoach(resolvedCoachId);
+    const effectiveCapabilities = acceptance.effectiveCapabilities || await this._resolveEffectiveCapabilities(coach, {
+      currentClients: currentActiveClients,
+    });
+    const capacity = await this.coachCapacityModel.reserveSlot({
+      coachId: resolvedCoachId,
+      invitationId: invitation._id || invitation.id,
+      clientId,
+      limit: effectiveCapabilities.maxClients,
+      activeCount: currentActiveClients,
+      now: new Date(),
+    });
+    if (!capacity.reserved) {
+      throw coachClientCapacityError(effectiveCapabilities, Number(capacity.used || currentActiveClients || 0));
+    }
+
+    const now = new Date();
+    const personalPlan = toDbPlan(client.personalPlan || client.plan || client?.personalSubscription?.plan || "free");
+    const personalSubscription = client.personalSubscription || {};
+    const periodEndRaw = personalSubscription.currentPeriodEnd || personalSubscription.paidUntil || null;
+    const periodEnd = periodEndRaw ? new Date(periodEndRaw) : null;
+    const hasPaidPeriod = ["pro", "vip"].includes(personalPlan) && periodEnd && Number.isFinite(periodEnd.getTime()) && periodEnd.getTime() > now.getTime();
+    const patch = {
+      coach: {
+        ...(client?.coach || {}),
+        ...acceptance.coachAssignment,
+        assignedAt: now,
+      },
+      coachAccess: { ...acceptance.activeCoachAccess, startedAt: now, updatedAt: now },
+      clientPermissions: acceptance.clientPermissions,
+      updatedAt: now,
+    };
+
+    if (!client?.onboarding?.done) {
+      patch.onboarding = this._onboardingFromCoachInvite(
+        isPlainObject(invitation?.onboarding) ? invitation.onboarding : { enabled: false, mode: "none" },
+        now
+      );
+    }
+    if (["pro", "vip"].includes(personalPlan)) {
+      patch.personalSubscription = {
+        ...personalSubscription,
+        plan: personalPlan,
+        status: hasPaidPeriod ? "cancel_at_period_end" : "suppressed_by_coach",
+        autoRenew: false,
+        currentPeriodEnd: hasPaidPeriod ? periodEnd : (personalSubscription.currentPeriodEnd || null),
+        suppressedReason: "coach_access",
+        updatedAt: now,
+      };
+    }
+
+    let updated;
+    let activatedInvite;
+    try {
+      updated = await this.updateById(clientId, patch);
+      activatedInvite = await this.invitedModel.updateById(invitation._id || invitation.id, {
+        status: "active",
+        acceptedUserId: toMongoIdOrString(updated?._id || updated?.id || clientId),
+        acceptedAt: invitation.acceptedAt || now,
+        activatedAt: now,
+        updatedAt: now,
+      });
+    } catch (error) {
+      await this.coachCapacityModel.releaseSlot({
+        coachId: resolvedCoachId,
+        invitationId: invitation._id || invitation.id,
+        clientId,
+        now: new Date(),
+      });
+      throw error;
+    }
+
+    await recordAccessAuditEvent({
+      subjectType: "client",
+      subjectId: updated?._id || updated?.id || clientId,
+      actorType,
+      actorId: actorId || updated?._id || updated?.id || clientId,
+      event: "coach_access_activated",
+      previousValue: {
+        coachAccess: client?.coachAccess || null,
+        personalSubscription: client?.personalSubscription || null,
+      },
+      nextValue: {
+        coachAccess: patch.coachAccess,
+        personalSubscription: patch.personalSubscription || client?.personalSubscription || null,
+      },
+      reason: actorType === "client" ? "client_accepted_coach_invitation" : "coach_activated_legacy_invitation",
+      metadata: {
+        invitationId: invitation?._id || invitation?.id || null,
+        servicePackage: patch.coachAccess?.servicePackage || null,
+        automaticActivation: actorType === "client",
+      },
+    });
+    await recordAccessAuditEvent({
+      subjectType: "coach",
+      subjectId: resolvedCoachId,
+      actorType: "client",
+      actorId: updated?._id || updated?.id || clientId,
+      event: "client_invitation_accepted",
+      dedupeKey: `coach-invite-active:${idToString(invitation?._id || invitation?.id)}`,
+      notificationVisible: true,
+      notificationImmediate: true,
+      reason: "client_accepted_and_linked",
+      metadata: {
+        invitationId: invitation?._id || invitation?.id || null,
+        clientId: idToString(updated?._id || updated?.id || clientId),
+      },
+    });
+
+    if (patch.personalSubscription?.status) {
+      await recordAccessAuditEvent({
+        subjectType: "client",
+        subjectId: updated?._id || updated?.id || clientId,
+        actorType: "system",
+        actorId: null,
+        event: "personal_renewal_suppressed",
+        previousValue: { personalSubscription: client?.personalSubscription || null },
+        nextValue: { personalSubscription: patch.personalSubscription },
+        reason: "coach_access_primary",
+        metadata: { coachId: resolvedCoachId },
+      });
+    }
+
+    return {
+      user: updated,
+      client: updated,
+      invitation: this._publicCoachClientInvitation(activatedInvite || invitation, coach),
+      coach,
+      status: "active",
+      capacity,
+    };
+  };
+
   clientAcceptCoachInvitation = async ({ userId, invitationId }) => {
     const user = await this.getById(userId);
     if (!user) throw new Error("NOT_FOUND");
@@ -4710,7 +4895,7 @@ class ServicioUsuarios {
 
     const invite = await this._getPendingCoachClientInvitationForUser(user, invitationId);
     const acceptance = await this._prepareCoachClientInviteAcceptance(invite);
-    if (!acceptance?.pendingCoachAccess) throw new Error("INVITATION_NOT_FOUND");
+    if (!acceptance?.activeCoachAccess) throw new Error("INVITATION_NOT_FOUND");
 
     const currentCoachId = activeCoachIdFromUser(user);
     const nextCoachId = idToString(acceptance.coachAssignment.entrenadorId);
@@ -4720,30 +4905,15 @@ class ServicioUsuarios {
     if (await this.clientCoachBlocksModel.isBlocked({ clientId: user._id || user.id || userId, coachId: nextCoachId })) {
       throw new Error("COACH_BLOCKED_BY_CLIENT");
     }
-    const pendingCoachAccess = user?.coachAccess || {};
-    const pendingCoachId = String(pendingCoachAccess.status || "") === "accepted_pending_activation"
-      ? idToString(pendingCoachAccess.coachId)
-      : "";
-    if (pendingCoachId && pendingCoachId !== nextCoachId) {
-      throw new Error("CLIENT_ALREADY_HAS_PENDING_COACH");
-    }
-
     const now = new Date();
-    const patch = {
-      coachAccess: acceptance.pendingCoachAccess,
-      clientPermissions: acceptance.clientPermissions,
-      updatedAt: now,
-    };
-
-    if (!user?.onboarding?.done) {
-      const inviteOnboarding = isPlainObject(invite?.onboarding)
-        ? invite.onboarding
-        : { enabled: false, mode: "none" };
-      patch.onboarding = this._onboardingFromCoachInvite(inviteOnboarding, now);
-    }
-
-    const updated = await this.updateById(user._id || user.id || userId, patch);
-    const acceptedInvite = await this._markCoachInviteAcceptedPendingActivation(invite._id, updated?._id || updated?.id);
+    const activation = await this._activateAcceptedCoachInvitation({
+      client: user,
+      invitation: invite,
+      acceptance,
+      actorType: "client",
+      actorId: user._id || user.id || userId,
+    });
+    const updated = activation.user;
     const redirect = this._clientInvitationNextPath(updated);
 
     if (typeof this.invitedModel.findByEmail === "function") {
@@ -4763,27 +4933,8 @@ class ServicioUsuarios {
         })));
     }
 
-    await recordAccessAuditEvent({
-      subjectType: "client",
-      subjectId: updated?._id || updated?.id || userId,
-      actorType: "client",
-      actorId: updated?._id || updated?.id || userId,
-      event: "coach_invitation_accepted",
-      previousValue: { coachAccess: user?.coachAccess || null },
-      nextValue: { coachAccess: acceptance.pendingCoachAccess },
-      reason: "client_accepted_coach_invitation",
-      metadata: {
-        invitationId: invite?._id || invite?.id || null,
-        coachId: nextCoachId,
-        servicePackage: acceptance.pendingCoachAccess?.servicePackage || null,
-      },
-    });
-
     return {
-      user: updated,
-      invitation: this._publicCoachClientInvitation(acceptedInvite || invite, acceptance.coach),
-      coach: acceptance.coach,
-      status: "accepted_pending_activation",
+      ...activation,
       ...redirect,
     };
   };
@@ -4809,130 +4960,18 @@ class ServicioUsuarios {
       throw new Error("INVITATION_NOT_FOUND");
     }
 
-    requireCoachCanOfferService(coach, acceptance.activeCoachAccess.servicePackage);
-
     const client = invitation.acceptedUserId
       ? await this.getById(invitation.acceptedUserId)
       : await this._findUserByEmail(invitation.email);
     if (!client) throw new Error("NOT_FOUND");
     if (!this._isClientUser(client)) throw new Error("USER_NOT_CLIENT");
-
-    const currentCoachId = activeCoachIdFromUser(client);
-    const nextCoachId = idToString(acceptance.coachAssignment.entrenadorId);
-    if (currentCoachId && currentCoachId !== nextCoachId) {
-      throw new Error("CLIENT_ALREADY_HAS_ACTIVE_COACH");
-    }
-    if (await this.clientCoachBlocksModel.isBlocked({ clientId: client._id || client.id, coachId: nextCoachId })) {
-      throw new Error("COACH_BLOCKED_BY_CLIENT");
-    }
-
-    const currentActiveClients = await this.model.countClientsByCoachId(coach._id || coach.id || coachId);
-    const effectiveCapabilities = acceptance.effectiveCapabilities || await this._resolveEffectiveCapabilities(coach, {
-      currentClients: currentActiveClients,
-    });
-    const capacity = await this.coachCapacityModel.reserveSlot({
-      coachId: resolvedCoachId,
-      invitationId: invitation._id,
-      clientId: client._id || client.id,
-      limit: effectiveCapabilities.maxClients,
-      activeCount: currentActiveClients,
-      now: new Date(),
-    });
-
-    if (!capacity.reserved) {
-      throw coachClientCapacityError(effectiveCapabilities, Number(capacity.used || currentActiveClients || 0));
-    }
-
-    const now = new Date();
-    const personalPlan = toDbPlan(client.personalPlan || client.plan || client?.personalSubscription?.plan || "free");
-    const personalSubscription = client.personalSubscription || {};
-    const periodEndRaw = personalSubscription.currentPeriodEnd || personalSubscription.paidUntil || null;
-    const periodEnd = periodEndRaw ? new Date(periodEndRaw) : null;
-    const hasPaidPeriod = ["pro", "vip"].includes(personalPlan) && periodEnd && Number.isFinite(periodEnd.getTime()) && periodEnd.getTime() > now.getTime();
-    const patch = {
-      coach: {
-        ...(client?.coach || {}),
-        ...acceptance.coachAssignment,
-        assignedAt: now,
-      },
-      coachAccess: acceptance.activeCoachAccess,
-      clientPermissions: acceptance.clientPermissions,
-      updatedAt: now,
-    };
-
-    if (["pro", "vip"].includes(personalPlan)) {
-      patch.personalSubscription = {
-        ...personalSubscription,
-        plan: personalPlan,
-        status: hasPaidPeriod ? "cancel_at_period_end" : "suppressed_by_coach",
-        autoRenew: false,
-        currentPeriodEnd: hasPaidPeriod ? periodEnd : (personalSubscription.currentPeriodEnd || null),
-        suppressedReason: "coach_access",
-        updatedAt: now,
-      };
-    }
-
-    let updated;
-    let activatedInvite;
-    try {
-      updated = await this.updateById(client._id || client.id, patch);
-      activatedInvite = await this.invitedModel.updateById(invitation._id, {
-        status: "active",
-        activatedAt: now,
-        updatedAt: now,
-      });
-    } catch (error) {
-      await this.coachCapacityModel.releaseSlot({
-        coachId: resolvedCoachId,
-        invitationId: invitation._id,
-        clientId: client._id || client.id,
-        now: new Date(),
-      });
-      throw error;
-    }
-
-    await recordAccessAuditEvent({
-      subjectType: "client",
-      subjectId: updated?._id || updated?.id || client?._id || client?.id,
+    return await this._activateAcceptedCoachInvitation({
+      client,
+      invitation,
+      acceptance,
       actorType: "coach",
-      actorId: coach._id || coach.id || coachId,
-      event: "coach_access_activated",
-      previousValue: {
-        coachAccess: client?.coachAccess || null,
-        personalSubscription: client?.personalSubscription || null,
-      },
-      nextValue: {
-        coachAccess: acceptance.activeCoachAccess,
-        personalSubscription: patch.personalSubscription || client?.personalSubscription || null,
-      },
-      reason: "coach_activated_client_access",
-      metadata: {
-        invitationId: invitation?._id || invitation?.id || null,
-        servicePackage: acceptance.activeCoachAccess?.servicePackage || null,
-      },
+      actorId: resolvedCoachId,
     });
-
-    if (patch.personalSubscription?.status) {
-      await recordAccessAuditEvent({
-        subjectType: "client",
-        subjectId: updated?._id || updated?.id || client?._id || client?.id,
-        actorType: "system",
-        actorId: null,
-        event: "personal_renewal_suppressed",
-        previousValue: { personalSubscription: client?.personalSubscription || null },
-        nextValue: { personalSubscription: patch.personalSubscription },
-        reason: "coach_access_primary",
-        metadata: { coachId: coach._id || coach.id || coachId },
-      });
-    }
-
-    return {
-      user: updated,
-      client: updated,
-      invitation: this._publicCoachClientInvitation(activatedInvite || invitation, coach),
-      coach,
-      status: "active",
-    };
   };
 
   clientDeclineCoachInvitation = async ({ userId, invitationId }) => {
@@ -5786,6 +5825,14 @@ class ServicioUsuarios {
     const nextOverrides = normalizeCoachOverrides({
       ...(user?.coachOverrides || {}),
       ...sanitizedPayload,
+      clientAutonomy: {
+        ...(user?.coachOverrides?.clientAutonomy || {}),
+        ...(sanitizedPayload?.clientAutonomy || {}),
+        availablePresets: {
+          ...(user?.coachOverrides?.clientAutonomy?.availablePresets || {}),
+          ...(sanitizedPayload?.clientAutonomy?.availablePresets || {}),
+        },
+      },
       features: {
         ...(user?.coachOverrides?.features || {}),
         ...(sanitizedPayload?.features || {}),
@@ -5867,16 +5914,8 @@ class ServicioUsuarios {
     };
   };
 
-  adminStartImpersonation = async ({ adminId, targetUserId }) => {
+  _startReadOnlyImpersonation = async ({ actor, actorType, target }) => {
     if (!process.env.JWT_SECRET) throw new Error("Falta JWT_SECRET en .env");
-
-    const admin = await this.getById(adminId);
-    if (!admin) throw new Error("NOT_FOUND");
-    if (normalizeRole(admin?.role) !== "admin") throw new Error("ADMIN_REQUIRED");
-
-    const target = await this.getById(targetUserId);
-    if (!target) throw new Error("NOT_FOUND");
-
     const targetRole = normalizeRole(target?.role);
     if (targetRole === "admin") throw new Error("CANNOT_IMPERSONATE_ADMIN");
     if (!["cliente", "coach"].includes(targetRole)) throw new Error("ROLE_NOT_IMPERSONABLE");
@@ -5891,7 +5930,9 @@ class ServicioUsuarios {
       await this.impersonationAuditModel.record({
         sessionId,
         action: "impersonation_started",
-        adminId: admin._id,
+        adminId: actorType === "admin" ? actor._id : null,
+        actorType,
+        actorId: actor._id || actor.id,
         targetUserId: target._id,
         targetRole,
         startedAt: now,
@@ -5905,7 +5946,10 @@ class ServicioUsuarios {
         uid: target._id,
         email: target.email,
         role: targetRole,
-        actorAdminId: admin._id,
+        actorId: actor._id || actor.id,
+        actorRole: actorType,
+        actorAdminId: actorType === "admin" ? (actor._id || actor.id) : null,
+        actorCoachId: actorType === "coach" ? (actor._id || actor.id) : null,
         targetUserId: target._id,
         targetRole,
         impersonation: true,
@@ -5921,9 +5965,29 @@ class ServicioUsuarios {
       token,
       expiresAt,
       sessionId,
-      actorAdminId: admin._id,
+      actorId: actor._id || actor.id,
+      actorRole: actorType,
+      actorAdminId: actorType === "admin" ? (actor._id || actor.id) : null,
+      actorCoachId: actorType === "coach" ? (actor._id || actor.id) : null,
       targetUser: this._sanitizeUser(targetWithCapabilities),
     };
+  };
+
+  adminStartImpersonation = async ({ adminId, targetUserId }) => {
+    const admin = await this.getById(adminId);
+    if (!admin) throw new Error("NOT_FOUND");
+    if (normalizeRole(admin?.role) !== "admin") throw new Error("ADMIN_REQUIRED");
+    const target = await this.getById(targetUserId);
+    if (!target) throw new Error("NOT_FOUND");
+    return await this._startReadOnlyImpersonation({ actor: admin, actorType: "admin", target });
+  };
+
+  coachStartClientImpersonation = async ({ coachId, clientId }) => {
+    const { coach, client } = await this._getCoachClientPair({ coachId, clientId });
+    if (activeCoachIdFromUser(client) !== idToString(coach._id || coach.id || coachId)) {
+      throw new Error("CLIENT_NOT_ASSIGNED_TO_COACH");
+    }
+    return await this._startReadOnlyImpersonation({ actor: coach, actorType: "coach", target: client });
   };
 
   adminStopImpersonation = async (impersonation = {}) => {
@@ -5937,6 +6001,8 @@ class ServicioUsuarios {
         sessionId: impersonation.impersonationSessionId || null,
         action: "impersonation_ended",
         adminId: impersonation.actorAdminId,
+        actorType: impersonation.impersonationActorRole || (impersonation.actorAdminId ? "admin" : "coach"),
+        actorId: impersonation.impersonationActorId || impersonation.actorAdminId || impersonation.actorCoachId,
         targetUserId: impersonation.targetUserId || impersonation.id,
         targetRole: impersonation.targetRole || impersonation.role,
         startedAt: impersonation.impersonationStartedAt
@@ -5963,6 +6029,9 @@ class ServicioUsuarios {
       active: true,
       readOnly: !!impersonation.readOnly,
       actorAdminId: impersonation.actorAdminId || null,
+      actorCoachId: impersonation.actorCoachId || null,
+      actorId: impersonation.impersonationActorId || impersonation.actorAdminId || impersonation.actorCoachId || null,
+      actorRole: impersonation.impersonationActorRole || (impersonation.actorAdminId ? "admin" : "coach"),
       sessionId: impersonation.impersonationSessionId || null,
       startedAt: impersonation.impersonationStartedAt || null,
       targetUser: this._sanitizeUser(await this._withEffectiveCapabilities(target)),
@@ -6206,6 +6275,32 @@ class ServicioUsuarios {
     return updated;
   };
 
+  clientPreviewNutrition = async ({ userId, payload = {} }) => {
+    const user = await this.getById(userId);
+    if (!user) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(user)) throw new Error("USER_NOT_CLIENT");
+    const basics = user?.profile?.basics || {};
+    const incoming = isPlainObject(payload?.data) ? payload.data : payload;
+    const input = {
+      birthDate: incoming.birthDate ?? incoming.fechaNacimiento ?? basics.fechaNacimiento,
+      age: incoming.age,
+      sex: incoming.sex ?? incoming.sexo ?? incoming.genero ?? basics.genero,
+      weightKg: incoming.weightKg ?? incoming.pesoKg ?? user?.antropometriaActual?.pesoKg,
+      heightCm: incoming.heightCm ?? incoming.alturaCm ?? user?.antropometriaActual?.alturaCm,
+      activityFactor: incoming.activityFactor ?? incoming.factorActividad ?? basics.factorActividad,
+      activity: incoming.activity ?? incoming.actividadDiaria ?? basics.actividadDiaria,
+      exerciseFrequency: incoming.exerciseFrequency ?? incoming.frecuenciaEjercicio ?? basics.frecuenciaEjercicio,
+      goalType: incoming.goalType ?? incoming.objetivo ?? user?.goal?.type,
+      targetWeightKg: incoming.targetWeightKg ?? incoming.pesoObjetivoKg,
+      ratePctBWPerWeek: incoming.ratePctBWPerWeek ?? incoming.ritmoPctPesoSemanal,
+      maintenanceKcalOverride: incoming.maintenanceKcalOverride ?? incoming.tdeeCustom,
+    };
+    const preview = payload?.purpose === "maintenance"
+      ? calculateMaintenancePreview(input)
+      : calculateNutritionGoalPreview(input);
+    return { user, preview };
+  };
+
   getMyProgress = async (userId) => {
     const user = await this.getById(userId);
     if (!user) throw new Error("NOT_FOUND");
@@ -6357,6 +6452,46 @@ class ServicioUsuarios {
     });
 
     return result.user;
+  };
+
+  adminUpdateClientMenuAutonomy = async ({ clientId, preset = null, adminId = null }) => {
+    const client = await this.getById(clientId);
+    if (!client) throw new Error("NOT_FOUND");
+    if (!this._isClientUser(client)) throw new Error("USER_NOT_CLIENT");
+    const coachId = activeCoachIdFromUser(client);
+    if (!coachId) throw new Error("COACH_CLIENT_RELATION_REQUIRED");
+    const coach = await this.getById(coachId);
+    if (!coach || !this._isCoachUser(coach)) throw new Error("COACH_NOT_FOUND");
+    const effectiveCapabilities = await this._resolveEffectiveCapabilities(coach);
+    const requestedPreset = preset
+      ? normalizeClientMenuAutonomyPreset(preset, "view_only")
+      : effectiveCapabilities?.clientAutonomy?.defaultPreset || "equivalences";
+    if (effectiveCapabilities?.clientAutonomy?.availablePresets?.[requestedPreset] === false) {
+      throw new Error("CLIENT_AUTONOMY_PRESET_NOT_AVAILABLE");
+    }
+    const nextPermissions = this._sanitizeClientPermissionsForCoach(coach, effectiveCapabilities, {
+      ...(client?.clientPermissions || {}),
+      menu: {
+        ...(client?.clientPermissions?.menu || {}),
+        autonomyPreset: requestedPreset,
+      },
+    });
+    nextPermissions.menu.autonomySource = preset ? "relationship_override" : "coach_plan_default";
+    nextPermissions.menu.autonomyDefaultPreset = effectiveCapabilities?.clientAutonomy?.defaultPreset || "equivalences";
+    nextPermissions.menu.availableAutonomyPresets = effectiveCapabilities?.clientAutonomy?.availablePresets || {};
+    const updated = await this.updateById(clientId, { clientPermissions: nextPermissions, updatedAt: new Date() });
+    await recordAccessAuditEvent({
+      subjectType: "client",
+      subjectId: clientId,
+      actorType: "admin",
+      actorId: adminId,
+      event: "client_menu_autonomy_updated_by_admin",
+      previousValue: { clientPermissions: client?.clientPermissions || {} },
+      nextValue: { clientPermissions: nextPermissions },
+      reason: preset ? "relationship_override" : "restore_coach_plan_default",
+      metadata: { coachId, preset: requestedPreset },
+    });
+    return await this._withEffectiveCapabilities(updated);
   };
 
   adminGetCoachClients = async (coachId) => {
@@ -6795,6 +6930,155 @@ class ServicioUsuarios {
     return { coach, client: updated, assignmentInvalidation };
   };
 
+  coachPreviewClientNutrition = async ({ coachId, clientId, payload = {} }) => {
+    const { coach, client } = await this._getCoachClientPair({ coachId, clientId });
+    this._assertNutritionEditAllowed(coach);
+    const basics = client?.profile?.basics || {};
+    const incoming = isPlainObject(payload?.data) ? payload.data : payload;
+    const preview = calculateNutritionGoalPreview({
+      birthDate: incoming.birthDate ?? incoming.fechaNacimiento ?? basics.fechaNacimiento,
+      age: incoming.age,
+      sex: incoming.sex ?? incoming.sexo ?? incoming.genero ?? basics.genero,
+      weightKg: incoming.weightKg ?? incoming.pesoKg ?? client?.antropometriaActual?.pesoKg,
+      heightCm: incoming.heightCm ?? incoming.alturaCm ?? client?.antropometriaActual?.alturaCm,
+      activityFactor: incoming.activityFactor ?? incoming.factorActividad ?? basics.factorActividad,
+      activity: incoming.activity ?? incoming.actividadDiaria ?? basics.actividadDiaria,
+      exerciseFrequency: incoming.exerciseFrequency ?? incoming.frecuenciaEjercicio ?? basics.frecuenciaEjercicio,
+      goalType: incoming.goalType ?? incoming.objetivo ?? client?.goal?.type,
+      targetWeightKg: incoming.targetWeightKg ?? incoming.pesoObjetivoKg,
+      ratePctBWPerWeek: incoming.ratePctBWPerWeek ?? incoming.ritmoPctPesoSemanal,
+      maintenanceKcalOverride: incoming.maintenanceKcalOverride ?? incoming.tdeeCustom,
+    });
+    return { coach, client, preview };
+  };
+
+  coachUpdateClientOnboarding = async ({ coachId, clientId, payload = {} }) => {
+    const { coach, client } = await this._getCoachClientPair({ coachId, clientId });
+    this._assertNutritionEditAllowed(coach);
+    const incoming = isPlainObject(payload?.onboarding) ? payload.onboarding : payload;
+    const currentBasics = client?.profile?.basics || {};
+    const nextBasics = { ...currentBasics };
+    const currentAnthro = client?.antropometriaActual || {};
+    const changedFields = [];
+    const has = (key) => Object.prototype.hasOwnProperty.call(incoming, key);
+    const setChanged = (label, previous, next, apply) => {
+      if (previous !== undefined && previous !== null && String(previous) !== String(next)) changedFields.push(label);
+      apply(next);
+    };
+
+    if (has("fechaNacimiento") || has("birthDate")) {
+      const value = cleanString(incoming.fechaNacimiento ?? incoming.birthDate, 20);
+      if (!ageFromBirthDate(value)) throw new Error("FECHA_NACIMIENTO_INVALIDA");
+      setChanged("fecha de nacimiento", currentBasics.fechaNacimiento, value, (next) => { nextBasics.fechaNacimiento = next; });
+    }
+    if (has("genero") || has("sexo") || has("sex")) {
+      const value = cleanString(incoming.genero ?? incoming.sexo ?? incoming.sex, 30).toLowerCase();
+      if (!["masculino", "femenino", "prefiero_no_decir"].includes(value)) throw new Error("SEXO_INVALIDO");
+      setChanged("sexo", currentBasics.genero, value, (next) => { nextBasics.genero = next; });
+    }
+    let heightCm = currentAnthro.alturaCm;
+    if (has("alturaCm") || has("heightCm")) {
+      const value = Number(incoming.alturaCm ?? incoming.heightCm);
+      if (!Number.isFinite(value) || value < 120 || value > 230) throw new Error("ALTURA_INVALIDA");
+      setChanged("altura", currentAnthro.alturaCm, value, (next) => { heightCm = next; });
+    }
+    let weightKg = currentAnthro.pesoKg;
+    if (has("pesoKg") || has("weightKg")) {
+      const value = Number(incoming.pesoKg ?? incoming.weightKg);
+      if (!Number.isFinite(value) || value < 30 || value > 250) throw new Error("PESO_INVALIDO");
+      setChanged("peso", currentAnthro.pesoKg, value, (next) => { weightKg = next; });
+    }
+    if (has("actividadDiaria") || has("activity")) {
+      const value = cleanString(incoming.actividadDiaria ?? incoming.activity, 40);
+      if (value) {
+        if (!["sedentario", "none", "ligero", "moderado", "activo", "muy_activo"].includes(value)) throw new Error("ACTIVIDAD_INVALIDA");
+        setChanged("actividad diaria", currentBasics.actividadDiaria, value, (next) => { nextBasics.actividadDiaria = next; });
+      }
+    }
+    if (has("frecuenciaEjercicio") || has("exerciseFrequency")) {
+      const value = cleanString(incoming.frecuenciaEjercicio ?? incoming.exerciseFrequency, 30);
+      if (value) {
+        if (!["none", "0", "1_3", "4_6", "7_plus"].includes(value)) throw new Error("FRECUENCIA_EJERCICIO_INVALIDA");
+        setChanged("frecuencia de ejercicio", currentBasics.frecuenciaEjercicio, value, (next) => { nextBasics.frecuenciaEjercicio = next; });
+      }
+    }
+    const explicitFactor = incoming.factorActividad ?? incoming.activityFactor;
+    const factorActividad = calculateActivityFactor({
+      factor: explicitFactor ?? nextBasics.factorActividad,
+      actividadDiaria: nextBasics.actividadDiaria,
+      frecuenciaEjercicio: nextBasics.frecuenciaEjercicio,
+    });
+    if ((has("factorActividad") || has("activityFactor")) && factorActividad === null) throw new Error("ACTIVIDAD_INVALIDA");
+    if (factorActividad !== null) {
+      setChanged("factor de actividad", currentBasics.factorActividad, factorActividad, (next) => { nextBasics.factorActividad = next; });
+    }
+
+    const nextGoal = { ...(client?.goal || {}) };
+    if (has("objetivo") || has("goalType")) {
+      const value = cleanString(incoming.objetivo ?? incoming.goalType, 60);
+      if (value) setChanged("objetivo", client?.goal?.type, value, (next) => { nextGoal.type = next; });
+    }
+    if (changedFields.length && payload.confirmExisting !== true && incoming.confirmExisting !== true) {
+      const error = new Error("ONBOARDING_CONFIRMATION_REQUIRED");
+      error.changedFields = [...new Set(changedFields)];
+      throw error;
+    }
+
+    const preview = calculateNutritionGoalPreview({
+      birthDate: nextBasics.fechaNacimiento,
+      sex: nextBasics.genero,
+      weightKg,
+      heightCm,
+      activityFactor: nextBasics.factorActividad,
+      goalType: nextGoal.type,
+    });
+    const complete = payload.complete === true || incoming.complete === true;
+    if (complete && !preview.ready) {
+      const error = new Error("ONBOARDING_DATA_INCOMPLETE");
+      error.missingFields = preview.missingFields;
+      throw error;
+    }
+
+    const now = new Date();
+    const coachObjectId = toMongoIdOrString(coach._id || coach.id || coachId);
+    const patch = {
+      profile: { ...(client?.profile || {}), basics: nextBasics },
+      antropometriaActual: {
+        ...currentAnthro,
+        alturaCm: heightCm ?? null,
+        pesoKg: weightKg ?? null,
+        updatedAt: now,
+        updatedByCoachId: coachObjectId,
+      },
+      goal: { ...nextGoal, updatedAt: now, updatedByCoachId: coachObjectId },
+      onboarding: {
+        ...(client?.onboarding || {}),
+        enabled: true,
+        done: complete ? true : client?.onboarding?.done === true,
+        step: complete ? 3 : Math.max(1, Number(client?.onboarding?.step) || 1),
+        startedAt: client?.onboarding?.startedAt || now,
+        completedAt: complete ? now : (client?.onboarding?.completedAt || null),
+        updatedAt: now,
+        updatedByCoachId: coachObjectId,
+        source: "coach",
+      },
+      updatedAt: now,
+    };
+    const updated = await this.updateById(clientId, patch);
+    await recordAccessAuditEvent({
+      subjectType: "client",
+      subjectId: clientId,
+      actorType: "coach",
+      actorId: coachObjectId,
+      event: complete ? "onboarding_completed_by_coach" : "onboarding_updated_by_coach",
+      previousValue: { profile: client?.profile || {}, antropometriaActual: currentAnthro, goal: client?.goal || {} },
+      nextValue: { profile: patch.profile, antropometriaActual: patch.antropometriaActual, goal: patch.goal },
+      reason: "coach_manage_client_onboarding",
+      metadata: { changedFields: [...new Set(changedFields)], complete },
+    });
+    return { coach, client: updated, preview };
+  };
+
   coachUpdateClientMenu = async ({ coachId, clientId, payload = {} }) => {
     const { coach, client } = await this._getCoachClientPair({ coachId, clientId });
     const incoming = isPlainObject(payload?.menu) ? payload.menu : payload;
@@ -6813,30 +7097,29 @@ class ServicioUsuarios {
     const trackingPermissionsInput = isPlainObject(payload?.clientPermissions?.tracking)
       ? payload.clientPermissions.tracking
       : null;
-    const nextClientPermissions = trackingPermissionsInput
+    const menuPermissionsInput = isPlainObject(payload?.clientPermissions?.menu)
+      ? payload.clientPermissions.menu
+      : null;
+    const hasPermissionPatch = !!trackingPermissionsInput || !!menuPermissionsInput;
+    const rawPermissionPatch = hasPermissionPatch
       ? {
           ...(client?.clientPermissions || {}),
+          menu: {
+            ...(client?.clientPermissions?.menu || {}),
+            ...(menuPermissionsInput || {}),
+          },
           tracking: {
             ...(client?.clientPermissions?.tracking || {}),
-            ...(trackingPermissionsInput.canUseMenuAlternatives !== undefined
-              ? { canUseMenuAlternatives: !!trackingPermissionsInput.canUseMenuAlternatives }
-              : {}),
-            ...(trackingPermissionsInput.canCreateEquivalentMeals !== undefined
-              ? { canCreateEquivalentMeals: !!trackingPermissionsInput.canCreateEquivalentMeals }
-              : {}),
-            ...(trackingPermissionsInput.canTrackFoods !== undefined
-              ? { canTrackFoods: !!trackingPermissionsInput.canTrackFoods }
-              : {}),
-            ...(trackingPermissionsInput.equivalentNotificationMode !== undefined ||
-              trackingPermissionsInput.equivalentNotifyImportantImmediately !== undefined ||
-              trackingPermissionsInput.equivalentApprovalMode !== undefined
-              ? normalizeEquivalentTrackingSettings({
-                  ...(client?.clientPermissions?.tracking || {}),
-                  ...trackingPermissionsInput,
-                })
-              : {}),
+            ...(trackingPermissionsInput || {}),
           },
         }
+      : null;
+    const nextClientPermissions = rawPermissionPatch
+      ? this._sanitizeClientPermissionsForCoach(
+          coach,
+          coach?.effectiveCapabilities || await this._resolveEffectiveCapabilities(coach),
+          rawPermissionPatch
+        )
       : null;
 
     const nextMenu = {
@@ -7967,6 +8250,18 @@ class ServicioUsuarios {
 
       if (has("experienciaPesas") && data.experienciaPesas != null) {
         basics.experienciaPesas = String(data.experienciaPesas);
+      }
+
+      if (has("factorActividad") && data.factorActividad != null) {
+        const factor = calculateActivityFactor({ factor: data.factorActividad });
+        if (factor === null) throw new Error("ACTIVIDAD_INVALIDA");
+        basics.factorActividad = factor;
+      } else if (has("actividadDiaria") || has("frecuenciaEjercicio")) {
+        const factor = calculateActivityFactor({
+          actividadDiaria: basics.actividadDiaria,
+          frecuenciaEjercicio: basics.frecuenciaEjercicio,
+        });
+        if (factor !== null) basics.factorActividad = factor;
       }
 
       if (has("grasaNivel") && data.grasaNivel != null) {

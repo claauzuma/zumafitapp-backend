@@ -654,9 +654,6 @@ class ServicioClientOwnMenus {
   async authorizeAutomaticGeneration(user) {
     const actor = await this._actor(user);
     const capabilities = await this.capabilities(actor);
-    if (capabilities.hasCoach || capabilities.clientType === "with_coach") {
-      throw serviceError("CLIENT_MENU_FORBIDDEN", "El menu autonomo no esta disponible mientras tu coach gestiona la planificacion");
-    }
     if (capabilities.canGenerateAutomaticMenu !== true || capabilities.canAutoCalculateTrackingQuantities !== true) {
       throw serviceError("PLAN_CAPABILITY_REQUIRED", "La generacion automatica esta disponible en Pro y VIP", {
         resource: "nutrition.autoMenus",
@@ -739,7 +736,11 @@ class ServicioClientOwnMenus {
     if (!capabilities.canCreateOwnMenu) throw serviceError("CLIENT_MENU_FORBIDDEN", "Tu plan no permite crear menus");
     validateRawMenuPayload(payload);
     await this._assertLimit(actor);
-    if (payload.activate === true && await this._hasCoachMenuActive(actor)) {
+    if (
+      payload.activate === true &&
+      await this._hasCoachMenuActive(actor) &&
+      capabilities.canActivateOwnMenuOverCoachPlan !== true
+    ) {
       throw serviceError("COACH_MENU_ACTIVE", "No podes activar un menu propio mientras existe un menu activo asignado por tu coach.");
     }
 
@@ -754,7 +755,7 @@ class ServicioClientOwnMenus {
     await this._assertLimitAfterWrite(actor, created._id);
     let nextUser = actor;
     if (payload.activate === true) {
-      nextUser = await this._activate(actor, created);
+      nextUser = await this._activate(actor, created, capabilities);
     }
     return {
       menu: normalizeDoc(created, nextUser),
@@ -845,12 +846,15 @@ class ServicioClientOwnMenus {
     return { menu: normalizeDoc(created, actor) };
   }
 
-  async _activate(user, menu) {
+  async _activate(user, menu, capabilities = this._capabilitiesFromAccessContext(user)) {
     if (!hasValidMenuContent(menu)) {
       throw serviceError("INVALID_MENU", "El menu necesita al menos una comida con alimentos para activarse");
     }
     requireMenuDaysLimit(user, menu);
-    if (await this._hasCoachMenuActive(user)) {
+    if (
+      await this._hasCoachMenuActive(user) &&
+      capabilities.canActivateOwnMenuOverCoachPlan !== true
+    ) {
       throw serviceError("COACH_MENU_ACTIVE", "No podes activar un menu propio mientras existe un menu activo asignado por tu coach.");
     }
     const now = new Date();
@@ -870,7 +874,7 @@ class ServicioClientOwnMenus {
     const capabilities = this._capabilitiesFromAccessContext(actor);
     if (!capabilities.canActivateOwnMenu) throw serviceError("CLIENT_MENU_FORBIDDEN", "Tu plan no permite activar menus");
     const menu = await this._getOwnedMenu(actor, menuId);
-    const nextUser = await this._activate(actor, menu);
+    const nextUser = await this._activate(actor, menu, capabilities);
     return {
       ok: true,
       activeMenu: normalizeDoc(menu, nextUser),

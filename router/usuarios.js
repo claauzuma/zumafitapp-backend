@@ -193,6 +193,12 @@ class RouterUsuarios {
       denyWriteWhenReadOnlyImpersonation,
       this.controladorUsuarios.clientUpdateGoals
     );
+    users.post(
+      "/me/nutrition-preview",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.clientPreviewNutrition
+    );
     users.get("/me/progress", authMiddleware, this.controladorUsuarios.getMyProgress);
     users.patch(
       "/me/progress/weight",
@@ -247,6 +253,13 @@ class RouterUsuarios {
       requireRole("coach"),
       this.controladorUsuarios.getMyCoachClientDetail
     );
+    users.post(
+      "/me/coach-clients/:clientId/impersonation/start",
+      authMiddleware,
+      requireRole("coach"),
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.coachStartClientImpersonation
+    );
     users.get(
       "/me/coach-clients/:clientId/menu-tracking",
       authMiddleware,
@@ -279,6 +292,20 @@ class RouterUsuarios {
       requireRole("coach"),
       denyWriteWhenReadOnlyImpersonation,
       this.controladorUsuarios.coachUpdateClientNutrition
+    );
+    users.post(
+      "/me/coach-clients/:clientId/nutrition-preview",
+      authMiddleware,
+      requireRole("coach"),
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.coachPreviewClientNutrition
+    );
+    users.patch(
+      "/me/coach-clients/:clientId/onboarding",
+      authMiddleware,
+      requireRole("coach"),
+      denyWriteWhenReadOnlyImpersonation,
+      this.controladorUsuarios.coachUpdateClientOnboarding
     );
     users.patch(
       "/me/coach-clients/:clientId/menu",
@@ -580,6 +607,13 @@ class RouterUsuarios {
       authMiddleware,
       requireRole("admin"),
       this.controladorUsuarios.adminUnassignCoach
+    );
+
+    admin.patch(
+      "/users/:id/client-menu-autonomy",
+      authMiddleware,
+      requireRole("admin"),
+      this.controladorUsuarios.adminUpdateClientMenuAutonomy
     );
 
     admin.get(

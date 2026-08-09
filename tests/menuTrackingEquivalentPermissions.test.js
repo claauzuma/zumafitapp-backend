@@ -277,7 +277,23 @@ test("el limite custom no se aplica por error a una alternativa asignada del mis
 
 test("el coach persiste el permiso de equivalencias sin modificar el resto de permisos", async () => {
   const service = new ServicioUsuarios();
-  const coach = { _id: "coach-1", role: "coach" };
+  const coach = {
+    _id: "coach-1",
+    role: "coach",
+    coachProfile: { specialties: { nutrition: true } },
+    effectiveCapabilities: {
+      isTrialExpired: false,
+      features: {
+        menus: { manualBuilder: true, semiAutomaticBuilder: true },
+        routines: {},
+        metrics: { basic: true },
+      },
+      clientAutonomy: {
+        defaultPreset: "equivalences",
+        availablePresets: { total: true, equivalences: true, coach_only: true, view_only: true },
+      },
+    },
+  };
   const client = {
     _id: "client-1",
     role: "cliente",

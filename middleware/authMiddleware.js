@@ -27,6 +27,9 @@ function mapPayloadToUser(payload) {
     impersonation: payload?.impersonation === true,
     readOnly: payload?.readOnly === true,
     actorAdminId: payload?.actorAdminId || null,
+    actorCoachId: payload?.actorCoachId || null,
+    impersonationActorId: payload?.actorId || payload?.actorAdminId || payload?.actorCoachId || null,
+    impersonationActorRole: payload?.actorRole || (payload?.actorAdminId ? "admin" : payload?.actorCoachId ? "coach" : null),
     targetUserId: payload?.targetUserId || uid,
     targetRole: payload?.targetRole || payload?.role || payload?.rol,
     impersonationSessionId: payload?.sessionId || null,
@@ -75,6 +78,17 @@ export function authMiddleware(req, res, next) {
     }
 
     req.user = user;
+    const method = String(req.method || "GET").toUpperCase();
+    const safeMethod = ["GET", "HEAD", "OPTIONS"].includes(method);
+    const requestPath = String(req.originalUrl || req.url || "").split("?")[0].replace(/\/+$/, "");
+    const isStopRequest = /\/impersonation\/stop$/.test(requestPath);
+    if (user.impersonation && user.readOnly && !safeMethod && !isStopRequest) {
+      return res.status(403).json({
+        error: "Modo simulacion de solo lectura: esta accion no esta permitida",
+        impersonation: true,
+        readOnly: true,
+      });
+    }
     return next();
   } catch (err) {
     const msg =

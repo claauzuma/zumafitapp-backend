@@ -68,6 +68,34 @@ test("limita historial de tracking Free a los ultimos 7 dias", () => {
   );
 });
 
+test("el historial usa el dia calendario de Argentina y no adelanta el corte al cambiar UTC", () => {
+  const user = {
+    role: "cliente",
+    personalPlan: "free",
+    coachAccess: {
+      status: "active",
+      coachId: "coach-1",
+      servicePackage: "service_pro",
+      serviceScopes: ["nutrition", "training"],
+    },
+  };
+  const sundayNightInArgentina = new Date("2026-08-03T01:30:00.000Z");
+
+  assert.doesNotThrow(() => requireTrackingHistoryRange(user, {
+    start: "2026-07-27",
+    end: "2026-08-02",
+    now: sundayNightInArgentina,
+  }));
+  assert.throws(
+    () => requireTrackingHistoryRange(user, {
+      start: "2026-07-20",
+      end: "2026-07-26",
+      now: sundayNightInArgentina,
+    }),
+    (error) => error.code === "PLAN_CAPABILITY_REQUIRED" && error.limit === 7
+  );
+});
+
 test("Free permite dos cambios manuales de objetivos cada 30 dias", () => {
   const now = new Date("2026-06-15T00:00:00.000Z");
   const user = {

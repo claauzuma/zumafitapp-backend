@@ -63,6 +63,20 @@ test("resolver profesional prioriza overrides individuales sobre default global"
   assert.equal(customized.usesOverrides, true);
 });
 
+test("Admin resuelve autonomía de clientes con origen plan u override", () => {
+  const inherited = resolveEffectiveCoachCapabilities({ coach, planConfig: BASE_COACH_PLAN_CONFIGS.pro });
+  assert.equal(inherited.clientAutonomy.defaultPreset, "equivalences");
+  assert.equal(inherited.sources.clientAutonomy.defaultPreset, "plan");
+
+  const overridden = resolveEffectiveCoachCapabilities({
+    coach: { ...coach, coachOverrides: { clientAutonomy: { defaultPreset: "total", availablePresets: { total: true } } } },
+    planConfig: BASE_COACH_PLAN_CONFIGS.pro,
+  });
+  assert.equal(overridden.clientAutonomy.defaultPreset, "total");
+  assert.equal(overridden.sources.clientAutonomy.defaultPreset, "override");
+  assert.equal(overridden.usesOverrides, true);
+});
+
 test("config global de cliente alimenta capabilities sin habilitar IA", () => {
   const original = getRuntimeClientPlanSetting("free");
   try {
@@ -102,4 +116,3 @@ test("defaults personales finales conservan Free, Pro y VIP", () => {
   assert.equal(BASE_CLIENT_PLAN_SETTINGS.pro.libraryAccess, "global");
   assert.equal(BASE_CLIENT_PLAN_SETTINGS.vip.libraryAccess, "premium");
 });
-

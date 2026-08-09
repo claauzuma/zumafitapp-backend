@@ -3,6 +3,7 @@ import { normalizeClientRole } from "./clientNutritionCapabilities.js";
 
 const MS_DAY = 24 * 60 * 60 * 1000;
 const FREE_GOALS_CHANGE_LIMIT = 2;
+const DEFAULT_TRACKING_TIME_ZONE = "America/Argentina/Buenos_Aires";
 
 const RESOURCE_LIMIT_KEYS = {
   ownMenus: "ownMenus",
@@ -246,6 +247,36 @@ function parseDay(value = "") {
   return Number.isFinite(date.getTime()) ? date : null;
 }
 
+function trackingCalendarDay(value = new Date(), timeZone = process.env.TRACKING_TIME_ZONE || DEFAULT_TRACKING_TIME_ZONE) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+
+  let formatter;
+  try {
+    formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  } catch {
+    formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: DEFAULT_TRACKING_TIME_ZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  }
+
+  const parts = Object.fromEntries(
+    formatter
+      .formatToParts(date)
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value])
+  );
+  return parseDay(`${parts.year}-${parts.month}-${parts.day}`);
+}
+
 function inclusiveDaySpan(start, end) {
   if (!start || !end) return 1;
   const first = start.getTime() <= end.getTime() ? start : end;
@@ -253,7 +284,15 @@ function inclusiveDaySpan(start, end) {
   return Math.floor((last.getTime() - first.getTime()) / MS_DAY) + 1;
 }
 
-export function requireTrackingHistoryRange(userOrContext = {}, { start, end, from, to, date, now = new Date() } = {}) {
+export function requireTrackingHistoryRange(userOrContext = {}, {
+  start,
+  end,
+  from,
+  to,
+  date,
+  now = new Date(),
+  timeZone = process.env.TRACKING_TIME_ZONE || DEFAULT_TRACKING_TIME_ZONE,
+} = {}) {
   const context = accessContextFor(userOrContext);
   const limit = numericLimit(context, "trackingHistoryDays");
   if (limit === null) return context;
@@ -261,8 +300,7 @@ export function requireTrackingHistoryRange(userOrContext = {}, { start, end, fr
   const startDate = parseDay(start || from || date);
   const endDate = parseDay(end || to || date || start || from);
   const requestedDays = inclusiveDaySpan(startDate, endDate);
-  const nowDate = now instanceof Date ? now : new Date(now);
-  const today = new Date(Date.UTC(nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate()));
+  const today = trackingCalendarDay(now, timeZone);
   const minAllowed = new Date(today.getTime() - (limit - 1) * MS_DAY);
   const oldestRequested = startDate && endDate && startDate.getTime() <= endDate.getTime() ? startDate : endDate || startDate;
   if (requestedDays > limit || (oldestRequested && oldestRequested.getTime() < minAllowed.getTime())) {

@@ -12,6 +12,7 @@ class ModelMongoDBImpersonationAudit {
     const col = this._col();
     await col.createIndex({ sessionId: 1 });
     await col.createIndex({ adminId: 1, createdAt: -1 });
+    await col.createIndex({ actorType: 1, actorId: 1, createdAt: -1 });
     await col.createIndex({ targetUserId: 1, createdAt: -1 });
     await col.createIndex({ action: 1, createdAt: -1 });
   }
@@ -22,6 +23,8 @@ class ModelMongoDBImpersonationAudit {
       sessionId: event.sessionId || null,
       action: event.action || "impersonation_event",
       adminId: event.adminId ? String(event.adminId) : null,
+      actorType: event.actorType || (event.adminId ? "admin" : null),
+      actorId: event.actorId ? String(event.actorId) : (event.adminId ? String(event.adminId) : null),
       targetUserId: event.targetUserId ? String(event.targetUserId) : null,
       targetRole: event.targetRole || null,
       startedAt: event.startedAt || null,

@@ -11,6 +11,7 @@ import {
 import { normalizeCoachPlanCode } from "./coachPlans.js";
 import { recordAccessAuditEvent } from "./accessAuditEvents.js";
 import { getRuntimeClientPlanSetting } from "./clientPlanSettings.js";
+import { resolveClientMenuAutonomyPermissions } from "./clientMenuAutonomy.js";
 
 const MS_DAY = 24 * 60 * 60 * 1000;
 
@@ -163,12 +164,13 @@ export const PROFESSIONAL_SERVICE_CATALOG = {
     label: "Coach Pro",
     billingOwner: "coach",
     scopes: ["training", "nutrition"],
-    limits: { equivalentMealFoods: 6 },
+    limits: { equivalentMealFoods: 6, ownMenus: 10, ownMeals: 100, favorites: 20, menuDays: 7 },
     library: "global",
     nutrition: {
       coachAuthority: true,
       tracking: true,
       assignedMenus: true,
+      automaticMenus: true,
       autoCompleteRemainingMeals: false,
       flexibleMarginRecommendations: false,
       manualDayCompletion: true,
@@ -188,12 +190,13 @@ export const PROFESSIONAL_SERVICE_CATALOG = {
     label: "Coach VIP",
     billingOwner: "coach",
     scopes: ["training", "nutrition"],
-    limits: { equivalentMealFoods: 10 },
+    limits: { equivalentMealFoods: 10, ownMenus: 50, ownMeals: 500, favorites: 100, menuDays: 7 },
     library: "premium",
     nutrition: {
       coachAuthority: true,
       tracking: true,
       assignedMenus: true,
+      automaticMenus: true,
       autoCompleteRemainingMeals: true,
       flexibleMarginRecommendations: true,
       manualDayCompletion: true,
@@ -641,6 +644,9 @@ export function resolveClientAccessContext(user = {}, { now = new Date() } = {})
     effectivePersonalPlan,
   });
   const capabilityService = hasCoach && coachAccess.servicePackageExplicit ? effectiveService : null;
+  const relationshipAutonomy = hasCoach
+    ? resolveClientMenuAutonomyPermissions(user?.clientPermissions || {}, { defaultPreset: "equivalences" })
+    : null;
   const advancedCapabilities = {
     canPlanRemainingIntake:
       personalCapabilities.canPlanRemainingIntake === true ||
@@ -762,6 +768,22 @@ export function resolveClientAccessContext(user = {}, { now = new Date() } = {})
     capabilities: hasCoach
       ? {
           ...personalCapabilities,
+          canCreateOwnMenu: relationshipAutonomy?.menu?.canCreateOwnMenu === true,
+          canEditOwnMenu: relationshipAutonomy?.menu?.canCreateOwnMenu === true,
+          canDeleteOwnMenu: relationshipAutonomy?.menu?.canCreateOwnMenu === true,
+          canDuplicateOwnMenu: relationshipAutonomy?.menu?.canCreateOwnMenu === true,
+          canActivateOwnMenu: relationshipAutonomy?.menu?.canCreateOwnMenu === true,
+          canActivateOwnMenuOverCoachPlan:
+            relationshipAutonomy?.menu?.canActivateOwnMenuOverCoachPlan === true,
+          canUseBasicLibrary: relationshipAutonomy?.menu?.canUseLibrary === true,
+          canUseGlobalLibrary:
+            relationshipAutonomy?.menu?.canUseLibrary === true && ["global", "premium"].includes(effectiveService?.library),
+          canUsePremiumLibrary:
+            relationshipAutonomy?.menu?.canUseLibrary === true && effectiveService?.library === "premium",
+          canCopyLibraryMenu: relationshipAutonomy?.menu?.canUseLibrary === true,
+          canGenerateAutomaticMenu:
+            relationshipAutonomy?.menu?.canUseAutomaticMenu === true && effectiveService?.nutrition?.automaticMenus === true,
+          canEditMenuPreferences: relationshipAutonomy?.menu?.canEditPreferences === true,
           canAutoCompleteRemainingMeals: effectiveService?.nutrition?.autoCompleteRemainingMeals === true,
           canUseFlexibleMarginRecommendations: effectiveService?.nutrition?.flexibleMarginRecommendations === true,
           canUseManualDayCompletion: true,
@@ -770,8 +792,13 @@ export function resolveClientAccessContext(user = {}, { now = new Date() } = {})
           canUseEquivalences: true,
           limits: {
             ...(personalCapabilities.limits || {}),
+            ownMenus: effectiveService?.limits?.ownMenus || personalCapabilities?.limits?.ownMenus,
+            ownMeals: effectiveService?.limits?.ownMeals || personalCapabilities?.limits?.ownMeals,
+            favorites: effectiveService?.limits?.favorites || personalCapabilities?.limits?.favorites,
+            menuDays: effectiveService?.limits?.menuDays || personalCapabilities?.limits?.menuDays,
             equivalentMealFoods: effectiveService?.limits?.equivalentMealFoods || 6,
           },
+          clientMenuAutonomy: relationshipAutonomy,
           canViewCoachAdherenceBreakdown: true,
           primaryAuthority: "coach",
           canTrack: true,

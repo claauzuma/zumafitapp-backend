@@ -66,6 +66,20 @@ function adminError(res, error) {
       impact: error?.impact || null,
     });
   }
+  if (msg === "ONBOARDING_CONFIRMATION_REQUIRED") {
+    return res.status(409).json({
+      code: msg,
+      error: "ConfirmÃ¡ los datos existentes que van a cambiar.",
+      changedFields: error?.changedFields || [],
+    });
+  }
+  if (msg === "ONBOARDING_DATA_INCOMPLETE") {
+    return res.status(422).json({
+      code: msg,
+      error: "Faltan datos para completar el onboarding.",
+      missingFields: error?.missingFields || [],
+    });
+  }
 
   if (isAccessGateError(error)) {
     const code = error?.code || msg;
@@ -1484,6 +1498,16 @@ class ControladorUsuarios {
     }
   };
 
+  clientPreviewNutrition = async (req, res) => {
+    try {
+      const userId = req.user?.id || req.user?._id || null;
+      const data = await this.servicio.clientPreviewNutrition({ userId, payload: req.body || {} });
+      return res.json({ ok: true, preview: data.preview });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
   getMyProgress = async (req, res) => {
     try {
       const userId = req.user?.id || req.user?._id || null;
@@ -1548,6 +1572,19 @@ class ControladorUsuarios {
         clients: (data.clients || []).map((u) => mapUserPublic(u)),
         total: data.total || 0,
       });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  adminUpdateClientMenuAutonomy = async (req, res) => {
+    try {
+      const user = await this.servicio.adminUpdateClientMenuAutonomy({
+        clientId: req.params.id,
+        preset: req.body?.preset || null,
+        adminId: req.user?.id || req.user?._id || null,
+      });
+      return res.json({ ok: true, user: mapUserPublic(user) });
     } catch (error) {
       return adminError(res, error);
     }
@@ -1696,6 +1733,28 @@ class ControladorUsuarios {
     }
   };
 
+  coachStartClientImpersonation = async (req, res) => {
+    try {
+      const data = await this.servicio.coachStartClientImpersonation({
+        coachId: req.user?.id || req.user?._id,
+        clientId: req.params.clientId,
+      });
+      return res.json({
+        ok: true,
+        token: data.token,
+        expiresAt: data.expiresAt,
+        sessionId: data.sessionId,
+        actorId: data.actorId,
+        actorRole: data.actorRole,
+        actorCoachId: data.actorCoachId,
+        targetUser: mapUserPublic(data.targetUser),
+        readOnly: true,
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
   coachEndClientService = async (req, res) => {
     try {
       const coachId = req.user?.id || req.user?._id || null;
@@ -1739,6 +1798,41 @@ class ControladorUsuarios {
         coach: mapUserPublic(data.coach),
         client: mapUserPublic(data.client),
         assignmentInvalidation: data.assignmentInvalidation || null,
+      });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  coachPreviewClientNutrition = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const { clientId } = req.params;
+      const data = await this.servicio.coachPreviewClientNutrition({
+        coachId,
+        clientId,
+        payload: req.body || {},
+      });
+      return res.json({ ok: true, preview: data.preview, client: mapUserPublic(data.client) });
+    } catch (error) {
+      return adminError(res, error);
+    }
+  };
+
+  coachUpdateClientOnboarding = async (req, res) => {
+    try {
+      const coachId = req.user?.id || req.user?._id || null;
+      const { clientId } = req.params;
+      const data = await this.servicio.coachUpdateClientOnboarding({
+        coachId,
+        clientId,
+        payload: req.body || {},
+      });
+      return res.json({
+        ok: true,
+        coach: mapUserPublic(data.coach),
+        client: mapUserPublic(data.client),
+        preview: data.preview,
       });
     } catch (error) {
       return adminError(res, error);
@@ -1940,6 +2034,9 @@ class ControladorUsuarios {
         expiresAt: data.expiresAt,
         sessionId: data.sessionId,
         actorAdminId: data.actorAdminId,
+        actorCoachId: data.actorCoachId,
+        actorId: data.actorId,
+        actorRole: data.actorRole,
         targetUser: mapUserPublic(data.targetUser),
         readOnly: true,
       });
@@ -1966,6 +2063,9 @@ class ControladorUsuarios {
         active: true,
         readOnly: data.readOnly,
         actorAdminId: data.actorAdminId,
+        actorCoachId: data.actorCoachId,
+        actorId: data.actorId,
+        actorRole: data.actorRole,
         sessionId: data.sessionId,
         startedAt: data.startedAt,
         targetUser: mapUserPublic(data.targetUser),
