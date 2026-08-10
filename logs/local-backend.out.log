@@ -1,0 +1,36 @@
+Conectando a la base de datos...
+Base de datos conectada!
+⚠️ No se pudieron asegurar índices: Index already exists with a different name: professional_applications_email_status
+**** Persistencia no reconocida, usando MongoDB por defecto ****
+RouterAlimentos iniciado
+**** Persistiendo en MongoDB ****
+MODEL REAL = ModelMongoDBUsuarios
+METODOS DEL MODEL = [
+  'constructor',
+  '_col',
+  'getUpdatedAtById',
+  'touchLastActivityById',
+  'ensureIndexes'
+]
+touchLastActivityById = [AsyncFunction: touchLastActivityById]
+typeof touchLastActivityById = function
+**** Persistencia no reconocida, usando MongoDB por defecto ****
+🔐 RouterUsuarios activo
+**** Persistiendo Comidas en MongoDB ****
+RouterComidas activo
+RouterEjercicios activo
+RouterRutinas activo
+RouterClienteRutinas activo
+RouterMenus activo
+RouterClienteMenus activo
+**** Persistencia no reconocida, usando MongoDB por defecto ****
+RouterFoodLogs activo
+RouterNutritionLibrary activo
+**** Persistencia no reconocida, usando MongoDB por defecto ****
+RouterComidasGuardadas activo
+Servidor express escuchando en:
+- Local: http://localhost:8080
+- Red:   http://192.168.70.1:8080
+- Red:   http://192.168.74.1:8080
+- Red:   http://192.168.0.13:8080
+Error en servidor: listen EADDRINUSE: address already in use 0.0.0.0:8080

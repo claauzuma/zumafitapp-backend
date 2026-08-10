@@ -131,6 +131,60 @@ test("coach_pro lista la biblioteca global sin obtener permisos de edicion", asy
   assert.equal(service._canEditOwnedBase(actor, menu), false);
 });
 
+test("coach VIP puede listar juntos sus menus y las plantillas admin permitidas", async () => {
+  const service = new ServicioMenus();
+  const actor = coach("coach_ai", aiFeatures);
+  const ownMenu = {
+    ...globalMenu(),
+    _id: OTHER_COACH_ID,
+    ownerType: "coach",
+    ownerId: COACH_ID,
+    sourceType: "coach_owned",
+    visibilidad: "privada",
+  };
+  const adminMenu = globalMenu({ tier: "global_premium" });
+  let receivedVisibilityQuery = null;
+  service._actor = async () => actor;
+  service._assertNutritionAccess = async () => ({ effectiveCapabilities: actor.effectiveCapabilities });
+  service.menusModel = {
+    ownerOnlyForCoach: (id) => ({ ownerType: "coach", ownerId: id }),
+    adminTemplatesForCoach: ({ premium }) => ({ ownerType: "admin", premium }),
+    listBase: async ({ visibilityQuery }) => {
+      receivedVisibilityQuery = visibilityQuery;
+      return { items: [ownMenu, adminMenu], total: 2 };
+    },
+  };
+
+  const result = await service.listMenus({ id: COACH_ID }, { scope: "all" });
+
+  assert.equal(result.scope, "all");
+  assert.equal(result.total, 2);
+  assert.deepEqual(receivedVisibilityQuery, {
+    $or: [
+      { ownerType: "coach", ownerId: COACH_ID },
+      { ownerType: "admin", premium: true },
+    ],
+  });
+  assert.deepEqual(result.menus.map((menu) => menu.ownerType), ["coach", "admin"]);
+});
+
+test("alcance combinado permanece bloqueado sin capability de biblioteca global", async () => {
+  const service = new ServicioMenus();
+  const actor = coach("coach_initial", initialFeatures);
+  service._actor = async () => actor;
+  service._assertNutritionAccess = async () => ({ effectiveCapabilities: actor.effectiveCapabilities });
+  service.menusModel = {
+    ownerOnlyForCoach: () => ({ ownerType: "coach" }),
+    adminTemplatesForCoach: () => ({ ownerType: "admin" }),
+    listBase: async () => ({ items: [], total: 0 }),
+  };
+
+  await assert.rejects(
+    service.listMenus({ id: COACH_ID }, { scope: "all" }),
+    /COACH_FEATURE_NOT_ALLOWED/
+  );
+});
+
 test("duplicar una plantilla admin por endpoint exige capability global", async () => {
   const menu = globalMenu();
   const service = new ServicioMenus();

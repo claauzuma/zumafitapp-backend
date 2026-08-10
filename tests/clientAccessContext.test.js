@@ -5,8 +5,52 @@ import ServicioClientAccessContext, {
   canCoachOfferServicePackage,
   resolveClientAccessContext,
 } from "../servicio/clientAccessContext.js";
+import ModelMongoDBUsuarios from "../model/DAO/usuariosMongoDB.js";
 
 const now = new Date("2026-06-26T12:00:00.000Z");
+
+test("access-context conserva los permisos de autonomia otorgados por el coach", async () => {
+  const actor = {
+    _id: "507f1f77bcf86cd799439011",
+    role: "cliente",
+    personalPlan: "free",
+    coachAccess: {
+      status: "active",
+      coachId: "507f1f77bcf86cd799439012",
+      servicePackage: "service_vip",
+    },
+    clientPermissions: {
+      menu: {
+        autonomyPreset: "total",
+        canEditPreferences: true,
+        canUseLibrary: true,
+        canCreateOwnMenu: true,
+        canUseAutomaticMenu: true,
+      },
+    },
+  };
+  const usuariosModel = new ModelMongoDBUsuarios();
+  usuariosModel._col = () => ({
+    findOne: async (_query, options = {}) => Object.fromEntries(
+      Object.entries(options.projection || {})
+        .filter(([, included]) => included === 1)
+        .map(([key]) => [key, actor[key]])
+        .filter(([, value]) => value !== undefined)
+    ),
+  });
+
+  const servicio = new ServicioClientAccessContext();
+  servicio.usuariosModel = usuariosModel;
+  servicio.planChangeRequestsModel = { findPendingByUser: async () => null };
+
+  const context = await servicio.getContext({ id: actor._id });
+
+  assert.equal(context.personalPlan, "free");
+  assert.equal(context.primaryAccess.id, "service_vip");
+  assert.equal(context.capabilities.clientMenuAutonomy.preset, "total");
+  assert.equal(context.capabilities.canEditMenuPreferences, true);
+  assert.equal(context.capabilities.canGenerateAutomaticMenu, true);
+});
 
 test("cliente free autogestionado queda en Free Lite con limites bajos", () => {
   const context = resolveClientAccessContext({

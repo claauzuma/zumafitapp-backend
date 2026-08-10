@@ -691,13 +691,23 @@ class ServicioMenus {
     const scope = normalizeToken(filters.scope, this._isAdmin(actor) ? "all" : "mine");
     let visibilityQuery = null;
     if (!this._isAdmin(actor)) {
-      if (["global", "admin", "zumafit", "biblioteca"].includes(scope)) {
+      const globalScope = ["global", "admin", "zumafit", "biblioteca"].includes(scope);
+      const combinedScope = ["all", "todos", "discover", "explorar"].includes(scope);
+      if (globalScope || combinedScope) {
         if (access.effectiveCapabilities?.features?.menus?.canUseGlobalMenuTemplates !== true) {
           throw new Error("COACH_FEATURE_NOT_ALLOWED");
         }
-        visibilityQuery = this.menusModel.adminTemplatesForCoach({
+        const adminTemplates = this.menusModel.adminTemplatesForCoach({
           premium: access.effectiveCapabilities?.features?.menus?.canUsePremiumMenuTemplates === true,
         });
+        visibilityQuery = combinedScope
+          ? {
+              $or: [
+                this.menusModel.ownerOnlyForCoach(this._actorId(actor)),
+                adminTemplates,
+              ],
+            }
+          : adminTemplates;
       } else {
         visibilityQuery = this.menusModel.ownerOnlyForCoach(this._actorId(actor));
       }
@@ -711,7 +721,13 @@ class ServicioMenus {
     return {
       menus: (data.items || []).map(normalizeDoc),
       total: data.total || 0,
-      scope: this._isAdmin(actor) ? scope : ["global", "admin", "zumafit", "biblioteca"].includes(scope) ? "global" : "mine",
+      scope: this._isAdmin(actor)
+        ? scope
+        : ["all", "todos", "discover", "explorar"].includes(scope)
+          ? "all"
+          : ["global", "admin", "zumafit", "biblioteca"].includes(scope)
+            ? "global"
+            : "mine",
       permissions: access.effectiveCapabilities?.features?.menus || null,
     };
   }

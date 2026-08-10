@@ -84,6 +84,7 @@ const ACCESS_CONTEXT_PROJECTION = {
   entrenadorId: 1,
   profesionalId: 1,
   coachAccess: 1,
+  clientPermissions: 1,
   clientCoachNotice: 1,
   nutritionCapabilities: 1,
   onboarding: 1,
