@@ -6592,13 +6592,15 @@ class ServicioUsuarios {
     }
   }
 
-  async _validatedCoachAssignedMenusByDay(coach, value = {}) {
+  async _validatedCoachAssignedMenusByDay(coach, value = {}, client = null) {
     const normalized = normalizeAssignedMenusByDay(value);
     const coachId = idToString(coach?._id || coach?.id);
+    const clientId = idToString(client?._id || client?.id);
     const capabilities = resolveProfessionalLibraryCapabilities(coach);
     const baseCache = new Map();
+    const assignedCache = new Map();
 
-    const validateEntry = async (entry, fallbackSource = "base") => {
+    const validateEntry = async (entry, fallbackSource = "base", dayKey = "") => {
       if (!entry) return null;
       const baseId = idToString(
         entry.menuId ||
@@ -6612,6 +6614,32 @@ class ServicioUsuarios {
       if (base === undefined) {
         base = await this.menusModel.getBaseById(baseId);
         baseCache.set(baseId, base || null);
+      }
+      if (!base && fallbackSource === "base" && clientId && typeof this.menusModel.getAssignedById === "function") {
+        let assigned = assignedCache.get(baseId);
+        if (assigned === undefined) {
+          assigned = await this.menusModel.getAssignedById(baseId);
+          assignedCache.set(baseId, assigned || null);
+        }
+        if (assigned) {
+          const belongsToPair =
+            idToString(assigned.clienteId || assigned.clientId) === clientId &&
+            idToString(assigned.coachId || assigned.entrenadorId) === coachId;
+          if (!belongsToPair || assigned.estado !== "activo" || assigned.activa === false) {
+            throw new Error("FORBIDDEN");
+          }
+          const day = getWeekDayMeta(dayKey);
+          const snapshotSource = menuDocSnapshotForDay(assigned, day, "coach") || assigned;
+          const menuSnapshot = normalizeWeeklyMenuSnapshot(snapshotSource);
+          if (!menuSnapshot?.meals?.length) throw new Error("MENU_NO_ENCONTRADO");
+          return {
+            menuId: baseId,
+            menuSnapshot,
+            source: "coach_assigned_legacy",
+            ...normalizeAssignedMenuPlanningMeta(entry),
+            assignedAt: entry.assignedAt ? new Date(entry.assignedAt) : new Date(),
+          };
+        }
       }
       if (!base) throw new Error("MENU_NO_ENCONTRADO");
 
@@ -6643,10 +6671,10 @@ class ServicioUsuarios {
     for (const day of WEEKLY_MENU_DAYS) {
       const dayEntry = normalized[day];
       if (!dayEntry) continue;
-      const primaryMenu = await validateEntry(dayEntry.primaryMenu || dayEntry, "base");
+      const primaryMenu = await validateEntry(dayEntry.primaryMenu || dayEntry, "base", day);
       const alternatives = [];
       for (const alternative of dayEntry.alternatives || []) {
-        const checked = await validateEntry(alternative, "alternative");
+        const checked = await validateEntry(alternative, "alternative", day);
         if (!checked || sameAssignedMenu(checked, primaryMenu)) continue;
         alternatives.push({
           ...checked,
@@ -7092,7 +7120,7 @@ class ServicioUsuarios {
     const restrictions = isPlainObject(incoming?.restrictions) ? incoming.restrictions : {};
     const weeklyPlan = isPlainObject(incoming?.weeklyPlan) ? incoming.weeklyPlan : {};
     const assignedMenusByDay = isPlainObject(weeklyPlan?.assignedMenusByDay)
-      ? await this._validatedCoachAssignedMenusByDay(coach, weeklyPlan.assignedMenusByDay)
+      ? await this._validatedCoachAssignedMenusByDay(coach, weeklyPlan.assignedMenusByDay, client)
       : null;
     const trackingPermissionsInput = isPlainObject(payload?.clientPermissions?.tracking)
       ? payload.clientPermissions.tracking

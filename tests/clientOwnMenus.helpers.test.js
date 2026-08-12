@@ -188,3 +188,59 @@ test("autoriza generación automática por capability, incluso con coach, y fall
     (error) => error.code === "PLAN_CAPABILITY_REQUIRED"
   );
 });
+
+test("guarda ajustes de generacion por menu y comida validando alimentos reales", async () => {
+  const servicio = new ServicioClientOwnMenus();
+  const actor = { _id: "cliente-1", role: "cliente", menu: {} };
+  let persisted = null;
+  servicio._actor = async () => actor;
+  servicio.alimentosModel = {
+    obtenerAlimentoPorId: async (id) => ({ _id: id, nombre: id === "food-1" ? "Pollo" : "Queso" }),
+  };
+  servicio.usuariosModel = {
+    updateEquivalentMealGenerationSettings: async (_id, settings) => {
+      persisted = settings;
+      actor.menu.equivalentMealGenerationSettings = settings;
+      return actor;
+    },
+  };
+
+  const saved = await servicio.saveEquivalentMealGenerationSettings(actor, {
+    menuId: "menu-1",
+    mealId: "meal-1",
+    mealName: "Desayuno",
+    strategy: "assisted_food_addition",
+    generationMode: "library",
+    requiredFoods: [{ id: "food-1", name: "Nombre no confiable" }],
+    avoidedFoods: [{ id: "food-2", name: "Otro nombre no confiable" }],
+  });
+
+  assert.equal(persisted.length, 1);
+  assert.deepEqual(saved.settings.requiredFoods, [{ id: "food-1", name: "Pollo" }]);
+  assert.deepEqual(saved.settings.avoidedFoods, [{ id: "food-2", name: "Queso" }]);
+  const loaded = await servicio.getEquivalentMealGenerationSettings(actor, {
+    menuId: "menu-1",
+    mealId: "meal-1",
+  });
+  assert.equal(loaded.settings.strategy, "assisted_food_addition");
+  assert.equal(loaded.settings.generationMode, "library");
+});
+
+test("rechaza un alimento requerido y evitado al mismo tiempo", async () => {
+  const servicio = new ServicioClientOwnMenus();
+  const actor = { _id: "cliente-1", role: "cliente", menu: {} };
+  servicio._actor = async () => actor;
+  servicio.alimentosModel = {
+    obtenerAlimentoPorId: async (id) => ({ _id: id, nombre: "Arroz" }),
+  };
+
+  await assert.rejects(
+    () => servicio.saveEquivalentMealGenerationSettings(actor, {
+      menuId: "menu-1",
+      mealId: "meal-1",
+      requiredFoods: ["food-1"],
+      avoidedFoods: ["food-1"],
+    }),
+    (error) => error.code === "VALIDATION_ERROR" && error.details.some((item) => item.includes("requerido y evitado"))
+  );
+});

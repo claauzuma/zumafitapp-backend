@@ -1,6 +1,7 @@
 import express from "express";
 import ControladorAdminCollections from "../controlador/adminCollections.js";
 import ControladorDatabaseStats from "../controlador/databaseStats.js";
+import ControladorAdminFoods from "../controlador/adminFoods.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { requireRole } from "../middleware/requireRole.js";
 
@@ -9,6 +10,7 @@ class RouterAdmin {
     this.router = express.Router();
     this.controladorAdminCollections = new ControladorAdminCollections();
     this.controladorDatabaseStats = new ControladorDatabaseStats();
+    this.controladorAdminFoods = new ControladorAdminFoods();
   }
 
   start() {
@@ -18,6 +20,24 @@ class RouterAdmin {
       "/database/stats",
       ...adminOnly,
       this.controladorDatabaseStats.obtenerEstadisticas
+    );
+
+    this.router.get(
+      "/alimentos",
+      ...adminOnly,
+      this.controladorAdminFoods.listar
+    );
+
+    this.router.post(
+      "/alimentos",
+      ...adminOnly,
+      this.controladorAdminFoods.crear
+    );
+
+    this.router.patch(
+      "/alimentos/:foodId/generation",
+      ...adminOnly,
+      this.controladorAdminFoods.actualizarGeneration
     );
 
     this.router.get(

@@ -328,6 +328,28 @@ class ModelMongoDBUsuarios {
     return await col.findOne({ _id });
   };
 
+  updateEquivalentMealGenerationSettings = async (id, settings = []) => {
+    const col = this._col();
+    let _id;
+    try {
+      _id = new ObjectId(id);
+    } catch {
+      throw new Error("ID_INVALIDO");
+    }
+    const now = new Date();
+    await col.updateOne(
+      { _id },
+      {
+        $set: {
+          "menu.equivalentMealGenerationSettings": Array.isArray(settings) ? settings : [],
+          "menu.updatedAt": now,
+          updatedAt: now,
+        },
+      }
+    );
+    return await col.findOne({ _id });
+  };
+
   actualizarPerfil = async (id, updates) => {
     return await this.updateById(id, updates);
   };

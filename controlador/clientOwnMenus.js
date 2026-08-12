@@ -21,7 +21,16 @@ function sendError(res, error) {
   if (code === "PLAN_LIMIT_REACHED" || code === "COACH_MENU_ACTIVE" || code === "ACTIVE_MENU_DELETE_CONFIRMATION_REQUIRED") {
     return res.status(409).json(payload);
   }
-  if (code === "INVALID_MENU" || code === "VALIDATION_ERROR") return res.status(400).json(payload);
+  if ([
+    "INVALID_MENU",
+    "VALIDATION_ERROR",
+    "INVALID_MEAL_TYPE",
+    "INVALID_MEAL_TARGET",
+    "INVALID_GENERATION_MODE",
+    "INVALID_FOOD_CONSTRAINTS",
+    "INVALID_FOOD_COMBINATION",
+    "MEAL_FOOD_LIMIT_REACHED",
+  ].includes(code)) return res.status(400).json(payload);
 
   console.error("Error clientOwnMenus:", error);
   return res.status(500).json({ code: "SERVER_ERROR", error: "Error en el servidor" });
@@ -44,6 +53,30 @@ class ControladorClientOwnMenus {
   authorizeAutomaticGeneration = async (req, res) => {
     try {
       return res.json(await this.servicio.authorizeAutomaticGeneration(req.user));
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
+  getEquivalentMealGenerationSettings = async (req, res) => {
+    try {
+      return res.json(await this.servicio.getEquivalentMealGenerationSettings(req.user, req.query || {}));
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
+  saveEquivalentMealGenerationSettings = async (req, res) => {
+    try {
+      return res.json(await this.servicio.saveEquivalentMealGenerationSettings(req.user, req.body || {}));
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
+  generateEquivalentMealAlternative = async (req, res) => {
+    try {
+      return res.json(await this.servicio.generateEquivalentMealAlternative(req.user, req.body || {}));
     } catch (error) {
       return sendError(res, error);
     }

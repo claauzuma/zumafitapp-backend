@@ -14,6 +14,9 @@ import {
   requireMenuDaysLimit,
   requireQuota,
 } from "./accessGates.js";
+import { resolveClientMenuAutonomyPermissions } from "./clientMenuAutonomy.js";
+import { FOOD_COMBINATION_MODES } from "./foodCombinationCandidates.js";
+import { generateMealAlternative } from "./mealAlternativeGenerator.js";
 import {
   canViewNutritionItem,
   idValues,
@@ -67,6 +70,27 @@ function toMongoIdOrString(id) {
 
 function cleanString(value = "", max = 500) {
   return String(value || "").trim().slice(0, max);
+}
+
+const EQUIVALENT_GENERATION_MODES = new Set(["library", "combine", "scratch"]);
+const EQUIVALENT_GENERATION_STRATEGIES = new Set(["selected_only", "assisted_food_addition"]);
+
+function equivalentGenerationSettingsKey(menuId, mealId) {
+  return `${cleanString(menuId, 120)}::${cleanString(mealId, 120)}`;
+}
+
+function defaultEquivalentGenerationSettings({ menuId = "", mealId = "", mealName = "" } = {}) {
+  return {
+    key: equivalentGenerationSettingsKey(menuId, mealId),
+    menuId: cleanString(menuId, 120),
+    mealId: cleanString(mealId, 120),
+    mealName: cleanString(mealName, 160),
+    strategy: "selected_only",
+    generationMode: "library",
+    requiredFoods: [],
+    avoidedFoods: [],
+    updatedAt: null,
+  };
 }
 
 function token(value = "") {
@@ -410,6 +434,7 @@ class ServicioClientOwnMenus {
     this.menusModel = new ModelMongoDBMenus();
     this.usuariosModel = new ModelMongoDBUsuarios();
     this.alimentosModel = new ModelMongoDBAlimentos();
+    this.mealAlternativeGenerator = generateMealAlternative;
   }
 
   async _actor(user = {}) {
@@ -667,6 +692,130 @@ class ServicioClientOwnMenus {
       limits: capabilities.limits,
       previewOnly: true,
     };
+  }
+
+  async _canonicalEquivalentGenerationFoods(values = []) {
+    const ids = [...new Set((Array.isArray(values) ? values : [])
+      .map((value) => cleanString(value?.id || value?.foodId || value?.alimentoId || value, 120))
+      .filter(Boolean))]
+      .slice(0, 12);
+    const foods = [];
+    for (const id of ids) {
+      const food = await this.alimentosModel.obtenerAlimentoPorId(id);
+      if (!food) throw validationError([`El alimento ${id} no existe en la base de alimentos`]);
+      foods.push({
+        id: idToString(food._id || food.id || food.alimentoId),
+        name: cleanString(food.nombre || food.Alimentos || food.name || "Alimento", 180),
+      });
+    }
+    return foods;
+  }
+
+  async getEquivalentMealGenerationSettings(user, query = {}) {
+    const actor = await this._actor(user);
+    const menuId = cleanString(query.menuId, 120);
+    const mealId = cleanString(query.mealId, 120);
+    if (!menuId || !mealId) throw validationError(["menuId y mealId son obligatorios"]);
+    const key = equivalentGenerationSettingsKey(menuId, mealId);
+    const saved = (Array.isArray(actor?.menu?.equivalentMealGenerationSettings)
+      ? actor.menu.equivalentMealGenerationSettings
+      : []).find((entry) => entry?.key === key);
+    return {
+      settings: saved || defaultEquivalentGenerationSettings({ menuId, mealId, mealName: query.mealName }),
+    };
+  }
+
+  async saveEquivalentMealGenerationSettings(user, payload = {}) {
+    const actor = await this._actor(user);
+    const menuId = cleanString(payload.menuId, 120);
+    const mealId = cleanString(payload.mealId, 120);
+    if (!menuId || !mealId) throw validationError(["menuId y mealId son obligatorios"]);
+    const [requiredFoods, avoidedFoods] = await Promise.all([
+      this._canonicalEquivalentGenerationFoods(payload.requiredFoods),
+      this._canonicalEquivalentGenerationFoods(payload.avoidedFoods),
+    ]);
+    const avoidedIds = new Set(avoidedFoods.map((food) => food.id));
+    const conflict = requiredFoods.find((food) => avoidedIds.has(food.id));
+    if (conflict) throw validationError([`${conflict.name} no puede ser requerido y evitado al mismo tiempo`]);
+    const key = equivalentGenerationSettingsKey(menuId, mealId);
+    const settings = {
+      ...defaultEquivalentGenerationSettings({ menuId, mealId, mealName: payload.mealName }),
+      key,
+      strategy: EQUIVALENT_GENERATION_STRATEGIES.has(payload.strategy)
+        ? payload.strategy
+        : "selected_only",
+      generationMode: EQUIVALENT_GENERATION_MODES.has(payload.generationMode)
+        ? payload.generationMode
+        : "library",
+      requiredFoods,
+      avoidedFoods,
+      updatedAt: new Date(),
+    };
+    const existing = Array.isArray(actor?.menu?.equivalentMealGenerationSettings)
+      ? actor.menu.equivalentMealGenerationSettings
+      : [];
+    const next = [
+      ...existing.filter((entry) => entry?.key !== key),
+      settings,
+    ].slice(-80);
+    if (typeof this.usuariosModel.updateEquivalentMealGenerationSettings === "function") {
+      await this.usuariosModel.updateEquivalentMealGenerationSettings(this._userId(actor), next);
+    } else {
+      await this.usuariosModel.updateById(this._userId(actor), {
+        menu: {
+          ...(actor.menu || {}),
+          equivalentMealGenerationSettings: next,
+          updatedAt: new Date(),
+        },
+      });
+    }
+    return { settings };
+  }
+
+  async generateEquivalentMealAlternative(user, payload = {}) {
+    const actor = await this._actor(user);
+    const capabilities = this._capabilitiesFromAccessContext(actor);
+    const autonomy = actor?.coach?.entrenadorId
+      ? resolveClientMenuAutonomyPermissions(actor?.clientPermissions || {}, { defaultPreset: "equivalences" })
+      : null;
+    if (
+      capabilities.canUseEquivalences !== true ||
+      capabilities.canAutoCalculateTrackingQuantities !== true ||
+      autonomy?.tracking?.canUseMenuAlternatives === false ||
+      autonomy?.tracking?.canCreateEquivalentMeals === false
+    ) {
+      throw serviceError(
+        "PLAN_CAPABILITY_REQUIRED",
+        "La generacion automatica de equivalencias no esta habilitada para este acceso.",
+        { resource: "nutrition.equivalentMeals", plan: capabilities.plan }
+      );
+    }
+
+    const menuId = cleanString(payload.menuId, 120);
+    const mealId = cleanString(payload.mealId, 120);
+    if (!menuId || !mealId) throw validationError(["menuId y mealId son obligatorios"]);
+    const key = equivalentGenerationSettingsKey(menuId, mealId);
+    const settings = (Array.isArray(actor?.menu?.equivalentMealGenerationSettings)
+      ? actor.menu.equivalentMealGenerationSettings
+      : []).find((entry) => entry?.key === key) ||
+      defaultEquivalentGenerationSettings({ menuId, mealId, mealName: payload.mealName });
+    const generationMode = settings.strategy === "assisted_food_addition"
+      ? FOOD_COMBINATION_MODES.ALLOW_SUGGESTIONS
+      : FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS;
+    const maxFoods = Math.max(1, Math.min(10, Number(capabilities?.limits?.equivalentMealFoods) || 6));
+
+    return await this.mealAlternativeGenerator({
+      mealType: payload.mealType,
+      target: payload.target,
+      requiredFoodIds: (settings.requiredFoods || []).map((food) => food.id),
+      excludedFoodIds: (settings.avoidedFoods || []).map((food) => food.id),
+      generationMode,
+      preferredCombinations: payload.preferredCombinations,
+      limit: payload.limit,
+      maxFoods,
+    }, {
+      model: this.alimentosModel,
+    });
   }
 
   _capabilitiesFromAccessContext(user, { activeMenuSource = null } = {}) {

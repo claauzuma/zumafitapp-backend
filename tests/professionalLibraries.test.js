@@ -15,6 +15,7 @@ const COACH_ID = "64b000000000000000000001";
 const OTHER_COACH_ID = "64b000000000000000000002";
 const CLIENT_ID = "64b000000000000000000003";
 const MENU_ID = "64b000000000000000000004";
+const ASSIGNED_MENU_ID = "64b000000000000000000005";
 
 function coach(plan, features) {
   return {
@@ -333,6 +334,77 @@ test("un coach no puede asignar la plantilla privada de otro coach", async () =>
     service._validatedCoachAssignedMenusByDay(coach("coach_pro", proFeatures), {
       tuesday: { menuId: MENU_ID, menuSnapshot: { id: MENU_ID, name: "Ajeno" } },
     }),
+    /FORBIDDEN/
+  );
+});
+
+test("una alternativa conserva como principal la copia activa historica del mismo coach y cliente", async () => {
+  const service = new ServicioUsuarios();
+  const legacyAssigned = {
+    _id: ASSIGNED_MENU_ID,
+    clienteId: CLIENT_ID,
+    coachId: COACH_ID,
+    estado: "activo",
+    activa: true,
+    nombre: "Volumen limpio 2200 - copia",
+    kcalObjetivo: 2523,
+    macrosObjetivo: { proteina: 180, carbs: 306, grasas: 49 },
+    comidas: [
+      {
+        id: "legacy-meal-1",
+        nombre: "Desayuno",
+        tipoComida: "desayuno",
+        items: [{ nombreSnapshot: "Avena", cantidad: 60, unidad: "g", kcal: 220 }],
+      },
+    ],
+  };
+  service.menusModel = {
+    getBaseById: async (id) => id === MENU_ID ? globalMenu() : null,
+    getAssignedById: async (id) => id === ASSIGNED_MENU_ID ? legacyAssigned : null,
+  };
+
+  const validated = await service._validatedCoachAssignedMenusByDay(
+    coach("coach_pro", proFeatures),
+    {
+      monday: {
+        primaryMenu: {
+          menuId: ASSIGNED_MENU_ID,
+          menuSnapshot: { id: ASSIGNED_MENU_ID, name: "Texto del cliente no confiable" },
+        },
+        alternatives: [{ menuId: MENU_ID, menuSnapshot: { id: MENU_ID, name: "Alternativa falsa" } }],
+      },
+    },
+    { _id: CLIENT_ID, id: CLIENT_ID }
+  );
+
+  assert.equal(validated.monday.primaryMenu.menuId, ASSIGNED_MENU_ID);
+  assert.equal(validated.monday.primaryMenu.menuSnapshot.name, "Volumen limpio 2200 - copia");
+  assert.equal(validated.monday.primaryMenu.source, "coach_assigned_legacy");
+  assert.equal(validated.monday.alternatives.length, 1);
+  assert.equal(validated.monday.alternatives[0].menuSnapshot.name, "Menu global real");
+});
+
+test("una copia historica de otro cliente no puede reutilizarse como principal", async () => {
+  const service = new ServicioUsuarios();
+  service.menusModel = {
+    getBaseById: async () => null,
+    getAssignedById: async () => ({
+      _id: ASSIGNED_MENU_ID,
+      clienteId: OTHER_COACH_ID,
+      coachId: COACH_ID,
+      estado: "activo",
+      activa: true,
+      nombre: "Copia ajena",
+      comidas: [{ nombre: "Almuerzo", items: [{ nombreSnapshot: "Arroz", cantidad: 100, unidad: "g" }] }],
+    }),
+  };
+
+  await assert.rejects(
+    service._validatedCoachAssignedMenusByDay(
+      coach("coach_pro", proFeatures),
+      { monday: { menuId: ASSIGNED_MENU_ID, menuSnapshot: { id: ASSIGNED_MENU_ID, name: "Copia ajena" } } },
+      { _id: CLIENT_ID, id: CLIENT_ID }
+    ),
     /FORBIDDEN/
   );
 });

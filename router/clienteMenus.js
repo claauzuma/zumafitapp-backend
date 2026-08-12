@@ -96,6 +96,24 @@ class RouterClienteMenus {
       this.controladorClientOwnMenus.authorizeAutomaticGeneration
     );
     this.router.get(
+      "/me/menus/equivalent-generation-settings",
+      authMiddleware,
+      this.controladorClientOwnMenus.getEquivalentMealGenerationSettings
+    );
+    this.router.put(
+      "/me/menus/equivalent-generation-settings",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientOwnMenus.saveEquivalentMealGenerationSettings
+    );
+    this.router.post(
+      "/me/menus/equivalent-alternatives/generate",
+      authMiddleware,
+      writeLimiter,
+      this.controladorClientOwnMenus.generateEquivalentMealAlternative
+    );
+    this.router.get(
       "/me/menus",
       authMiddleware,
       this.controladorClientOwnMenus.list
