@@ -353,6 +353,50 @@ test("planificar un equivalente no cambia lo consumido hasta marcar la comida", 
   assert.equal(consumed.record.tracking.consumedTotals.kcal, 490);
 });
 
+test("una alternativa inactiva persiste pero no reemplaza macros ni bloquea el consumo original", async () => {
+  const context = replacementService("pro");
+  const replacement = {
+    id: `client-meal-replacement-${context.date}-0-meal-1`,
+    name: "Mi alternativa guardada",
+    mode: "custom_equivalent",
+    replacementSlot: "client_generated",
+    isActiveReplacement: false,
+    replacesMealIds: ["meal-1"],
+    target: { kcal: 500, proteina: 40, carbs: 55, grasas: 13 },
+    foods: [{ id: "food-1", name: "Comida nueva", quantity: 100, unit: "g", kcal: 490 }],
+  };
+  const payload = replacementPayload(context.date, replacement);
+  payload.completedMenuMealIds = ["meal-1"];
+  const result = await context.service.upsertMyMenuTrackingDay({ id: context.user.id }, payload);
+  assert.equal(result.record.tracking.mealReplacements[0].isActiveReplacement, false);
+  assert.equal(result.record.tracking.consumedTotals.kcal, 500);
+});
+
+test("el coach recibe el slot de alternativa del cliente con alimentos y estado activo", async () => {
+  const context = replacementService("pro");
+  context.user.coach = { entrenadorId: "coach-1" };
+  context.service._getCoachClientPair = async () => ({ coach: { _id: "coach-1" }, client: context.user });
+  const replacement = {
+    id: `client-meal-replacement-${context.date}-0-meal-1`,
+    name: "Mi alternativa visible",
+    mode: "custom_equivalent",
+    replacesMealIds: ["meal-1"],
+    target: { kcal: 500, proteina: 40, carbs: 55, grasas: 13 },
+    foods: [{ id: "food-1", name: "Arroz", quantity: 140, unit: "g", kcal: 490 }],
+  };
+  await context.service.upsertMyMenuTrackingDay({ id: context.user.id }, replacementPayload(context.date, replacement));
+  context.service.accessAuditModel.list = async () => ({ items: [] });
+  const result = await context.service.getCoachClientEquivalentActivity({
+    coachId: "coach-1",
+    clientId: context.user.id,
+    query: { from: context.date, to: context.date },
+  });
+  assert.equal(result.clientMealAlternatives.length, 1);
+  assert.equal(result.clientMealAlternatives[0].name, "Mi alternativa visible");
+  assert.equal(result.clientMealAlternatives[0].foods[0].name, "Arroz");
+  assert.equal(result.clientMealAlternatives[0].active, true);
+});
+
 test("aprobacion opcional bloquea consumo hasta que el coach relacionado aprueba", async () => {
   const context = replacementService("pro");
   context.user.coach = { entrenadorId: "coach-1" };

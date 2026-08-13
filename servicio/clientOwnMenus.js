@@ -16,7 +16,10 @@ import {
 } from "./accessGates.js";
 import { resolveClientMenuAutonomyPermissions } from "./clientMenuAutonomy.js";
 import { FOOD_COMBINATION_MODES } from "./foodCombinationCandidates.js";
-import { generateMealAlternative } from "./mealAlternativeGenerator.js";
+import {
+  generateMealAlternative,
+  recalculateMealAlternativeQuantities,
+} from "./mealAlternativeGenerator.js";
 import {
   canViewNutritionItem,
   idValues,
@@ -435,6 +438,7 @@ class ServicioClientOwnMenus {
     this.usuariosModel = new ModelMongoDBUsuarios();
     this.alimentosModel = new ModelMongoDBAlimentos();
     this.mealAlternativeGenerator = generateMealAlternative;
+    this.mealAlternativeQuantityRecalculator = recalculateMealAlternativeQuantities;
   }
 
   async _actor(user = {}) {
@@ -812,6 +816,42 @@ class ServicioClientOwnMenus {
       generationMode,
       preferredCombinations: payload.preferredCombinations,
       limit: payload.limit,
+      maxFoods,
+    }, {
+      model: this.alimentosModel,
+    });
+  }
+
+  async recalculateEquivalentMealAlternative(user, payload = {}) {
+    const actor = await this._actor(user);
+    const capabilities = this._capabilitiesFromAccessContext(actor);
+    const autonomy = actor?.coach?.entrenadorId
+      ? resolveClientMenuAutonomyPermissions(actor?.clientPermissions || {}, { defaultPreset: "equivalences" })
+      : null;
+    if (
+      capabilities.canUseEquivalences !== true ||
+      capabilities.canAutoCalculateTrackingQuantities !== true ||
+      autonomy?.tracking?.canUseMenuAlternatives === false ||
+      autonomy?.tracking?.canCreateEquivalentMeals === false
+    ) {
+      throw serviceError(
+        "PLAN_CAPABILITY_REQUIRED",
+        "El recalculo automatico de equivalencias no esta habilitado para este acceso.",
+        { resource: "nutrition.equivalentMeals", plan: capabilities.plan }
+      );
+    }
+    const menuId = cleanString(payload.menuId, 120);
+    const mealId = cleanString(payload.mealId, 120);
+    if (!menuId || !mealId) throw validationError(["menuId y mealId son obligatorios"]);
+    const maxFoods = Math.max(1, Math.min(10, Number(capabilities?.limits?.equivalentMealFoods) || 6));
+    return await this.mealAlternativeQuantityRecalculator({
+      mealType: payload.mealType,
+      target: payload.target,
+      selectedFoodIds: payload.selectedFoodIds,
+      fixedFoods: payload.fixedFoods,
+      currentFoods: payload.currentFoods,
+      generateVariant: payload.generateVariant === true,
+      variantSeed: payload.variantSeed,
       maxFoods,
     }, {
       model: this.alimentosModel,

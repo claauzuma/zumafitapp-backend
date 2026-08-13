@@ -113,6 +113,12 @@ class RouterClienteMenus {
       writeLimiter,
       this.controladorClientOwnMenus.generateEquivalentMealAlternative
     );
+    this.router.post(
+      "/me/menus/equivalent-alternatives/recalculate",
+      authMiddleware,
+      writeLimiter,
+      this.controladorClientOwnMenus.recalculateEquivalentMealAlternative
+    );
     this.router.get(
       "/me/menus",
       authMiddleware,

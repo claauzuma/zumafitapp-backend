@@ -223,6 +223,23 @@ function foodIdentityValues(food = {}) {
     .map((value) => String(value));
 }
 
+function exactCatalogIdentity(food = {}) {
+  const value = food?.raw?._id ?? food._id ?? food.foodId ?? food.id ?? food?.raw?.alimentoId ?? food.alimentoId;
+  return hasValue(value) ? String(value) : "";
+}
+
+function catalogWithUniqueExactIdentities(primary = [], extras = []) {
+  const selected = [];
+  const seen = new Set();
+  for (const food of [...primary, ...extras]) {
+    const identity = exactCatalogIdentity(food);
+    if (identity && seen.has(identity)) continue;
+    selected.push(food);
+    if (identity) seen.add(identity);
+  }
+  return selected;
+}
+
 function catalogFoodFor(payloadFood = {}, allFoods = []) {
   const payloadIds = new Set(foodIdentityValues(payloadFood));
   const name = foodNameText(payloadFood);
@@ -741,6 +758,8 @@ class ServicioAlimentos {
     const internalTrackingQuantityMode = trackingContextAllowed
       ? internalContext.trackingQuantityMode
       : "";
+    const enforceQuantityConstraints =
+      trackingContextAllowed && internalContext?.enforceQuantityConstraints === true;
     const trackingOptimizationPolicy = internalTrackingQuantityMode === "calorie_fill"
       ? TRACKING_CALORIE_FILL_POLICY
       : internalTrackingQuantityMode === "constrained"
@@ -803,6 +822,12 @@ class ServicioAlimentos {
       }
     }
 
+    const engineFoods = enforceQuantityConstraints
+      // El catálogo temporal de la ronda ya contiene la regla efectiva. Para
+      // una identidad exacta no agregamos además el snapshot normalizado: así
+      // menu2 nunca debe decidir cuál de dos versiones rivales gana.
+      ? catalogWithUniqueExactIdentities(allFoods, alimentosBase)
+      : [...allFoods, ...alimentosBase];
     const result = menu.generarMenu({
       modo: mode,
       objetivo: target,
@@ -812,7 +837,7 @@ class ServicioAlimentos {
       // Los snapshots elegidos para esta operación prevalecen sobre la base
       // global si comparten nombre. Así Tracking y los editores calculan con
       // los mismos macros que el usuario está viendo.
-      alimentosBase: [...allFoods, ...alimentosBase],
+      alimentosBase: engineFoods,
       permitirDefaults: false,
       redondear: payload.options?.redondear !== false,
       // El boolean legacy no puede habilitar por sí solo la policy de Tracking.
@@ -821,11 +846,15 @@ class ServicioAlimentos {
         trackingOptimizationPolicy === TRACKING_OPTIMIZATION_POLICY &&
         payload.options?.trackingPriority === true,
       trackingOptimizationPolicy,
+      // Sólo puede habilitarlo un contexto interno autorizado. No se confía en el payload HTTP.
+      ...(enforceQuantityConstraints ? { enforceQuantityConstraints: true } : {}),
       generarVariante: payload.options?.generarVariante === true || payload.options?.generateVariant === true,
       variantSeed: payload.options?.variantSeed,
     });
 
-    const sourceFoods = [...allFoods, ...alimentosBase];
+    const sourceFoods = enforceQuantityConstraints
+      ? engineFoods
+      : [...allFoods, ...alimentosBase];
     const foodByName = new Map(
       sourceFoods
         .map((food) => [cleanText(food.nombre || food.name || food.Alimentos), food])

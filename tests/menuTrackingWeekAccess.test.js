@@ -180,3 +180,23 @@ test("G: Free sin coach conserva exactamente siete dias de historial", () => {
     (error) => error.code === "PLAN_CAPABILITY_REQUIRED" && error.limit === 7
   );
 });
+
+test("un día planificado por comida llega al cliente aunque no tenga menú asignado", async () => {
+  await withFixedNow(SUNDAY_NIGHT_IN_ARGENTINA, async () => {
+    const user = coachClient();
+    user.menu.weeklyPlan.mealTargetsByDay = {
+      sunday: {
+        mode: "per_meal",
+        meals: [
+          { id: "breakfast", label: "Desayuno", type: "breakfast", target: { kcal: 600, p: 40, c: 70, g: 18 } },
+          { id: "lunch", label: "Almuerzo", type: "lunch", target: { kcal: 900, p: 60, c: 110, g: 25 } },
+          { id: "dinner", label: "Cena", type: "dinner", target: { kcal: 911, p: 60, c: 120, g: 20 } },
+        ],
+      },
+    };
+    const result = await serviceFor(user).getMyMenuTrackingWeek({ id: CLIENT_ID }, { start: CURRENT_WEEK_START });
+    assert.equal(result.days[6].assignment.primaryMenu, null);
+    assert.equal(result.days[6].mealTargetPlan.mode, "per_meal");
+    assert.equal(result.days[6].mealTargetPlan.meals.length, 3);
+  });
+});

@@ -164,7 +164,7 @@ test("Admin y Coach conservan su policy y estructura, pero reciben el máximo re
   assert.equal(Object.hasOwn(admin.foods[0], "stepGramos"), false);
 });
 
-test("el boolean legacy no habilita la policy Tracking en el endpoint compartido", async () => {
+test("flags externos no habilitan la policy Tracking ni constraints internos en el endpoint compartido", async () => {
   const food = catalogFood({ id: "catalog-policy-guard", name: "Control de policy", unit: "Unid", max: 3 });
   const basePayload = {
     mode: "kcalProteina",
@@ -188,6 +188,16 @@ test("el boolean legacy no habilita la policy Tracking en el endpoint compartido
       trackingOptimizationPolicy: "tracking_no_permitida",
     },
   });
+  const forgedInternalFlag = await service.generarCantidades({
+    ...basePayload,
+    options: {
+      redondear: true,
+      usarMinMax: true,
+      trackingPriority: true,
+      enforceQuantityConstraints: true,
+      trackingOptimizationPolicy: "tracking_calorie_fill_v1",
+    },
+  });
   const explicitTracking = await service.generarCantidades({
     ...basePayload,
     options: {
@@ -200,6 +210,7 @@ test("el boolean legacy no habilita la policy Tracking en el endpoint compartido
 
   assert.equal(legacyBoolean.optimization, null);
   assert.equal(invalidPolicy.optimization, null);
+  assert.equal(forgedInternalFlag.optimization, null);
   assert.equal(explicitTracking.optimization?.policy, TRACKING_OPTIMIZATION_POLICY);
 });
 

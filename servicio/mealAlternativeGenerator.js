@@ -2,6 +2,7 @@ import ModelMongoDBAlimentos from "../model/DAO/alimentosMongoDB.js";
 import ServicioAlimentos, {
   TRACKING_QUANTITY_INTERNAL_CONTEXT,
 } from "./alimentos.js";
+import { normalizeFood as normalizeQuantityFood } from "../menu2.js";
 import {
   FOOD_COMBINATION_MODES,
   generateFoodCombinationCandidates,
@@ -12,6 +13,20 @@ const PROTEIN_REACHED_TOLERANCE = 0.5;
 const DEFAULT_CANDIDATE_LIMIT = 20;
 const MAX_CANDIDATE_LIMIT = 40;
 const DEFAULT_MAX_FOODS = 6;
+const RECOMMENDED_CALORIE_DEFICIT = 10;
+const RECOMMENDED_PROTEIN_DEFICIT = 2.5;
+
+const RELAXATION_LEVELS = Object.freeze({
+  STRICT: "STRICT",
+  RELAX_STEP: "RELAX_STEP",
+  RELAX_MIN: "RELAX_MIN",
+});
+
+const PORTION_CONSTRAINT_FIELDS = Object.freeze({
+  min: Object.freeze(["minGramos", "minQuantity", "cantidadMin", "porcionMin"]),
+  max: Object.freeze(["maxGramos", "maxQuantity", "cantidadMax", "porcionMax"]),
+  step: Object.freeze(["stepGramos", "stepQuantity", "step", "multiplo"]),
+});
 
 const MEAL_TYPE_ALIASES = Object.freeze({
   breakfast: "breakfast",
@@ -167,6 +182,25 @@ function publicFood(generatedFood, sourceFood, candidate) {
   };
 }
 
+function publicFixedFood(sourceFood = {}, quantity = 0, candidate = {}) {
+  const normalized = normalizeQuantityFood(sourceFood) || {};
+  const amount = number(quantity);
+  const id = foodPrimaryId(sourceFood);
+  return {
+    foodId: id,
+    name: foodName(sourceFood),
+    role: candidate.roleAssignments?.[id] || null,
+    quantity: round(amount, 6),
+    unit: sourceFood?.unidad || sourceFood?.Unidad || sourceFood?.unit || "g",
+    kcal: round(number(normalized.calorias) * amount),
+    proteina: round(number(normalized.proteina) * amount),
+    carbs: round(number(normalized.carbohidratos) * amount),
+    grasas: round(number(normalized.grasas) * amount),
+    image: sourceFood?.imagen || null,
+    imageUrl: sourceFood?.imagenUrl || sourceFood?.imagen?.url || "",
+  };
+}
+
 function secondaryMacroError(totals, target) {
   const carbScale = target.carbs > 0 ? target.carbs : 25;
   const fatScale = target.grasas > 0 ? target.grasas : 10;
@@ -221,7 +255,98 @@ function compareSolutions(left, right, target) {
   return left.structure.localeCompare(right.structure) || left.signature.localeCompare(right.signature);
 }
 
-function publicSolution(solution, mode) {
+function normalizedPortionUnit(food = {}, rule = {}) {
+  const value = String(
+    rule.unit || food.unit || food.unidad || food.Unidad || food.unidadBase || food.measurementUnit || ""
+  ).trim().toLowerCase();
+  if (["g", "gr", "grs", "gramo", "gramos"].includes(value)) return "g";
+  if (["ml", "mililitro", "mililitros"].includes(value)) return "ml";
+  return value;
+}
+
+function withoutPortionConstraints(shape = {}, configured = {}) {
+  if (!shape || typeof shape !== "object") return shape;
+  const clean = { ...shape };
+  for (const kind of Object.keys(PORTION_CONSTRAINT_FIELDS)) {
+    if (!configured[kind]) continue;
+    for (const field of PORTION_CONSTRAINT_FIELDS[kind]) delete clean[field];
+  }
+  return clean;
+}
+
+function configuredPortionNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/**
+ * Proyecta una sola regla efectiva por documento, sin agregar copias rivales al
+ * catalogo. Es una transformacion interna: nunca recibe overrides del payload
+ * HTTP y no persiste cambios en fooddatabase2.
+ */
+function foodWithEffectivePortionRule(food = {}, level = RELAXATION_LEVELS.STRICT) {
+  const originalRule = food?.generation?.portionRule;
+  if (!originalRule || typeof originalRule !== "object") return food;
+
+  const unit = normalizedPortionUnit(food, originalRule);
+  const continuous = unit === "g" || unit === "ml";
+  const originalMin = configuredPortionNumber(originalRule.min);
+  const originalMax = configuredPortionNumber(originalRule.max);
+  const originalStep = configuredPortionNumber(originalRule.step);
+  const configured = {
+    min: originalMin !== null,
+    max: originalMax !== null,
+    step: originalStep !== null,
+  };
+  if (!configured.min && !configured.max && !configured.step) return food;
+  const relaxStep = continuous && originalStep === 10 && level !== RELAXATION_LEVELS.STRICT;
+  const effectiveStep = relaxStep ? 5 : originalStep;
+  const effectiveMin = level === RELAXATION_LEVELS.RELAX_MIN && continuous && originalMin !== null
+    ? Math.max(0, originalMin - 20)
+    : originalMin;
+  const clean = withoutPortionConstraints(food, configured);
+  const cleanRaw = food.raw && typeof food.raw === "object"
+    ? withoutPortionConstraints(food.raw, configured)
+    : food.raw;
+  const effectiveRule = {
+    ...originalRule,
+    unit: originalRule.unit || unit || null,
+    min: effectiveMin,
+    max: originalMax,
+    step: effectiveStep,
+  };
+
+  return {
+    ...clean,
+    ...(cleanRaw ? { raw: cleanRaw } : {}),
+    generation: {
+      ...(food.generation || {}),
+      portionRule: effectiveRule,
+    },
+    ...(effectiveMin !== null && effectiveMin > 0 ? { minGramos: effectiveMin } : {}),
+    ...(originalMax !== null && originalMax > 0 ? { maxGramos: originalMax } : {}),
+    ...(effectiveStep !== null && effectiveStep > 0 ? { stepGramos: effectiveStep } : {}),
+  };
+}
+
+function catalogForRelaxation(catalog = [], level = RELAXATION_LEVELS.STRICT) {
+  return (Array.isArray(catalog) ? catalog : []).map((food) =>
+    foodWithEffectivePortionRule(food, level)
+  );
+}
+
+function isRecommendedForRound(solution, target) {
+  if (!solution) return false;
+  const calorieDeficit = target.kcal - solution.totals.kcal;
+  const caloriesRecommended = calorieDeficit >= -1e-6 &&
+    calorieDeficit <= RECOMMENDED_CALORIE_DEFICIT + 1e-9;
+  const proteinRecommended = target.proteina <= 0 ||
+    solution.totals.proteina >= target.proteina - RECOMMENDED_PROTEIN_DEFICIT - 1e-9;
+  return caloriesRecommended && proteinRecommended;
+}
+
+function publicSolution(solution, mode, relaxation) {
   const unreachable = !solution.ranking.inCalorieZone ||
     !solution.ranking.proteinReached ||
     solution.ranking.hasMacroLimitations;
@@ -245,40 +370,143 @@ function publicSolution(solution, mode) {
     score: round(Math.max(0, 100000 - penalty), 6),
     warnings: solution.warnings,
     optimization: solution.optimization,
+    variant: solution.variant || null,
+    recommended: true,
+    relaxation,
   };
+}
+
+function quantitySolverFood(sourceFood = {}, currentQuantity = null) {
+  const normalized = normalizeQuantityFood(sourceFood) || {};
+  return {
+    ...sourceFood,
+    foodId: foodPrimaryId(sourceFood),
+    name: foodName(sourceFood),
+    unit: sourceFood.unidad || sourceFood.Unidad || sourceFood.unit || "g",
+    kcalPerUnitOrGram: number(normalized.calorias),
+    proteinPerUnitOrGram: number(normalized.proteina),
+    carbsPerUnitOrGram: number(normalized.carbohidratos),
+    fatPerUnitOrGram: number(normalized.grasas),
+    ...(Number.isFinite(Number(currentQuantity)) && Number(currentQuantity) > 0
+      ? { currentQuantity: Number(currentQuantity) }
+      : {}),
+  };
+}
+
+function quantitySatisfiesEffectiveRule(food = {}, quantity = 0) {
+  const amount = number(quantity);
+  if (!(amount > 0)) return false;
+  const rule = food?.generation?.portionRule || {};
+  const min = configuredPortionNumber(rule.min) ??
+    configuredPortionNumber(food.minGramos ?? food.minQuantity ?? food.cantidadMin ?? food.porcionMin);
+  const max = configuredPortionNumber(rule.max) ??
+    configuredPortionNumber(food.maxGramos ?? food.maxQuantity ?? food.cantidadMax ?? food.porcionMax);
+  const step = configuredPortionNumber(rule.step) ??
+    configuredPortionNumber(food.stepGramos ?? food.stepQuantity ?? food.step ?? food.multiplo);
+  const allowedValues = Array.isArray(rule.allowedValues)
+    ? rule.allowedValues.map(Number).filter((value) => Number.isFinite(value) && value > 0)
+    : [];
+  const epsilon = 1e-6;
+  if (min !== null && amount < min - epsilon) return false;
+  if (max !== null && amount > max + epsilon) return false;
+  if (allowedValues.length && !allowedValues.some((value) => Math.abs(value - amount) <= epsilon)) return false;
+  if (step !== null && step > 0 && Math.abs(amount / step - Math.round(amount / step)) > epsilon) return false;
+  if (!["g", "ml"].includes(normalizedPortionUnit(food, rule)) &&
+      food.allowFractionalQuantity !== true &&
+      Math.abs(amount - Math.round(amount)) > epsilon) return false;
+  return true;
 }
 
 async function solveCandidate({ candidate, catalog, target, quantityService }) {
   const candidateFoods = candidate.foodIds.map((id) =>
-    catalog.find((food) => foodAliases(food).has(String(id)))
+    catalog.find((item) => foodAliases(item).has(String(id))) || null
   );
   if (candidateFoods.some((food) => !food)) return null;
+
+  const fixedQuantities = candidate.fixedQuantities instanceof Map
+    ? candidate.fixedQuantities
+    : new Map();
+  const currentQuantities = candidate.currentQuantities instanceof Map
+    ? candidate.currentQuantities
+    : new Map();
+  const fixedFoods = [];
+  const pendingFoods = [];
+  for (let index = 0; index < candidateFoods.length; index++) {
+    const sourceFood = candidateFoods[index];
+    const requestedId = String(candidate.foodIds[index]);
+    const fixedQuantity = fixedQuantities.get(requestedId);
+    if (Number.isFinite(fixedQuantity) && fixedQuantity > 0) {
+      fixedFoods.push({
+        ...quantitySolverFood(sourceFood),
+        foodId: requestedId,
+        quantity: fixedQuantity,
+      });
+    } else {
+      pendingFoods.push({
+        ...quantitySolverFood(sourceFood, currentQuantities.get(requestedId)),
+        foodId: requestedId,
+      });
+    }
+  }
+  if (!pendingFoods.length) return null;
 
   const result = await quantityService.generarCantidades({
     mode: "kcalProteina",
     generationType: "selectedOnly",
     target,
-    fixedFoods: [],
-    pendingFoods: candidateFoods,
-    options: { redondear: true, usarMinMax: false },
+    fixedFoods,
+    pendingFoods,
+    options: {
+      redondear: true,
+      usarMinMax: false,
+      generarVariante: candidate.generateVariant === true,
+      variantSeed: candidate.variantSeed,
+    },
   }, {
     authorization: TRACKING_QUANTITY_INTERNAL_CONTEXT,
     trackingQuantityMode: "calorie_fill",
+    // Sólo este flujo convierte min/max/step del Admin en restricciones duras.
+    // Tracking conserva su comportamiento histórico porque no envía este flag.
+    enforceQuantityConstraints: true,
   });
 
   if (result?.status === "error" || !Array.isArray(result?.foods) || !result.foods.length) return null;
   const usedCatalogIds = new Set();
-  const foods = result.foods.map((food, index) => {
+  const generatedFoods = result.foods.map((food, index) => {
     const sourceFood = findCatalogFood(catalog, food, candidate.foodIds[index]);
     const output = publicFood(food, sourceFood, candidate);
-    if (output.foodId) usedCatalogIds.add(output.foodId);
+    const requestedId = candidate.foodIds.find((id) =>
+      sourceFood && foodAliases(sourceFood).has(String(id))
+    );
+    if (requestedId) output.foodId = String(requestedId);
+    if (output.foodId) usedCatalogIds.add(String(output.foodId));
     return output;
   });
+  const fixedOutputs = candidateFoods
+    .map((food, index) => ({ food, requestedId: String(candidate.foodIds[index]) }))
+    .filter(({ requestedId }) => fixedQuantities.has(requestedId))
+    .map(({ food, requestedId }) => {
+      const output = publicFixedFood(food, fixedQuantities.get(requestedId), candidate);
+      output.foodId = requestedId;
+      if (output.foodId) usedCatalogIds.add(output.foodId);
+      return output;
+    });
+  const generatedById = new Map(generatedFoods.map((food) => [food.foodId, food]));
+  const fixedById = new Map(fixedOutputs.map((food) => [food.foodId, food]));
+  const foods = candidate.foodIds
+    .map((id) => fixedById.get(String(id)) || generatedById.get(String(id)))
+    .filter(Boolean);
   if (
     foods.length !== candidate.foodIds.length ||
     foods.some((food) => !(food.quantity > 0) || !(food.kcal >= 0)) ||
     candidate.foodIds.some((id) => !usedCatalogIds.has(String(id)))
   ) return null;
+  for (let index = 0; index < candidateFoods.length; index++) {
+    const requestedId = String(candidate.foodIds[index]);
+    if (fixedQuantities.has(requestedId)) continue;
+    const output = foods.find((food) => food.foodId === requestedId);
+    if (!output || !quantitySatisfiesEffectiveRule(candidateFoods[index], output.quantity)) return null;
+  }
 
   const totals = nutrition(result.totals);
   if (!Object.values(totals).every(Number.isFinite) || totals.kcal > target.kcal + 1e-6) return null;
@@ -292,9 +520,102 @@ async function solveCandidate({ candidate, catalog, target, quantityService }) {
     preferredCombinationMatch: candidate.preferredCombinationMatch === true,
     warnings: Array.isArray(result.warnings) ? result.warnings : [],
     optimization: result.optimization || null,
+    variant: result.variant || null,
   };
   solved.ranking = nutritionalRank(solved, target);
   return solved;
+}
+
+async function solveCandidatesWithRelaxation({ candidates, catalog, target, quantityService, meta = {} }) {
+  const startedAt = Date.now();
+  const rounds = [];
+  let winningRound = null;
+  for (const level of [
+    RELAXATION_LEVELS.STRICT,
+    RELAXATION_LEVELS.RELAX_STEP,
+    RELAXATION_LEVELS.RELAX_MIN,
+  ]) {
+    const roundResult = await solveRound({ level, candidates, catalog, target, quantityService });
+    rounds.push(roundResult.diagnostic);
+    if (roundResult.recommendedSolutions.length) {
+      winningRound = roundResult;
+      break;
+    }
+  }
+
+  if (!winningRound) {
+    return {
+      status: "NO_SOLUTION",
+      code: "MEAL_TARGET_NOT_REACHABLE_WITH_PORTION_RULES",
+      recommended: false,
+      alternative: null,
+      alternatives: [],
+      relaxation: {
+        level: RELAXATION_LEVELS.RELAX_MIN,
+        portionRulesRelaxed: true,
+        exhausted: true,
+      },
+      meta: {
+        ...meta,
+        combinationCandidatesEvaluated: candidates.length,
+        totalCandidateExecutions: rounds.reduce((total, round) => total + round.candidatesProcessed, 0),
+        quantitySolutionsFound: rounds.reduce((total, round) => total + round.quantitySolutionsFound, 0),
+        recommendedSolutionsFound: 0,
+        rounds,
+        elapsedMs: Date.now() - startedAt,
+      },
+    };
+  }
+
+  const relaxation = {
+    level: winningRound.level,
+    portionRulesRelaxed: winningRound.level !== RELAXATION_LEVELS.STRICT,
+  };
+  const publicSolutions = winningRound.recommendedSolutions.map((solution) =>
+    publicSolution(solution, meta.mode || FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS, relaxation)
+  );
+  return {
+    status: "SUCCESS",
+    recommended: true,
+    relaxation,
+    alternative: publicSolutions[0],
+    alternatives: publicSolutions.slice(1),
+    meta: {
+      ...meta,
+      combinationCandidatesEvaluated: candidates.length,
+      totalCandidateExecutions: rounds.reduce((total, round) => total + round.candidatesProcessed, 0),
+      quantitySolutionsFound: winningRound.solutions.length,
+      recommendedSolutionsFound: publicSolutions.length,
+      rounds,
+      elapsedMs: Date.now() - startedAt,
+    },
+  };
+}
+
+async function solveRound({ level, candidates, catalog, target, quantityService }) {
+  const startedAt = Date.now();
+  const effectiveCatalog = catalogForRelaxation(catalog, level);
+  quantityService.model = { obtenerAlimentos: async () => effectiveCatalog };
+  const settled = await Promise.allSettled(candidates.map((candidate) =>
+    solveCandidate({ candidate, catalog: effectiveCatalog, target, quantityService })
+  ));
+  const solutions = settled
+    .filter((entry) => entry.status === "fulfilled" && entry.value)
+    .map((entry) => entry.value)
+    .sort((left, right) => compareSolutions(left, right, target));
+  const recommendedSolutions = solutions.filter((solution) => isRecommendedForRound(solution, target));
+  return {
+    level,
+    solutions,
+    recommendedSolutions,
+    diagnostic: {
+      level,
+      candidatesProcessed: candidates.length,
+      quantitySolutionsFound: solutions.length,
+      recommendedSolutionsFound: recommendedSolutions.length,
+      elapsedMs: Date.now() - startedAt,
+    },
+  };
 }
 
 /**
@@ -335,6 +656,11 @@ export async function generateMealAlternative(input = {}, dependencies = {}) {
   });
   const candidates = (combinations.candidates || []).filter((candidate) => candidate.foodIds.length <= maxFoods);
   if (!candidates.length) {
+    const relaxation = {
+      level: RELAXATION_LEVELS.STRICT,
+      portionRulesRelaxed: false,
+      exhausted: false,
+    };
     return {
       status: "NO_SOLUTION",
       code: mode === FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS
@@ -342,6 +668,8 @@ export async function generateMealAlternative(input = {}, dependencies = {}) {
         : "NO_COMPATIBLE_FOOD_COMBINATION",
       alternative: null,
       alternatives: [],
+      recommended: false,
+      relaxation,
       meta: {
         combinationCandidatesEvaluated: 0,
         quantitySolutionsFound: 0,
@@ -353,45 +681,108 @@ export async function generateMealAlternative(input = {}, dependencies = {}) {
 
   const catalog = await model.obtenerAlimentos();
   const quantityService = dependencies.quantityService || new ServicioAlimentos("MONGO");
-  quantityService.model = { obtenerAlimentos: async () => catalog };
-  const settled = await Promise.allSettled(candidates.map((candidate) =>
-    solveCandidate({ candidate, catalog, target, quantityService })
-  ));
-  const solutions = settled
-    .filter((entry) => entry.status === "fulfilled" && entry.value)
-    .map((entry) => entry.value)
-    .sort((left, right) => compareSolutions(left, right, target));
-  if (!solutions.length) {
-    return {
-      status: "NO_SOLUTION",
-      code: mode === FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS
-        ? "TARGET_NOT_REACHABLE_WITH_SELECTED_FOODS"
-        : "NO_VALID_QUANTITY_SOLUTION",
-      alternative: null,
-      alternatives: [],
-      meta: {
-        combinationCandidatesEvaluated: candidates.length,
-        quantitySolutionsFound: 0,
-        structuresEvaluated: combinations.meta?.structuresEvaluated || 0,
-        elapsedMs: Date.now() - startedAt,
-      },
-    };
-  }
-
-  const publicSolutions = solutions.map((solution) => publicSolution(solution, mode));
-  return {
-    status: "SUCCESS",
-    alternative: publicSolutions[0],
-    alternatives: publicSolutions.slice(1),
+  const result = await solveCandidatesWithRelaxation({
+    candidates,
+    catalog,
+    target,
+    quantityService,
     meta: {
-      combinationCandidatesEvaluated: candidates.length,
-      quantitySolutionsFound: publicSolutions.length,
       structuresEvaluated: combinations.meta?.structuresEvaluated || 0,
       mealType,
       mode,
-      elapsedMs: Date.now() - startedAt,
     },
+  });
+  result.meta.elapsedMs = Date.now() - startedAt;
+  return result;
+}
+
+export async function recalculateMealAlternativeQuantities(input = {}, dependencies = {}) {
+  const startedAt = Date.now();
+  const mealType = normalizeMealAlternativeMealType(input.mealType);
+  const target = normalizeTarget(input.target || input.mealTarget || {});
+  const selectedFoodIds = uniqueIds(input.selectedFoodIds || [], "selectedFoodIds");
+  const fixedFoodsInput = Array.isArray(input.fixedFoods) ? input.fixedFoods : [];
+  if (!selectedFoodIds.length) {
+    throw generationError("INVALID_FOOD_CONSTRAINTS", "Selecciona al menos un alimento para recalcular.", "selectedFoodIds");
+  }
+  if (selectedFoodIds.length > safeLimit(input.maxFoods, DEFAULT_MAX_FOODS, 10)) {
+    throw generationError("MEAL_FOOD_LIMIT_REACHED", "La comida supera el limite de alimentos.", "selectedFoodIds");
+  }
+
+  const fixedQuantities = new Map();
+  for (const fixed of fixedFoodsInput) {
+    const id = String(fixed?.foodId || fixed?.id || "").trim();
+    const quantity = Number(fixed?.quantity ?? fixed?.cantidad);
+    if (!id || !selectedFoodIds.includes(id) || !Number.isFinite(quantity) || quantity <= 0) {
+      throw generationError("INVALID_FIXED_QUANTITY", "Revisa las cantidades fijadas antes de recalcular.", "fixedFoods");
+    }
+    fixedQuantities.set(id, quantity);
+  }
+  if (fixedQuantities.size >= selectedFoodIds.length) {
+    throw generationError("NO_AUTOMATIC_FOODS", "Marca al menos un alimento como Auto para recalcularlo.", "fixedFoods");
+  }
+  const currentQuantities = new Map(
+    (Array.isArray(input.currentFoods) ? input.currentFoods : [])
+      .map((food) => [String(food?.foodId || food?.id || "").trim(), Number(food?.quantity ?? food?.cantidad)])
+      .filter(([id, quantity]) => id && selectedFoodIds.includes(id) && Number.isFinite(quantity) && quantity > 0)
+  );
+  const model = dependencies.model || new ModelMongoDBAlimentos();
+  const catalog = await model.obtenerAlimentos();
+  if (selectedFoodIds.some((id) => !catalog.some((food) => foodAliases(food).has(id)))) {
+    throw generationError("FOOD_NOT_FOUND", "Uno de los alimentos ya no esta disponible.", "selectedFoodIds");
+  }
+  const candidate = {
+    foodIds: selectedFoodIds,
+    structure: `RECALCULATE:${selectedFoodIds.join("+")}`,
+    roleAssignments: {},
+    preferredCombinationMatch: false,
+    fixedQuantities,
+    currentQuantities,
+    generateVariant: input.generateVariant === true,
+    variantSeed: input.variantSeed,
   };
+  const quantityService = dependencies.quantityService || new ServicioAlimentos("MONGO");
+  const result = await solveCandidatesWithRelaxation({
+    candidates: [candidate],
+    catalog,
+    target,
+    quantityService,
+    meta: {
+      structuresEvaluated: 1,
+      mealType,
+      mode: FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS,
+      recalculation: true,
+      fixedFoods: fixedQuantities.size,
+    },
+  });
+  // Una variante es opcional. Si no existe una redistribucion suficientemente
+  // buena, resolvemos otra vez la misma seleccion sin variante y devolvemos la
+  // mejor cantidad valida; nunca ampliamos la estructura de alimentos.
+  const requestedVariantWasNotApplied = input.generateVariant === true && (
+    result.status === "NO_SOLUTION" ||
+    result.alternative?.variant?.requested === true && result.alternative.variant.applied !== true
+  );
+  if (requestedVariantWasNotApplied) {
+    candidate.generateVariant = false;
+    const fallback = await solveCandidatesWithRelaxation({
+      candidates: [candidate],
+      catalog,
+      target,
+      quantityService,
+      meta: {
+        structuresEvaluated: 1,
+        mealType,
+        mode: FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS,
+        recalculation: true,
+        fixedFoods: fixedQuantities.size,
+        variantFallback: true,
+      },
+    });
+    fallback.meta.elapsedMs = Date.now() - startedAt;
+    return fallback;
+  }
+  result.meta.elapsedMs = Date.now() - startedAt;
+  return result;
 }
 
 export default generateMealAlternative;

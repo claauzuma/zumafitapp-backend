@@ -1107,6 +1107,65 @@ function weeklyPlanHasValues(weeklyPlan = {}) {
   );
 }
 
+function normalizeWeeklyMealTargetsByDay(value = {}, nutritionWeek = null) {
+  if (!isPlainObject(value)) throw new Error("MEAL_TARGETS_BY_DAY_INVALID");
+  const normalized = {};
+
+  WEEKLY_MENU_DAY_META.forEach((day) => {
+    const entry = findDayValue(value, day);
+    if (!entry.found || entry.value === null) return;
+    const plan = entry.value;
+    if (!isPlainObject(plan) || plan.mode !== "per_meal" || !Array.isArray(plan.meals)) {
+      throw new Error("MEAL_TARGET_PLAN_INVALID");
+    }
+    if (plan.meals.length < 3 || plan.meals.length > 6) throw new Error("MEAL_TARGET_COUNT_INVALID");
+
+    const validMealTypes = new Set(["breakfast", "lunch", "snack", "dinner", "extraSnack"]);
+    const mealIds = new Set();
+    const meals = plan.meals.map((meal, index) => {
+      if (!isPlainObject(meal) || !isPlainObject(meal.target)) throw new Error("MEAL_TARGET_INVALID");
+      const id = cleanString(meal.id || `coach_target_${day.key}_${index + 1}`, 80);
+      const type = cleanString(meal.type || "snack", 40);
+      if (!id || mealIds.has(id) || !validMealTypes.has(type)) throw new Error("MEAL_TARGET_INVALID");
+      mealIds.add(id);
+      return {
+        id,
+        label: cleanString(meal.label || meal.name || `Comida ${index + 1}`, 80),
+        type,
+        order: index,
+        target: {
+          kcal: numberOrNull(meal.target.kcal, { min: 0, max: 7000 }),
+          p: numberOrNull(meal.target.p ?? meal.target.proteina, { min: 0, max: 500 }),
+          c: numberOrNull(meal.target.c ?? meal.target.carbs, { min: 0, max: 900 }),
+          g: numberOrNull(meal.target.g ?? meal.target.grasas, { min: 0, max: 400 }),
+        },
+      };
+    });
+
+    const totals = meals.reduce((sum, meal) => ({
+      kcal: sum.kcal + Number(meal.target.kcal || 0),
+      p: sum.p + Number(meal.target.p || 0),
+      c: sum.c + Number(meal.target.c || 0),
+      g: sum.g + Number(meal.target.g || 0),
+    }), { kcal: 0, p: 0, c: 0, g: 0 });
+    const dailyTarget = nutritionWeek?.targets?.[day.key] || {};
+    if (hasNumber(dailyTarget.kcal) && (
+      Math.abs(totals.kcal - Number(dailyTarget.kcal || 0)) > 1 ||
+      Math.abs(totals.p - Number(dailyTarget.p || 0)) > 0.11 ||
+      Math.abs(totals.c - Number(dailyTarget.c || 0)) > 0.11 ||
+      Math.abs(totals.g - Number(dailyTarget.g || 0)) > 0.11
+    )) throw new Error("MEAL_TARGET_TOTALS_MISMATCH");
+
+    normalized[day.key] = {
+      mode: "per_meal",
+      meals,
+      updatedAt: plan.updatedAt ? new Date(plan.updatedAt) : new Date(),
+    };
+  });
+
+  return normalized;
+}
+
 function isSelfGeneratedWeeklyPlan(user = {}) {
   const weeklyPlan = user?.menu?.weeklyPlan || {};
   const source = normalizeDayName(weeklyPlan.source || user?.menu?.weeklyPlanSource || "");
@@ -1737,6 +1796,10 @@ function sanitizeTrackingEntry(entry = {}, fallbackSource = "manual_food", index
     runId: entry.runId ? cleanString(entry.runId, 120) : null,
     mode: entry.mode ? cleanString(entry.mode, 80) : null,
     creationType: entry.creationType ? cleanString(entry.creationType, 80) : null,
+    replacementSlot: ["client_generated", "coach_assigned"].includes(String(entry.replacementSlot || "").toLowerCase())
+      ? String(entry.replacementSlot).toLowerCase()
+      : entry.mode === "custom_equivalent" ? "client_generated" : "coach_assigned",
+    selectionKey: entry.selectionKey ? cleanString(entry.selectionKey, 160) : null,
     strategy: ["selected_only", "assisted_food_addition"].includes(String(entry.strategy || "").toLowerCase())
       ? String(entry.strategy).toLowerCase()
       : "selected_only",
@@ -1853,6 +1916,7 @@ function consumedReplacementEntries(entries = [], completedMenuMeals = []) {
       .filter(Boolean)
   );
   return (Array.isArray(entries) ? entries : []).filter((entry) => {
+    if (entry?.isActiveReplacement === false) return false;
     const replacedIds = Array.isArray(entry?.replacesMealIds)
       ? entry.replacesMealIds.map((id) => cleanString(id, 100)).filter(Boolean)
       : [];
@@ -7119,6 +7183,9 @@ class ServicioUsuarios {
     const mealConfig = isPlainObject(incoming?.mealConfig) ? incoming.mealConfig : {};
     const restrictions = isPlainObject(incoming?.restrictions) ? incoming.restrictions : {};
     const weeklyPlan = isPlainObject(incoming?.weeklyPlan) ? incoming.weeklyPlan : {};
+    const mealTargetsByDay = Object.prototype.hasOwnProperty.call(weeklyPlan, "mealTargetsByDay")
+      ? normalizeWeeklyMealTargetsByDay(weeklyPlan.mealTargetsByDay, resolveClientNutritionWeek(client))
+      : null;
     const assignedMenusByDay = isPlainObject(weeklyPlan?.assignedMenusByDay)
       ? await this._validatedCoachAssignedMenusByDay(coach, weeklyPlan.assignedMenusByDay, client)
       : null;
@@ -7192,6 +7259,7 @@ class ServicioUsuarios {
         ...(isPlainObject(weeklyPlan?.caloriesByDay) ? { caloriesByDay: weeklyPlan.caloriesByDay } : {}),
         ...(isPlainObject(weeklyPlan?.macrosByDay) ? { macrosByDay: weeklyPlan.macrosByDay } : {}),
         ...(isPlainObject(weeklyPlan?.mealsByDay) ? { mealsByDay: weeklyPlan.mealsByDay } : {}),
+        ...(mealTargetsByDay ? { mealTargetsByDay } : {}),
         ...(assignedMenusByDay
           ? { assignedMenusByDay }
           : {}),
@@ -7382,6 +7450,7 @@ class ServicioUsuarios {
         : [];
       const menuTotals = primary?.menuSnapshot?.totals || { kcal: 0, proteina: 0, carbs: 0, grasas: 0 };
       const target = nutritionWeek.targets[day.key] || null;
+      const mealTargetPlan = user?.menu?.weeklyPlan?.mealTargetsByDay?.[day.key] || null;
       const kcalTarget = hasNumber(target?.kcal) ? Number(target.kcal) : 0;
       const proteinTarget = hasNumber(target?.p) ? Number(target.p) : 0;
       const kcalDiff = roundTrackingNumber((menuTotals.kcal || 0) - kcalTarget);
@@ -7392,6 +7461,7 @@ class ServicioUsuarios {
         dayKey: day.key,
         dayLabel: day.label,
         target,
+        mealTargetPlan,
         assignment: {
           primaryMenu: primary,
           alternatives,
@@ -7648,6 +7718,7 @@ class ServicioUsuarios {
       if (!completedIds.has(id)) continue;
       const mealInfo = { meal, index: mealIndex, id };
       const full = (mealReplacements || []).find((entry) => (
+        entry?.isActiveReplacement !== false &&
         entry?.mode === "custom_equivalent" && entry.replacesMealIds?.includes(id)
       ));
       const foodsForMeal = (foodReplacements || []).filter((entry) => entry.replacesMealIds?.includes(id));
@@ -7724,6 +7795,23 @@ class ServicioUsuarios {
         reason: item.reason || "",
         metadata: item.metadata || {},
       }));
+    const trackingDocs = await this.menuTrackingModel.listByUserDateRange(clientId, from || addDaysIso(new Date().toISOString().slice(0, 10), -30), to || new Date().toISOString().slice(0, 10));
+    const clientMealAlternatives = (trackingDocs || []).flatMap((doc) => (
+      Array.isArray(doc?.mealReplacements) ? doc.mealReplacements : []
+    ).filter((entry) => entry?.mode === "custom_equivalent").map((entry) => ({
+      date: doc.date,
+      id: entry.id,
+      name: entry.name,
+      originalMealId: entry.originalMealId,
+      originalMealName: entry.originalMealName,
+      active: entry.isActiveReplacement !== false,
+      approvalStatus: entry.approvalStatus || "approved",
+      version: entry.version || 1,
+      target: entry.target || {},
+      resultTotals: entry.resultTotals || {},
+      foods: entry.foods || [],
+      updatedAt: entry.updatedAt || doc.updatedAt || null,
+    })));
     const notifications = activity.filter((item) => item.notificationVisible);
     const digestItems = activity.filter((item) => item.includeInWeeklyDigest);
     const digest = Object.values(digestItems.reduce((groups, item) => {
@@ -7738,6 +7826,7 @@ class ServicioUsuarios {
       activity,
       notifications,
       weeklyDigest: digest,
+      clientMealAlternatives,
       settings: normalizeEquivalentTrackingSettings(client?.clientPermissions?.tracking),
       total: activity.length,
     };
@@ -7886,6 +7975,7 @@ class ServicioUsuarios {
 
     const attemptedCompletedIds = new Set(completedMenuMeals.map((meal) => String(meal?.mealId || "")));
     const blockedEquivalent = [...mealReplacements, ...foodReplacements].find((entry) => (
+      entry?.isActiveReplacement !== false &&
       entry?.replacesMealIds?.some((id) => attemptedCompletedIds.has(String(id))) &&
       entry?.approvalStatus && entry.approvalStatus !== "approved"
     ));
@@ -8520,6 +8610,7 @@ export {
   buildNutritionAssignmentImpact,
   buildSelfGoalsBackup,
   moveInvalidatedAssignments,
+  normalizeWeeklyMealTargetsByDay,
   resolveClientNutritionWeek,
   resetCoachDerivedClientPermissions,
   restoreMetasAfterCoachDisconnect,

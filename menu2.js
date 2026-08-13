@@ -814,7 +814,10 @@ function solveQuantities(selection, objective, mode, opts = {}) {
       selection,
       pending,
       objective,
-      fixedTotals
+      fixedTotals,
+      {
+        enforceQuantityConstraints: opts.enforceQuantityConstraints === true,
+      }
     );
     if (trackingOptimization.error) {
       return {
@@ -1176,11 +1179,21 @@ function totalsForPendingQuantities(selection, pending, quantities) {
   return totals;
 }
 
-function calorieFillDescriptor(item, index, calorieBudget) {
+function calorieFillDescriptor(item, index, calorieBudget, options = {}) {
   const raw = item?.food?.raw || {};
   const unit = normalizedMeasurementUnit(raw) || normalizedMeasurementUnit(item) || "g";
   const continuous = unit === "g" || unit === "ml";
+  const enforceQuantityConstraints = options.enforceQuantityConstraints === true;
+  const recommendedMin = Math.max(0, toNumber(item?.minGramos, 0));
+  const recommendedMax = Math.max(0, toNumber(item?.maxGramos, 0));
   const recommendedStep = Math.max(0, toNumber(item?.stepGramos, 0));
+  const explicitConstraintSource = (value) => {
+    const source = String(value || "").trim();
+    return Boolean(source) && !source.startsWith("fallback.");
+  };
+  const minExplicit = explicitConstraintSource(item?.minSource);
+  const maxExplicit = item?.maxExplicit === true || explicitConstraintSource(item?.maxSource);
+  const stepExplicit = explicitConstraintSource(item?.stepSource);
   const fractionsExplicitlyAllowed = toBoolean(
     firstValue(raw, [
       "allowFractionalQuantity",
@@ -1190,13 +1203,20 @@ function calorieFillDescriptor(item, index, calorieBudget) {
     ]),
     false
   ) || (recommendedStep > 0 && recommendedStep < 1);
-  const step = continuous
-    ? (fractionsExplicitlyAllowed && recommendedStep > 0 && recommendedStep < 1
-      ? recommendedStep
-      : 1)
-    : (fractionsExplicitlyAllowed
-      ? (recommendedStep > 0 ? recommendedStep : 0.1)
-      : 1);
+
+  // En calorie_fill histórico los gramos/ml avanzan de a 1.
+  // Cuando este flujo interno pide restricciones duras, un step explícito
+  // pasa a definir la grilla real de búsqueda (ej. 100,110,120...).
+  const step = enforceQuantityConstraints && stepExplicit && recommendedStep > 0
+    ? recommendedStep
+    : continuous
+      ? (fractionsExplicitlyAllowed && recommendedStep > 0 && recommendedStep < 1
+        ? recommendedStep
+        : 1)
+      : (fractionsExplicitlyAllowed
+        ? (recommendedStep > 0 ? recommendedStep : 0.1)
+        : 1);
+
   const kcalPerQuantity = Number(item?.food?.calorias);
   const proteinPerQuantity = Number(item?.food?.proteina);
   const carbsPerQuantity = Number(item?.food?.carbohidratos);
@@ -1208,8 +1228,24 @@ function calorieFillDescriptor(item, index, calorieBudget) {
   ].every(Number.isFinite);
   const valid = Number.isFinite(kcalPerQuantity) && kcalPerQuantity > EPS && finiteMacros;
   const caloriesPerStep = valid ? kcalPerQuantity * step : 0;
-  const technicalMaxSteps = valid
+  const unconstrainedTechnicalMaxSteps = valid
     ? Math.max(1, Math.ceil(Math.max(0, calorieBudget) / caloriesPerStep) + 2)
+    : 0;
+
+  const hardMinimumSteps = enforceQuantityConstraints && minExplicit && recommendedMin > 0
+    ? Math.ceil((recommendedMin - EPS) / step)
+    : 0;
+  const explicitMaximumSteps = enforceQuantityConstraints && maxExplicit && recommendedMax > 0
+    ? Math.floor((recommendedMax + EPS) / step)
+    : unconstrainedTechnicalMaxSteps;
+  const technicalMaxSteps = enforceQuantityConstraints
+    ? Math.min(unconstrainedTechnicalMaxSteps, explicitMaximumSteps)
+    : unconstrainedTechnicalMaxSteps;
+
+  // Un alimento que forma parte de una estructura candidata debe aparecer.
+  // Sin MIN explícito se conserva el mínimo histórico de un paso.
+  const minimumSteps = enforceQuantityConstraints && valid
+    ? Math.max(1, hardMinimumSteps)
     : 0;
 
   return {
@@ -1232,9 +1268,13 @@ function calorieFillDescriptor(item, index, calorieBudget) {
     carbsPerStep: valid ? carbsPerQuantity * step : 0,
     fatPerStep: valid ? fatPerQuantity * step : 0,
     technicalMaxSteps,
-    recommendedMin: Math.max(0, toNumber(item?.minGramos, 0)),
-    recommendedMax: Math.max(0, toNumber(item?.maxGramos, 0)),
+    minimumSteps,
+    recommendedMin,
+    recommendedMax,
     recommendedStep,
+    minExplicit,
+    maxExplicit,
+    stepExplicit,
   };
 }
 
@@ -1265,9 +1305,10 @@ function calorieFillConcentrationScore(descriptors, steps, totals, fixedTotals) 
 function calorieFillCandidate(steps, descriptors, fixedTotals, objective) {
   const normalizedSteps = new Array(descriptors.length).fill(0);
   for (const descriptor of descriptors) {
+    const minimumSteps = Math.max(0, toNumber(descriptor.minimumSteps, 0));
     normalizedSteps[descriptor.index] = Math.min(
       descriptor.technicalMaxSteps,
-      Math.max(0, Math.floor(toNumber(steps[descriptor.index], 0) + EPS))
+      Math.max(minimumSteps, Math.floor(toNumber(steps[descriptor.index], 0) + EPS))
     );
   }
   const totals = calorieFillTotals(fixedTotals, descriptors, normalizedSteps);
@@ -1614,11 +1655,18 @@ function calorieFillMacroSeeds(descriptors, baseSteps, fixedTotals, objective, c
   });
 }
 
-function optimizeTrackingCalorieFillQuantities(selection, pending, objective, fixedTotals) {
+function optimizeTrackingCalorieFillQuantities(
+  selection,
+  pending,
+  objective,
+  fixedTotals,
+  options = {}
+) {
   const calorieCeiling = Math.max(0, objective.calorias);
   const calorieBudget = Math.max(0, calorieCeiling - fixedTotals.calorias);
+  const enforceQuantityConstraints = options.enforceQuantityConstraints === true;
   const allDescriptors = pending.map((item, index) =>
-    calorieFillDescriptor(item, index, calorieBudget)
+    calorieFillDescriptor(item, index, calorieBudget, { enforceQuantityConstraints })
   );
   const descriptors = allDescriptors.filter((descriptor) => descriptor.valid);
   const invalidFoods = allDescriptors
@@ -1646,13 +1694,51 @@ function optimizeTrackingCalorieFillQuantities(selection, pending, objective, fi
     };
   }
 
+  if (enforceQuantityConstraints) {
+    const invalidGrid = descriptors.find((descriptor) =>
+      descriptor.technicalMaxSteps + EPS < descriptor.minimumSteps
+    );
+    if (invalidGrid) {
+      return {
+        profile: "tracking_calorie_fill",
+        policy: TRACKING_CALORIE_FILL_POLICY,
+        requestedMode: "calorie_fill",
+        mode: "calorie_fill",
+        invalidFoods,
+        error: {
+          code: "invalid_quantity_grid",
+          message: `No hay una cantidad valida para ${invalidGrid.name} dentro de su minimo, maximo y paso.`,
+        },
+      };
+    }
+  }
+
   const minimumUseCalories = descriptors.reduce(
-    (total, descriptor) => total + descriptor.caloriesPerStep,
+    (total, descriptor) => total +
+      (enforceQuantityConstraints ? descriptor.minimumSteps : 1) * descriptor.caloriesPerStep,
     0
   );
   const canUseEveryValidFood = minimumUseCalories <= calorieBudget + TRACKING_CALORIE_EPS;
   const baseSteps = new Array(pending.length).fill(0);
-  if (canUseEveryValidFood) {
+
+  if (enforceQuantityConstraints) {
+    if (!canUseEveryValidFood) {
+      return {
+        profile: "tracking_calorie_fill",
+        policy: TRACKING_CALORIE_FILL_POLICY,
+        requestedMode: "calorie_fill",
+        mode: "calorie_fill",
+        invalidFoods,
+        error: {
+          code: "minimums_exceed_calorie_ceiling",
+          message: "Las cantidades minimas de esta combinacion superan el objetivo calorico.",
+        },
+      };
+    }
+    for (const descriptor of descriptors) {
+      baseSteps[descriptor.index] = descriptor.minimumSteps;
+    }
+  } else if (canUseEveryValidFood) {
     for (const descriptor of descriptors) baseSteps[descriptor.index] = 1;
   }
 
@@ -1980,6 +2066,12 @@ function optimizeTrackingCalorieFillQuantities(selection, pending, objective, fi
       recommendedMin: round(descriptor.recommendedMin, 6),
       recommendedMax: round(descriptor.recommendedMax, 6),
       recommendedStep: round(descriptor.recommendedStep, 6),
+      minExplicit: descriptor.minExplicit,
+      maxExplicit: descriptor.maxExplicit,
+      stepExplicit: descriptor.stepExplicit,
+      minSource: descriptor.item?.minSource || null,
+      maxSource: descriptor.item?.maxSource || null,
+      stepSource: descriptor.item?.stepSource || null,
       technicalMax: round(descriptor.technicalMaxSteps * descriptor.step, 6),
     })),
     exactSmallSearch,

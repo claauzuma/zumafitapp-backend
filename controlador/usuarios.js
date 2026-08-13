@@ -281,6 +281,11 @@ function adminError(res, error) {
   if (msg === "EQUIVALENT_PENDING_APPROVAL") return res.status(409).json({ code: msg, error: "Esta equivalencia esta pendiente de aprobacion del coach" });
   if (msg === "EQUIVALENT_REJECTED") return res.status(409).json({ code: msg, error: "El coach rechazo esta equivalencia. Podes duplicarla y corregirla." });
   if (msg === "EQUIVALENT_REVIEW_ACTION_INVALID") return res.status(400).json({ code: msg, error: "Accion de revision invalida" });
+  if (msg === "MEAL_TARGETS_BY_DAY_INVALID") return res.status(400).json({ code: msg, error: "La planificación de comidas por día no es válida" });
+  if (msg === "MEAL_TARGET_PLAN_INVALID") return res.status(400).json({ code: msg, error: "El modo de planificación por comida no es válido" });
+  if (msg === "MEAL_TARGET_COUNT_INVALID") return res.status(400).json({ code: msg, error: "Elegí entre 3 y 6 comidas" });
+  if (msg === "MEAL_TARGET_INVALID") return res.status(400).json({ code: msg, error: "Revisá las metas de cada comida" });
+  if (msg === "MEAL_TARGET_TOTALS_MISMATCH") return res.status(400).json({ code: msg, error: "La suma de las comidas debe coincidir con la meta diaria" });
   if (msg === "USER_NOT_CLIENT") return res.status(400).json({ error: "El usuario no es cliente" });
   if (msg === "NO_AUTENTICADO") return res.status(401).json({ error: "No autenticado" });
 

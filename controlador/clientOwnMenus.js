@@ -29,6 +29,9 @@ function sendError(res, error) {
     "INVALID_GENERATION_MODE",
     "INVALID_FOOD_CONSTRAINTS",
     "INVALID_FOOD_COMBINATION",
+    "INVALID_FIXED_QUANTITY",
+    "NO_AUTOMATIC_FOODS",
+    "FOOD_NOT_FOUND",
     "MEAL_FOOD_LIMIT_REACHED",
   ].includes(code)) return res.status(400).json(payload);
 
@@ -77,6 +80,14 @@ class ControladorClientOwnMenus {
   generateEquivalentMealAlternative = async (req, res) => {
     try {
       return res.json(await this.servicio.generateEquivalentMealAlternative(req.user, req.body || {}));
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
+  recalculateEquivalentMealAlternative = async (req, res) => {
+    try {
+      return res.json(await this.servicio.recalculateEquivalentMealAlternative(req.user, req.body || {}));
     } catch (error) {
       return sendError(res, error);
     }
