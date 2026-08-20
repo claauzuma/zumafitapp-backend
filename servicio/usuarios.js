@@ -676,24 +676,67 @@ function normalizeWeeklyMenuSnapshot(snapshot = {}) {
 
 function normalizeAssignedMenusByDay(value = {}) {
   if (!isPlainObject(value)) return {};
+
   return WEEKLY_MENU_DAYS.reduce((acc, day) => {
     const entry = isPlainObject(value[day]) ? value[day] : null;
     if (!entry) return acc;
-    const primarySource = isPlainObject(entry.primaryMenu) ? entry.primaryMenu : entry;
+
+    const primarySource = isPlainObject(entry.primaryMenu)
+      ? entry.primaryMenu
+      : entry;
+
+    // Ignorar placeholders de días sin menú.
+    // Ej.: { primaryMenu: {} } o entradas con IDs nulos y sin comidas.
+    const rawBaseId = idToString(
+      primarySource?.menuId ||
+      primarySource?.menuBaseId ||
+      primarySource?.menuSnapshot?.baseId ||
+      primarySource?.menuSnapshot?.id
+    );
+
+    const rawMeals = Array.isArray(primarySource?.menuSnapshot?.meals)
+      ? primarySource.menuSnapshot.meals
+      : Array.isArray(primarySource?.meals)
+        ? primarySource.meals
+        : [];
+
+    const rawKcal = Number(
+      primarySource?.menuSnapshot?.kcal ??
+      primarySource?.kcal ??
+      0
+    );
+
+    const isEmptyPlaceholder =
+      !rawBaseId &&
+      rawMeals.length === 0 &&
+      (!Number.isFinite(rawKcal) || rawKcal <= 0);
+
+    if (isEmptyPlaceholder) {
+      return acc;
+    }
+
     const primaryMenu = normalizeAssignedMenuEntry(primarySource, "base");
     if (!primaryMenu) return acc;
+
     const alternatives = Array.isArray(entry.alternatives)
       ? entry.alternatives
-          .map((alternative) => normalizeAssignedMenuAlternative(alternative))
+          .map((alternative) =>
+            normalizeAssignedMenuAlternative(alternative)
+          )
           .filter(Boolean)
-          .filter((alternative) => !sameAssignedMenu(alternative, primaryMenu))
+          .filter(
+            (alternative) =>
+              !sameAssignedMenu(alternative, primaryMenu)
+          )
           .slice(0, 10)
       : [];
+
     acc[day] = {
       ...primaryMenu,
       primaryMenu,
       alternatives,
     };
+
     return acc;
   }, {});
 }
@@ -2196,9 +2239,13 @@ function trackingPublic(doc = null, manualTrackingTotals = null) {
       adherencePercent: null,
       reason: "",
       note: "",
+
       completedMenuMealIds: [],
       completedMenuMeals: [],
+      targetMealIds: [],
       manualEntries: [],
+
+
       generatedRemainingMeals: [],
       mealReplacements: [],
       foodReplacements: [],
@@ -2250,9 +2297,34 @@ function trackingPublic(doc = null, manualTrackingTotals = null) {
     reason: cleanString(nutrition.reason || "", 120),
     note: cleanString(nutrition.note || "", 1000),
     selectedAlternative: nutrition.selectedAlternative || null,
-    completedMenuMealIds: completedMenuMeals.map((meal) => cleanString(meal.mealId, 100)).filter(Boolean),
-    completedMenuMeals,
+
+
+
+
+
+completedMenuMealIds: completedMenuMeals
+  .map((meal) => cleanString(meal.mealId, 100))
+  .filter(Boolean),
+
+completedMenuMeals,
+
+targetMealIds: Array.isArray(doc.targetMealIds)
+  ? [...new Set(
+      doc.targetMealIds
+        .map((id) => cleanString(id, 100).trim())
+        .filter(Boolean)
+    )].slice(0, 20)
+  : [],
+
+manualEntries: Array.isArray(doc.manualEntries)
+  ? doc.manualEntries
+  : [],
+
+
+
+
     manualEntries: Array.isArray(doc.manualEntries) ? doc.manualEntries : [],
+
     generatedRemainingMeals: Array.isArray(doc.generatedRemainingMeals) ? doc.generatedRemainingMeals : [],
     mealReplacements: Array.isArray(doc.mealReplacements) ? doc.mealReplacements : [],
     foodReplacements: Array.isArray(doc.foodReplacements) ? doc.foodReplacements : [],
@@ -6657,7 +6729,17 @@ class ServicioUsuarios {
   }
 
   async _validatedCoachAssignedMenusByDay(coach, value = {}, client = null) {
+
+      console.log(
+    "🔥 ASSIGNED RAW:",
+    JSON.stringify(value, null, 2)
+  );
     const normalized = normalizeAssignedMenusByDay(value);
+
+      console.log(
+    "🔥 ASSIGNED NORMALIZED:",
+    JSON.stringify(normalized, null, 2)
+  );
     const coachId = idToString(coach?._id || coach?.id);
     const clientId = idToString(client?._id || client?.id);
     const capabilities = resolveProfessionalLibraryCapabilities(coach);
@@ -6665,6 +6747,7 @@ class ServicioUsuarios {
     const assignedCache = new Map();
 
     const validateEntry = async (entry, fallbackSource = "base", dayKey = "") => {
+        console.log("🔥 VALIDATE ENTRY:", dayKey, entry);
       if (!entry) return null;
       const baseId = idToString(
         entry.menuId ||
@@ -7908,16 +7991,186 @@ class ServicioUsuarios {
     const selectedAlternative = selectedIndex !== null && alternatives[selectedIndex]
       ? alternatives[selectedIndex]
       : null;
-    const selectedMenu = selectedAlternative || primary;
-    const selectedSnapshot = selectedMenu?.menuSnapshot || {};
-    const totals = menuSnapshotTotals(selectedSnapshot);
-    const totalMealsCount = Number(selectedSnapshot?.mealsCount || selectedSnapshot?.meals?.length || 0) || 0;
 
-    const completedMenuMeals = requestedStatus === "missed"
+
+
+const selectedMenu =
+  selectedAlternative || primary;
+
+const selectedSnapshot =
+  selectedMenu?.menuSnapshot || {};
+
+const totals =
+  menuSnapshotTotals(
+    selectedSnapshot
+  );
+
+const totalMealsCount =
+  Number(
+    selectedSnapshot?.mealsCount ||
+    selectedSnapshot?.meals?.length ||
+    0
+  ) || 0;
+
+
+/*
+ * =====================================================
+ * TRACKING YA EXISTENTE
+ * =====================================================
+ *
+ * Lo buscamos ANTES de resolver targetMealIds.
+ *
+ * Esto es importante porque una comida puede estar:
+ *
+ * 🎯 Por meta
+ * 0 alimentos todavía
+ *
+ * y ese estado tiene que sobrevivir aunque otra
+ * actualización del día no vuelva a mandar el campo.
+ */
+
+const existingTracking =
+  await this.menuTrackingModel.getByUserDate(
+    userId,
+    date
+  );
+
+
+/*
+ * =====================================================
+ * IDS VÁLIDOS DEL MENÚ ACTUAL
+ * =====================================================
+ */
+
+const validSnapshotMealIds =
+  new Set(
+    (
+      Array.isArray(
+        selectedSnapshot?.meals
+      )
+        ? selectedSnapshot.meals
+        : []
+    ).map(
+      (meal, index) =>
+        snapshotMealId(
+          meal,
+          index
+        )
+    )
+  );
+
+/*
+ * =====================================================
+ * COMIDAS EN MODO "POR META"
+ * =====================================================
+ *
+ * Si el frontend manda targetMealIds:
+ * usamos exactamente ese estado.
+ *
+ * Si NO lo manda:
+ * conservamos el estado previamente guardado.
+ *
+ * Esto evita que "Por meta" desaparezca por una
+ * actualización que no tenía relación con esa comida.
+ */
+
+const sourceTargetMealIds =
+  requestedStatus === "missed"
+    ? []
+    : Array.isArray(
+        payload.targetMealIds
+      )
+      ? payload.targetMealIds
+      : Array.isArray(
+          existingTracking?.targetMealIds
+        )
+        ? existingTracking.targetMealIds
+        : [];
+
+
+const targetMealIds =
+  requestedStatus === "missed"
+    ? []
+    : [
+        ...new Set(
+          cleanStringArray(
+            sourceTargetMealIds,
+            20,
+            100
+          )
+        ),
+      ].filter(
+        (id) =>
+          validSnapshotMealIds.has(
+            id
+          )
+      );
+
+const targetMealIdSet =
+  new Set(
+    targetMealIds
+  );
+
+
+/*
+ * =====================================================
+ * COMIDAS HECHAS
+ * =====================================================
+ *
+ * Construimos primero lo que llega como completado.
+ *
+ * Después quitamos cualquier comida que esté
+ * actualmente en Por meta.
+ *
+ * REGLA:
+ *
+ * ✓ Hecha
+ * y
+ * 🎯 Por meta
+ *
+ * nunca pueden coexistir.
+ */
+
+const completedMenuMeals =
+  (
+    requestedStatus === "missed"
       ? []
-      : buildCompletedMenuMealsFromPayload(payload, selectedSnapshot, requestedStatus);
-    const completedMealsCount = completedMenuMeals.length;
-    const manualEntries = sanitizeTrackingEntries(payload.manualEntries, "manual_food");
+      : buildCompletedMenuMealsFromPayload(
+          payload,
+          selectedSnapshot,
+          requestedStatus
+        )
+  ).filter(
+    (meal) =>
+      !targetMealIdSet.has(
+        cleanString(
+          meal?.mealId,
+          100
+        )
+      )
+  );
+
+
+const completedMealsCount =
+  completedMenuMeals.length;
+
+
+/*
+ * =====================================================
+ * REGISTROS MANUALES
+ * =====================================================
+ */
+
+const manualEntries =
+  sanitizeTrackingEntries(
+    payload.manualEntries,
+    "manual_food"
+  );
+
+
+
+
+
     const generatedRemainingMeals = sanitizeTrackingEntries(payload.generatedRemainingMeals, "generated_remaining_meal");
     let mealReplacements = sanitizeTrackingEntries(payload.mealReplacements, "client_meal_replacement");
     let foodReplacements = sanitizeTrackingEntries(payload.foodReplacements, "client_food_replacement");
@@ -7928,7 +8181,10 @@ class ServicioUsuarios {
       !looksLikeAssignedMealAlternative(entry, selectedMenu, replacementCandidates)
     ));
     const hasEquivalentMealDraft = equivalentMealDrafts.length > 0;
-    const existingTracking = await this.menuTrackingModel.getByUserDate(userId, date);
+
+
+
+
 
     if (
       !trackingPermissions.canUseMenuAlternatives &&
@@ -8033,14 +8289,24 @@ class ServicioUsuarios {
             source: target.statusLabel || null,
           }
         : null,
-      menuTotals: totals,
-      completedMenuMeals,
-      manualEntries,
-      generatedRemainingMeals,
-      mealReplacements,
-      foodReplacements,
-      consumedTotals,
-      remainingTotals,
+
+        menuTotals: totals,
+
+completedMenuMeals,
+
+/*
+ * NUEVO:
+ * comidas que están ejecutándose
+ * mediante Por meta.
+ */
+targetMealIds,
+
+manualEntries,
+generatedRemainingMeals,
+mealReplacements,
+foodReplacements,
+consumedTotals,
+remainingTotals,
       nutrition: {
         status,
         adherencePercent,

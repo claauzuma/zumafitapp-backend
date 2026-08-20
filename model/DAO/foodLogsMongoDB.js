@@ -40,6 +40,13 @@ class ModelMongoDBFoodLogs {
     return CnxMongoDB.db.collection("food_logs");
   }
 
+  _allocations() {
+    if (!CnxMongoDB.connection) {
+      throw new Error("No hay conexion a la base de datos");
+    }
+    return CnxMongoDB.db.collection("food_log_allocations");
+  }
+
   getDayByUserDate = async (userId, date) => {
     const values = idValues(userId);
     if (!values.length || !date) return null;
@@ -138,6 +145,57 @@ class ModelMongoDBFoodLogs {
       .toArray();
   };
 
+  listAllocationsByUserDate = async (userId, date) => {
+    const values = idValues(userId);
+    if (!values.length || !date) return [];
+    return await this._allocations()
+      .find({ userId: { $in: values }, date: String(date) })
+      .sort({ createdAt: 1 })
+      .toArray();
+  };
+
+  getAllocationByRequest = async (userId, date, writeRequestId) => {
+    const values = idValues(userId);
+    if (!values.length || !date || !writeRequestId) return null;
+    return await this._allocations().findOne({
+      userId: { $in: values },
+      date: String(date),
+      writeRequestId: String(writeRequestId),
+    });
+  };
+
+  upsertAllocation = async (doc = {}) => {
+    const userId = toMongoIdOrString(doc.userId);
+    const date = cleanId(doc.date);
+    const writeRequestId = cleanId(doc.writeRequestId);
+    if (!userId || !date || !writeRequestId) throw new Error("INVALID_ALLOCATION");
+    const now = new Date();
+    await this._allocations().updateOne(
+      { userId, date, writeRequestId },
+      {
+        $setOnInsert: { userId, date, writeRequestId, createdAt: now },
+        $set: {
+          foodLogIds: Array.isArray(doc.foodLogIds) ? doc.foodLogIds.map(toMongoIdOrString).filter(Boolean) : [],
+          total: doc.total || {},
+          allocations: Array.isArray(doc.allocations) ? doc.allocations : [],
+          updatedAt: now,
+        },
+      },
+      { upsert: true }
+    );
+    return await this.getAllocationByRequest(userId, date, writeRequestId);
+  };
+
+  deleteAllocationByRequest = async (userId, date, writeRequestId) => {
+    const values = idValues(userId);
+    if (!values.length || !date || !writeRequestId) return { deletedCount: 0 };
+    return await this._allocations().deleteOne({
+      userId: { $in: values },
+      date: String(date),
+      writeRequestId: String(writeRequestId),
+    });
+  };
+
   insertLog = async (doc) => {
     const now = new Date();
     const payload = {
@@ -234,6 +292,13 @@ class ModelMongoDBFoodLogs {
         partialFilterExpression: { writeRequestId: { $type: "string" } },
       }
     );
+
+    const allocations = this._allocations();
+    await allocations.createIndex(
+      { userId: 1, date: 1, writeRequestId: 1 },
+      { unique: true }
+    );
+    await allocations.createIndex({ userId: 1, date: -1 });
   }
 }
 

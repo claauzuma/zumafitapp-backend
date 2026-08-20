@@ -69,7 +69,7 @@ function replacementService(plan = "free") {
     requestId: payload.requestId,
   });
   service.accessAuditModel.create = async (event) => event;
-  return { service, user, date, primary, alternative };
+  return { service, user, date, primary, alternative, getStored: () => stored };
 }
 
 function replacementPayload(date, replacement) {
@@ -84,6 +84,36 @@ function replacementPayload(date, replacement) {
     generatedRemainingMeals: [],
   };
 }
+
+test("Por meta persiste targetMealIds y excluye la misma comida de Hechas", async () => {
+  const context = replacementService("free");
+  const basePayload = {
+    date: context.date,
+    dayKey: dayKey(context.date),
+    status: "pending",
+    completedMenuMealIds: ["meal-1"],
+    targetMealIds: ["meal-1"],
+    mealReplacements: [],
+    foodReplacements: [],
+    manualEntries: [],
+    generatedRemainingMeals: [],
+  };
+
+  await context.service.upsertMyMenuTrackingDay(
+    { id: context.user.id },
+    basePayload
+  );
+
+  assert.deepEqual(context.getStored().targetMealIds, ["meal-1"]);
+  assert.deepEqual(context.getStored().completedMenuMeals, []);
+
+  await context.service.upsertMyMenuTrackingDay(
+    { id: context.user.id },
+    { ...basePayload, completedMenuMealIds: [], targetMealIds: [] }
+  );
+
+  assert.deepEqual(context.getStored().targetMealIds, []);
+});
 
 test("Free autogestionado no crea equivalentes y Pro/VIP respetan 6/10 alimentos", () => {
   const free = clientMenuTrackingPermissions({ role: "cliente", personalPlan: "free" });

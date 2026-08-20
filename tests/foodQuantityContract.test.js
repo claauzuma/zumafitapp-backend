@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import ServicioAlimentos from "../servicio/alimentos.js";
+import ServicioAlimentos, { TRACKING_QUANTITY_INTERNAL_CONTEXT } from "../servicio/alimentos.js";
 import { TRACKING_OPTIMIZATION_POLICY } from "../menu2.js";
 
 function quantityService(databaseFoods = []) {
@@ -212,6 +212,96 @@ test("flags externos no habilitan la policy Tracking ni constraints internos en 
   assert.equal(invalidPolicy.optimization, null);
   assert.equal(forgedInternalFlag.optimization, null);
   assert.equal(explicitTracking.optimization?.policy, TRACKING_OPTIMIZATION_POLICY);
+});
+
+test("menu automatico GENERIC respeta portionRule y no inventa maximo cuando no existe", async () => {
+  const configured = catalogFood({
+    id: "generic-configured",
+    name: "Arroz generico configurado",
+    unit: "g",
+    min: 80,
+    max: 200,
+    step: 10,
+    kcal: 2,
+    protein: 0.04,
+    carbs: 0.4,
+    fat: 0.01,
+  });
+  configured.generation = {
+    mode: "GENERIC",
+    roles: { C1: true },
+    mealTypes: { lunch: true },
+    portionRule: { unit: "g", min: 80, max: 200, step: 10, allowedValues: [] },
+  };
+  delete configured.porcionMin;
+  delete configured.porcionMax;
+  delete configured.multiplo;
+
+  const unbounded = catalogFood({
+    id: "generic-unbounded",
+    name: "Base generica sin limites",
+    unit: "g",
+    kcal: 2,
+    protein: 0.04,
+    carbs: 0.4,
+    fat: 0.01,
+  });
+  unbounded.generation = {
+    mode: "GENERIC",
+    roles: { C1: true },
+    mealTypes: { lunch: true },
+    portionRule: { unit: "g", min: null, max: null, step: null, allowedValues: [] },
+  };
+  delete unbounded.porcionMin;
+  delete unbounded.porcionMax;
+  delete unbounded.multiplo;
+
+  const internal = {
+    authorization: TRACKING_QUANTITY_INTERNAL_CONTEXT,
+    trackingQuantityMode: "calorie_fill",
+  };
+  const configuredResult = await quantityService([configured]).generarCantidades({
+    ...trackingPayload(configured),
+    target: { kcal: 390, proteina: 0, carbs: 0, grasas: 0 },
+    menuGenerationPolicy: "generic_menu_v1",
+    generationMealType: "lunch",
+  }, internal);
+  assert.equal(configuredResult.foods[0].quantity, 190);
+  assert.equal(configuredResult.optimization.constraints[0].recommendedMin, 80);
+  assert.equal(configuredResult.optimization.constraints[0].recommendedMax, 200);
+  assert.equal(configuredResult.optimization.constraints[0].recommendedStep, 10);
+  assert.equal(configuredResult.optimization.constraints[0].technicalMax, 200);
+  assert.equal(configuredResult.optimization.constraints[0].minSource, "catalog.generation.portionRule.min");
+  assert.equal(configuredResult.optimization.constraints[0].maxSource, "catalog.generation.portionRule.max");
+  assert.equal(configuredResult.optimization.constraints[0].stepSource, "catalog.generation.portionRule.step");
+  assert.equal(configuredResult.optimization.constraints[0].maxExplicit, true);
+
+  const unboundedResult = await quantityService([unbounded]).generarCantidades({
+    ...trackingPayload(unbounded),
+    target: { kcal: 800, proteina: 0, carbs: 0, grasas: 0 },
+    menuGenerationPolicy: "generic_menu_v1",
+    generationMealType: "lunch",
+  }, internal);
+  assert.equal(unboundedResult.foods[0].quantity, 400);
+  assert.equal(unboundedResult.optimization.constraints[0].recommendedMin, 0);
+  assert.equal(unboundedResult.optimization.constraints[0].recommendedMax, 0);
+  assert.equal(unboundedResult.optimization.constraints[0].maxSource, "automatic.unbounded.max");
+});
+
+test("menu automatico rechaza un alimento que no sea GENERIC o no corresponda a la comida", async () => {
+  const explicit = catalogFood({ id: "explicit-only", name: "Alimento explicito", unit: "g" });
+  explicit.generation = { mode: "EXPLICIT_ONLY", mealTypes: { lunch: true } };
+  await assert.rejects(
+    () => quantityService([explicit]).generarCantidades({
+      ...trackingPayload(explicit),
+      menuGenerationPolicy: "generic_menu_v1",
+      generationMealType: "lunch",
+    }, {
+      authorization: TRACKING_QUANTITY_INTERNAL_CONTEXT,
+      trackingQuantityMode: "calorie_fill",
+    }),
+    (error) => error?.code === "MENU_NON_GENERIC_FOOD"
+  );
 });
 
 test("la comida automática normal de Admin y Coach respeta los steps reales sin cambiar de policy", async () => {

@@ -3,6 +3,7 @@ import menu, {
   TRACKING_CALORIE_FILL_POLICY,
   TRACKING_OPTIMIZATION_POLICY,
 } from "../menu2.js";
+import { normalizeFoodGenerationForRead } from "./foodGenerationMetadata.js";
 
 // Un Symbol no puede llegar desde JSON. El modo calorie_fill se habilita
 // solamente cuando el servicio especifico de Tracking entrega este contexto.
@@ -109,8 +110,13 @@ function limitFromQuery(value, fallback = 0) {
 function filterAlimentos(alimentos = [], filters = {}) {
   const search = cleanText(filters.search || filters.q || filters.nombre || filters.name || "");
   const category = cleanText(filters.category || filters.categoria || filters.fuente || "todos");
+  const generationMode = String(filters.mode || filters.generationMode || "").trim().toUpperCase();
   const limit = limitFromQuery(filters.limit, search ? 20 : 0);
   let list = Array.isArray(alimentos) ? [...alimentos] : [];
+
+  if (["EXPLICIT_ONLY", "GENERIC", "DISABLED"].includes(generationMode)) {
+    list = list.filter((food) => String(food?.generation?.mode || "EXPLICIT_ONLY").toUpperCase() === generationMode);
+  }
 
   if (search) {
     list = list
@@ -199,6 +205,11 @@ function constraintFromShape(food = {}, kind = "max", label = "payload") {
       if (!hasValue(shape[field])) continue;
       const value = toNumber(shape[field], 0);
       if (value > 0) return { value, source: `${shapeLabel}.${field}` };
+    }
+    const generationValue = shape?.generation?.portionRule?.[kind];
+    if (hasValue(generationValue)) {
+      const value = toNumber(generationValue, 0);
+      if (value > 0) return { value, source: `${shapeLabel}.generation.portionRule.${kind}` };
     }
   }
   return null;
@@ -379,7 +390,7 @@ function inferMacroRole(food = {}) {
   return "grasas";
 }
 
-function gramsLimitsForFood(food = {}, role = "") {
+function gramsLimitsForFood(food = {}, role = "", { explicitOnly = false } = {}) {
   const name = cleanText(food.nombre || food.name);
   const category = cleanText(food.categoria || food.fuente || food.source);
   const shapeConstraints = resolvedQuantityConstraints(food);
@@ -399,6 +410,14 @@ function gramsLimitsForFood(food = {}, role = "") {
     maxExplicit: explicitMax > 0,
     stepExplicit: explicitStep > 0,
   });
+
+  if (explicitOnly) {
+    return limits(explicitMin, explicitMax, explicitStep, {
+      min: "automatic.unbounded.min",
+      max: "automatic.unbounded.max",
+      step: "automatic.unbounded.step",
+    });
+  }
 
   if (!isGramBasedUnit(food.unidad || food.unit)) {
     return limits(explicitMin || 1, explicitMax || 12, explicitStep || 1, {
@@ -443,7 +462,9 @@ function gramsLimitsForFood(food = {}, role = "") {
 
 function itemForEngine(food = {}, options = {}) {
   const role = options.role || inferMacroRole(food);
-  const limits = gramsLimitsForFood(food, role);
+  const limits = gramsLimitsForFood(food, role, {
+    explicitOnly: options.explicitConstraintsOnly === true,
+  });
   const sourceKind = options.sourceKind || (options.fixed ? "fixed" : "selectedPending");
   return {
     id: food.id || food.foodId || food.alimentoId || food._id || null,
@@ -758,8 +779,11 @@ class ServicioAlimentos {
     const internalTrackingQuantityMode = trackingContextAllowed
       ? internalContext.trackingQuantityMode
       : "";
-    const enforceQuantityConstraints =
-      trackingContextAllowed && internalContext?.enforceQuantityConstraints === true;
+    const menuGenerationPolicy = trackingContextAllowed && payload.menuGenerationPolicy === "generic_menu_v1";
+    const generationMealType = String(payload.generationMealType || "");
+    const enforceQuantityConstraints = trackingContextAllowed && (
+      internalContext?.enforceQuantityConstraints === true || menuGenerationPolicy
+    );
     const trackingOptimizationPolicy = internalTrackingQuantityMode === "calorie_fill"
       ? TRACKING_CALORIE_FILL_POLICY
       : internalTrackingQuantityMode === "constrained"
@@ -774,6 +798,19 @@ class ServicioAlimentos {
     const pendingFoods = Array.isArray(payload.pendingFoods) ? payload.pendingFoods : [];
     const explicitCandidates = Array.isArray(payload.candidateFoods) ? payload.candidateFoods : [];
     const allFoods = await this.model.obtenerAlimentos();
+
+    if (menuGenerationPolicy) {
+      const invalidSelected = pendingFoods.find((food) => {
+        const catalogFood = catalogFoodFor(food, allFoods);
+        const generation = normalizeFoodGenerationForRead(catalogFood?.generation);
+        return !catalogFood || generation.mode !== "GENERIC" || generation.mealTypes[generationMealType] !== true;
+      });
+      if (invalidSelected) {
+        const error = new Error(`El alimento ${invalidSelected.name || invalidSelected.nombre || "seleccionado"} no esta habilitado para esta generacion automatica.`);
+        error.code = "MENU_NON_GENERIC_FOOD";
+        throw error;
+      }
+    }
 
     const normalizedFixed = fixedFoods.map((food) =>
       normalizeFoodLike(food, "", catalogFoodFor(food, allFoods))
@@ -800,6 +837,7 @@ class ServicioAlimentos {
         fixed: false,
         sourceKind: "selectedPending",
         currentQuantity: food.currentQuantity,
+        explicitConstraintsOnly: menuGenerationPolicy,
       }), role);
     }
 
@@ -811,14 +849,25 @@ class ServicioAlimentos {
       if (!groups.carbohidratos.length) neededRoles.push("carbohidratos");
       if (!groups.grasas.length) neededRoles.push("grasas");
 
-      const candidatesSource = explicitCandidates.length ? explicitCandidates : allFoods;
+      const rawCandidates = explicitCandidates.length ? explicitCandidates : allFoods;
+      const candidatesSource = menuGenerationPolicy
+        ? rawCandidates.filter((food) => {
+            const generation = normalizeFoodGenerationForRead(food?.generation);
+            return generation.mode === "GENERIC" && generation.mealTypes[generationMealType] === true;
+          })
+        : rawCandidates;
       const candidates = pickCandidates(candidatesSource, selectedNames, Array.from(new Set(neededRoles)));
       for (const candidate of candidates) {
         const role = inferMacroRole(candidate);
         alimentosBase.push(candidate);
         addedCandidateNames.add(cleanText(candidate.nombre || candidate.name));
         for (const id of foodIdentityValues(candidate)) addedCandidateIds.add(id);
-        addToGroups(groups, itemForEngine(candidate, { role, fixed: false, sourceKind: "addedCandidate" }), role);
+        addToGroups(groups, itemForEngine(candidate, {
+          role,
+          fixed: false,
+          sourceKind: "addedCandidate",
+          explicitConstraintsOnly: menuGenerationPolicy,
+        }), role);
       }
     }
 

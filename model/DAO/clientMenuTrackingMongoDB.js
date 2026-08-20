@@ -70,8 +70,25 @@ class ModelMongoDBClientMenuTracking {
       menuSnapshotSummary: doc.menuSnapshotSummary || null,
       target: doc.target || null,
       menuTotals: doc.menuTotals || null,
-      completedMenuMeals: Array.isArray(doc.completedMenuMeals) ? doc.completedMenuMeals : [],
-      manualEntries: Array.isArray(doc.manualEntries) ? doc.manualEntries : [],
+
+
+ completedMenuMeals: Array.isArray(doc.completedMenuMeals)
+  ? doc.completedMenuMeals
+  : [],
+
+targetMealIds: Array.isArray(doc.targetMealIds)
+  ? [...new Set(
+      doc.targetMealIds
+        .map((id) => String(id || "").trim())
+        .filter(Boolean)
+    )]
+  : [],
+
+manualEntries: Array.isArray(doc.manualEntries)
+  ? doc.manualEntries
+  : [],
+
+
       generatedRemainingMeals: Array.isArray(doc.generatedRemainingMeals) ? doc.generatedRemainingMeals : [],
       mealReplacements: Array.isArray(doc.mealReplacements) ? doc.mealReplacements : [],
       foodReplacements: Array.isArray(doc.foodReplacements) ? doc.foodReplacements : [],
@@ -132,8 +149,12 @@ class ModelMongoDBClientMenuTracking {
         $setOnInsert: {
           clientId,
           date,
-          completedMenuMeals: [],
-          manualEntries: [],
+
+completedMenuMeals: [],
+targetMealIds: [],
+manualEntries: [],
+
+
           generatedRemainingMeals: [],
           mealReplacements: [],
           foodReplacements: [],

@@ -105,3 +105,30 @@ test("sin candidatos permitidos conserva la mejor solucion seleccionada y explic
   assert.equal(result.assisted.reason, "no_allowed_candidates");
   assert.match(result.warnings[0], /restricciones/i);
 });
+
+test("menu automatico asistido ofrece solo candidatos GENERIC compatibles con la comida", async () => {
+  const genericLunch = candidate("generic-lunch", "Arroz generico", "carbohidratos", {
+    generation: { mode: "GENERIC", mealTypes: { lunch: true } },
+  });
+  const explicitLunch = candidate("explicit-lunch", "Arroz explicito", "carbohidratos", {
+    generation: { mode: "EXPLICIT_ONLY", mealTypes: { lunch: true } },
+  });
+  const genericDinner = candidate("generic-dinner", "Papa para cena", "carbohidratos", {
+    generation: { mode: "GENERIC", mealTypes: { dinner: true } },
+  });
+  const context = serviceFor({
+    catalog: [genericLunch, explicitLunch, genericDinner],
+    selectedResult: { status: "ok", foods: [], diff: { carbs: -30 } },
+    assistedResult: { status: "ok", foods: [{ foodId: "generic-lunch", source: "addedCandidate" }] },
+  });
+  await context.service.calculateRemainingQuantities({}, {
+    date: DATE,
+    generationType: "assisted_food_addition",
+    menuGenerationPolicy: "generic_menu_v1",
+    generationMealType: "lunch",
+    target: { kcal: 500, proteina: 30, carbs: 60, grasas: 15 },
+    pendingFoods: [{ foodId: "selected" }],
+  });
+  assert.deepEqual(context.calls[1].payload.candidateFoods.map((food) => food.id), ["generic-lunch"]);
+  assert.equal(context.calls[0].context.enforceQuantityConstraints, true);
+});

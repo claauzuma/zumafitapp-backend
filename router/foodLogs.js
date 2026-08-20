@@ -43,6 +43,13 @@ class RouterFoodLogs {
       writeLimiter,
       this.controladorFoodLogs.addCalculatedLogs
     );
+    this.router.post(
+      "/day/logs/batch",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorFoodLogs.addBatchLogs
+    );
     this.router.patch(
       "/day/meals",
       authMiddleware,

@@ -405,6 +405,7 @@ test("el DTO del coach separa adherencia de menú, nutrición y tracking manual"
     listLogsByUserDateRange: async () => [
       { date, kcal: 410, proteina: 25, carbs: 45, grasas: 12 },
       { date, kcal: 200, proteina: 10, carbs: 24, grasas: 6 },
+      { date, kcal: 500, proteina: 35, carbs: 55, grasas: 15, source: "menu_equivalent_consumption" },
     ],
   };
 

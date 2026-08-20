@@ -10,6 +10,7 @@ import ServiciosAlimentos, {
 } from "./alimentos.js";
 import { requireCapability, requireTrackingHistoryRange } from "./accessGates.js";
 import { filterEquivalentCandidateFoods, isEquivalentFoodAllowed } from "./trackingEquivalences.js";
+import { normalizeFoodGenerationForRead } from "./foodGenerationMetadata.js";
 
 const MEAL_TYPES = ["desayuno", "almuerzo", "merienda", "cena", "snack", "otra"];
 const MEAL_TYPE_SET = new Set(MEAL_TYPES);
@@ -381,10 +382,82 @@ function normalizeLog(doc = {}) {
     categoriaSnapshot: doc.categoriaSnapshot || "",
     imagen: doc.imagen || null,
     imagenUrl: doc.imagenUrl || doc.imagen?.url || "",
+    source: doc.source || "",
+    writeRequestId: cleanString(doc.writeRequestId, 120),
+    writeItemIndex: Number.isInteger(Number(doc.writeItemIndex)) ? Number(doc.writeItemIndex) : null,
     notas: doc.notas || "",
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
+}
+
+const ALLOCATION_KINDS = new Set(["free", "menu_meal", "meal_target", "daily_target"]);
+
+function normalizeAllocationKind(value = "") {
+  const kind = normalizeToken(value);
+  if (!ALLOCATION_KINDS.has(kind)) throw new Error("INVALID_ALLOCATION");
+  return kind;
+}
+
+function normalizeAllocationGroup(doc = {}) {
+  return {
+    id: idToString(doc._id || doc.id),
+    writeRequestId: cleanString(doc.writeRequestId, 120),
+    date: doc.date || "",
+    foodLogIds: (Array.isArray(doc.foodLogIds) ? doc.foodLogIds : []).map(idToString).filter(Boolean),
+    total: normalizeMealMeta(doc.total || {}),
+    allocations: (Array.isArray(doc.allocations) ? doc.allocations : []).map((entry) => ({
+      kind: normalizeToken(entry?.kind),
+      executionId: normalizeMealId(entry?.executionId || ""),
+      label: cleanText(entry?.label, "Destino", 80),
+      totals: normalizeMealMeta(entry?.totals || {}),
+    })).filter((entry) => entry.executionId),
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+  };
+}
+
+function allocationTotalsByDestination(groups = []) {
+  const out = {};
+  (Array.isArray(groups) ? groups : []).forEach((group) => {
+    (Array.isArray(group?.allocations) ? group.allocations : []).forEach((entry) => {
+      if (!entry?.executionId) return;
+      out[entry.executionId] = addTotals(out[entry.executionId] || emptyTotals(), entry.totals || {});
+    });
+  });
+  return out;
+}
+
+function proportionalAllocations(totalValue = {}, rawAllocations = []) {
+  const total = normalizeMealMeta(totalValue);
+  const entries = (Array.isArray(rawAllocations) ? rawAllocations : []).map((entry) => ({
+    kind: normalizeAllocationKind(entry?.kind),
+    executionId: normalizeMealId(entry?.executionId || entry?.id || ""),
+    label: cleanText(entry?.label, "Destino", 80),
+    kcal: macroNumber(entry?.totals?.kcal ?? entry?.kcal),
+  })).filter((entry) => entry.executionId && entry.kcal > 0);
+  const seen = new Set();
+  entries.forEach((entry) => {
+    if (seen.has(entry.executionId)) throw new Error("INVALID_ALLOCATION");
+    seen.add(entry.executionId);
+  });
+  const requestedKcal = roundMacro(entries.reduce((sum, entry) => sum + entry.kcal, 0));
+  if (!entries.length || total.kcal <= 0 || Math.abs(requestedKcal - total.kcal) > 0.2) {
+    throw new Error("INVALID_ALLOCATION_TOTAL");
+  }
+  const accumulated = emptyTotals();
+  return entries.map((entry, index) => {
+    const last = index === entries.length - 1;
+    const ratio = entry.kcal / total.kcal;
+    const totals = {
+      kcal: last ? roundMacro(total.kcal - accumulated.kcal) : roundMacro(entry.kcal),
+      proteina: last ? roundMacro(total.proteina - accumulated.proteina) : roundMacro(total.proteina * ratio),
+      carbs: last ? roundMacro(total.carbs - accumulated.carbs) : roundMacro(total.carbs * ratio),
+      grasas: last ? roundMacro(total.grasas - accumulated.grasas) : roundMacro(total.grasas * ratio),
+    };
+    Object.keys(accumulated).forEach((key) => { accumulated[key] = roundMacro(accumulated[key] + totals[key]); });
+    return { kind: entry.kind, executionId: entry.executionId, label: entry.label, totals };
+  });
 }
 
 function buildMealsConfig(day = null, logs = []) {
@@ -715,6 +788,16 @@ class ServicioFoodLogs {
     const totals = totalLogs(logs);
     const objetivo = objectiveInfo?.objetivo || null;
     const mealsConfig = buildMealsConfig(day, logs);
+    let allocationDocs = [];
+    if (typeof this.foodLogsModel.listAllocationsByUserDate === "function") {
+      try {
+        allocationDocs = await this.foodLogsModel.listAllocationsByUserDate(userId, date);
+      } catch (error) {
+        // Algunos tests unitarios construyen la respuesta con documentos in-memory.
+        if (String(error?.message || "") !== "No hay conexion a la base de datos") throw error;
+      }
+    }
+    const allocations = allocationDocs.map(normalizeAllocationGroup);
 
     return {
       date,
@@ -726,7 +809,61 @@ class ServicioFoodLogs {
       day: normalizeDay(day, date),
       mealsConfig,
       meals: groupLogsByMeal(logs, mealsConfig),
+      allocations,
+      allocationTotalsByDestination: allocationTotalsByDestination(allocations),
     };
+  }
+
+  async _persistAllocationGroup(actor, date, writeRequestId, logs = [], rawAllocations = []) {
+    if (!Array.isArray(rawAllocations) || !rawAllocations.length) return null;
+    if (!writeRequestId) throw new Error("REQUEST_ID_REQUIRED");
+    if (typeof this.foodLogsModel.upsertAllocation !== "function") return null;
+    const requestLogs = logs.filter((log) => cleanString(log?.writeRequestId, 120) === writeRequestId);
+    if (!requestLogs.length) throw new Error("INVALID_ALLOCATION");
+    const total = totalLogs(requestLogs);
+    const allocations = proportionalAllocations(total, rawAllocations);
+    return await this.foodLogsModel.upsertAllocation({
+      userId: this._actorId(actor),
+      date,
+      writeRequestId,
+      foodLogIds: requestLogs.map((log) => log._id || log.id).filter(Boolean),
+      total,
+      allocations,
+    });
+  }
+
+  async _reconcileAllocationGroup(actor, date, writeRequestId, logs = []) {
+    if (!writeRequestId || typeof this.foodLogsModel.getAllocationByRequest !== "function") return;
+    const existing = await this.foodLogsModel.getAllocationByRequest(this._actorId(actor), date, writeRequestId);
+    if (!existing) return;
+    const requestLogs = logs.filter((log) => cleanString(log?.writeRequestId, 120) === writeRequestId);
+    if (!requestLogs.length) {
+      await this.foodLogsModel.deleteAllocationByRequest?.(this._actorId(actor), date, writeRequestId);
+      return;
+    }
+    const current = normalizeAllocationGroup(existing);
+    const total = totalLogs(requestLogs);
+    const previousTotalKcal = Math.max(0, Number(current.total?.kcal) || 0);
+    const requested = current.allocations.map((entry, index) => ({
+      ...entry,
+      totals: {
+        kcal: index === current.allocations.length - 1
+          ? roundMacro(total.kcal - current.allocations.slice(0, index).reduce(
+            (sum, item) => sum + roundMacro(total.kcal * ((Number(item.totals?.kcal) || 0) / Math.max(previousTotalKcal, 1))),
+            0
+          ))
+          : roundMacro(total.kcal * ((Number(entry.totals?.kcal) || 0) / Math.max(previousTotalKcal, 1))),
+      },
+    }));
+    const allocations = proportionalAllocations(total, requested);
+    await this.foodLogsModel.upsertAllocation({
+      userId: this._actorId(actor),
+      date,
+      writeRequestId,
+      foodLogIds: requestLogs.map((log) => log._id || log.id).filter(Boolean),
+      total,
+      allocations,
+    });
   }
 
   async getDay(user, query = {}) {
@@ -766,6 +903,8 @@ class ServicioFoodLogs {
     const trackingQuantityMode = trackingQuantityModeFromPayload(payload);
     const requestedGeneration = normalizeToken(payload.generationType || payload.alcance || "selected_only");
     const assisted = ["assisted_food_addition", "complete_meal", "completemeal", "completar_comida"].includes(requestedGeneration);
+    const menuGenerationPolicy = payload.menuGenerationPolicy === "generic_menu_v1";
+    const generationMealType = String(payload.generationMealType || "");
     const basePayload = {
       ...payload,
       // Tracking optimiza un restante: kcal son techo, proteína es un mínimo
@@ -786,6 +925,7 @@ class ServicioFoodLogs {
     const internalContext = {
       authorization: TRACKING_QUANTITY_INTERNAL_CONTEXT,
       trackingQuantityMode,
+      ...(menuGenerationPolicy ? { enforceQuantityConstraints: true } : {}),
     };
     const selectedResult = await this.alimentosService.generarCantidades(basePayload, internalContext);
     if (!assisted || selectedResult?.status === "error") return selectedResult;
@@ -820,6 +960,10 @@ class ServicioFoodLogs {
     const candidates = filterEquivalentCandidateFoods(actor, catalog, {
       selectedFoodIds,
       rejectedFoodIds: payload.rejectedSuggestionFoodIds,
+    }).filter((food) => {
+      if (!menuGenerationPolicy) return true;
+      const generation = normalizeFoodGenerationForRead(food?.generation);
+      return generation.mode === "GENERIC" && generation.mealTypes[generationMealType] === true;
     });
     if (!candidates.length) {
       return {
@@ -867,6 +1011,11 @@ class ServicioFoodLogs {
       normalizeMealId(log?.mealId || log?.mealConfigId || log?.mealKey) === cleanMealId ||
       (!log?.mealId && mealType && normalizeMealType(log?.mealType || log?.comida) === mealType)
     ));
+    const allocationRequestIds = [...new Set(
+      mealLogs
+        .map((log) => cleanString(log?.writeRequestId, 120))
+        .filter(Boolean)
+    )];
     if (mealLogs.length && payload.confirmDeleteLogs !== true) {
       throw new Error("TRACKING_MEAL_NOT_EMPTY");
     }
@@ -881,6 +1030,9 @@ class ServicioFoodLogs {
     const nextConfig = normalizeMealsConfig(mealsConfig.filter((meal) => meal.mealId !== cleanMealId));
     const dayWithConfig = await this.foodLogsModel.updateDayMealsConfig(day._id, nextConfig);
     const logs = await this.foodLogsModel.listLogsByUserDate(this._actorId(actor), date);
+    for (const writeRequestId of allocationRequestIds) {
+      await this._reconcileAllocationGroup(actor, date, writeRequestId, logs);
+    }
     const updatedDay = await this.foodLogsModel.updateDayTotals(dayWithConfig._id, totalLogs(logs));
     return await this._buildResponse(actor, date, objectiveInfo, updatedDay, logs);
   }
@@ -972,6 +1124,7 @@ class ServicioFoodLogs {
     }
 
     const logs = await this.foodLogsModel.listLogsByUserDate(this._actorId(actor), date);
+    await this._persistAllocationGroup(actor, date, writeRequestId, logs, payload.allocations);
     const updatedDay = await this.foodLogsModel.updateDayTotals(day._id, totalLogs(logs));
     const response = await this._buildResponse(actor, date, objectiveInfo, updatedDay, logs);
     return {
@@ -988,6 +1141,14 @@ class ServicioFoodLogs {
         requiredCapability: "nutrition.autoCalculateTrackingQuantities",
         requireRequestId: true,
       }
+    );
+  }
+
+  async addBatchLogs(user, payload = {}) {
+    return await this.addSnapshotLogs(
+      user,
+      { ...payload, source: payload.source || "manual_tracking_batch" },
+      { requireRequestId: true }
     );
   }
 
@@ -1029,6 +1190,7 @@ class ServicioFoodLogs {
 
     const objectiveInfo = await this._resolveObjective(actor);
     const logs = await this.foodLogsModel.listLogsByUserDate(this._actorId(actor), date);
+    await this._reconcileAllocationGroup(actor, date, cleanString(current.writeRequestId, 120), logs);
     const day = await this.foodLogsModel.getDayByUserDate(this._actorId(actor), date);
     const updatedDay = day
       ? await this.foodLogsModel.updateDayTotals(day._id, totalLogs(logs))
@@ -1049,6 +1211,7 @@ class ServicioFoodLogs {
 
     const objectiveInfo = await this._resolveObjective(actor);
     const logs = await this.foodLogsModel.listLogsByUserDate(this._actorId(actor), date);
+    await this._reconcileAllocationGroup(actor, date, cleanString(current.writeRequestId, 120), logs);
     const day = await this.foodLogsModel.getDayByUserDate(this._actorId(actor), date);
     const updatedDay = day
       ? await this.foodLogsModel.updateDayTotals(day._id, totalLogs(logs))
