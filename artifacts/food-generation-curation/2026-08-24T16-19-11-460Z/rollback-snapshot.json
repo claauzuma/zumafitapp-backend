@@ -1,0 +1,6542 @@
+{
+  "schemaVersion": 1,
+  "runId": "2026-08-24T16-19-11-460Z",
+  "database": "base2",
+  "collection": "fooddatabase2",
+  "totalBefore": 574,
+  "entries": [
+    {
+      "id": "6619bfeb147cd50b64677676",
+      "alimentoId": 1,
+      "name": "Aceite de coco",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "537b620fe63845e04cf16135ae367a05acba038c4044bcedf501c6094485fc09"
+    },
+    {
+      "id": "6619bfeb147cd50b64677678",
+      "alimentoId": 3,
+      "name": "Aceitunas negras",
+      "beforeGenerationPresent": true,
+      "beforeRawGeneration": {
+        "mode": "EXPLICIT_ONLY",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": false,
+          "snack": false,
+          "dinner": false,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "bad6c0bad61e45947fabefdd2445137238bad310043853d88514132805053c71"
+    },
+    {
+      "id": "6619bfeb147cd50b64677679",
+      "alimentoId": 4,
+      "name": "Aceitunas verdes",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "90701855893d5082ec762a9fd1784210f447b6fe7be27064e558a3c935b92f81"
+    },
+    {
+      "id": "6619bfeb147cd50b64677696",
+      "alimentoId": 34,
+      "name": "Almendras",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "6bd04a97e0c0fd2fbb32be8c0b61083b2ec7b6904fde942479f06e0b86dc693d"
+    },
+    {
+      "id": "6619bfeb147cd50b64677698",
+      "alimentoId": 35,
+      "name": "Anana",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "592495bb0af5a71017ce77075e07d5f3c02b8398eeff45b128c32beb73fd3da6"
+    },
+    {
+      "id": "6619bfeb147cd50b64677699",
+      "alimentoId": 36,
+      "name": "Arandanos",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "bf7d4f3282a22266dedaee368f53c8e0af5187372d0492917aa4ed6ede216569"
+    },
+    {
+      "id": "6619bfeb147cd50b6467769d",
+      "alimentoId": 40,
+      "name": "Arroz (Cocido)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "d3799ac71454eea535c5478bab63a265fbfa03f1c78aa29c7991255c924c222b"
+    },
+    {
+      "id": "6619bfeb147cd50b6467769f",
+      "alimentoId": 42,
+      "name": "Arroz integral",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "0274fe397d3f60417cdf32b6f0671be25d555d4c3c369870dda9158e06fbfc44"
+    },
+    {
+      "id": "6619bfeb147cd50b646776a0",
+      "alimentoId": 43,
+      "name": "Arroz integral (Cocido)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "f6d74433203ed28e77f64d1ad5a3863b6ae431258b884bcf460d2d799a0f4e0e"
+    },
+    {
+      "id": "6619bfeb147cd50b646776a4",
+      "alimentoId": 47,
+      "name": "Atun en lomitos al natural",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "78f722c25cee389e1e2232f0159370a409fd0bc0abc3381a3cf9c02674205e7f"
+    },
+    {
+      "id": "6619bfeb147cd50b646776a5",
+      "alimentoId": 48,
+      "name": "Avellanas",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "4d052cd56269034070c855b12ed322d3c0c2b5cd625cfe905bfdd533cb31c981"
+    },
+    {
+      "id": "6619bfeb147cd50b646776a6",
+      "alimentoId": 49,
+      "name": "Avena instantanea",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "14f7f4c83e52857d763bea8fb97e0599e979d32330c181fd5c569c566f1e52dd"
+    },
+    {
+      "id": "6619bfeb147cd50b646776a8",
+      "alimentoId": 51,
+      "name": "Banana",
+      "beforeGenerationPresent": true,
+      "beforeRawGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "632e393d3959d064e6dbc05bd491fd773a569531762f9631a41c4871aea0cc34"
+    },
+    {
+      "id": "6619bfeb147cd50b646776a9",
+      "alimentoId": 52,
+      "name": "Banana chica",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "bef528ed69b76a76b4f804c6a4d01431bd7b4f93ea16d5b7e2dcad3d1ae0c6e8"
+    },
+    {
+      "id": "6619bfeb147cd50b646776aa",
+      "alimentoId": 53,
+      "name": "Banana grande",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "1dda8d4e5ed678dbc6a22235447bdd287828a275c45915ed6e2a042b230c76c4"
+    },
+    {
+      "id": "6619bfeb147cd50b646776ab",
+      "alimentoId": 54,
+      "name": "Banana mediana",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "dad9fbd3a028b3bf8006c7987143a2a3072da78f7d2da56409fe179c5a5a9538"
+    },
+    {
+      "id": "6619bfeb147cd50b646776af",
+      "alimentoId": 58,
+      "name": "Batatas",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "dc85bbe7879c114d70bdc72e521300af41ad43c2ad9faf84e00a14aa91121656"
+    },
+    {
+      "id": "6619bfeb147cd50b646776b3",
+      "alimentoId": 62,
+      "name": "Berenjena",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": true,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "06cceff259b9ddb39c7153cf91a4b1226567f9e4933ae4f4c0cb97f51aecbdb1"
+    },
+    {
+      "id": "6619bfeb147cd50b646776bd",
+      "alimentoId": 72,
+      "name": "Bola de lomo",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "3d0f3dbfcf47a3cfad7cc477bb1682d4b87279b7d3cfa0f505f70e71cf74a0b7"
+    },
+    {
+      "id": "6619bfeb147cd50b646776c2",
+      "alimentoId": 77,
+      "name": "brocoli",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": true,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "596c67f14b17a383da4180bd94ed507dc42f056af0dc4997dd3a820f58a2c323"
+    },
+    {
+      "id": "6619bfeb147cd50b646776c4",
+      "alimentoId": 79,
+      "name": "Calabacin",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": true,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "15414f1b459181ae04b5bd4791826c660250b05b271889ee1736d83cb30ff510"
+    },
+    {
+      "id": "6619bfeb147cd50b646776c7",
+      "alimentoId": 82,
+      "name": "Capelletini giacomo jamon  y queso",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "01024c41612e8a47e81365fe7f7efaa5472f11bacc15fbfbfe6e3d3b15b52254"
+    },
+    {
+      "id": "6619bfeb147cd50b646776c8",
+      "alimentoId": 83,
+      "name": "Capelletini giacomo tridicci",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "8bd89e2fdd115d375b53c71abab4944d22e7c3a9a45f88458af1a048274faf59"
+    },
+    {
+      "id": "6619bfeb147cd50b646776cd",
+      "alimentoId": 88,
+      "name": "Carne de cerdo magro",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "0b05102df03fbe615a7374c98646983fa5711f463c8c0b6874e4ff099f1cd4af"
+    },
+    {
+      "id": "6619bfeb147cd50b646776d3",
+      "alimentoId": 94,
+      "name": "Castañas",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "dbe432ef3eecd6de1dc5c9eb6e40d7e56d8d5282d1277439f9faa84c56c666a6"
+    },
+    {
+      "id": "6619bfeb147cd50b646776d4",
+      "alimentoId": 96,
+      "name": "Castañas de caju",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "2596c5214f8b8c8f26278ee1184c4dd3dc31a75e0784173aab9e6e27f68cad82"
+    },
+    {
+      "id": "6619bfeb147cd50b646776db",
+      "alimentoId": 102,
+      "name": "Cerezas",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "e030189454ef0402888eb06416f9cfa98c591fe421bb25511099d9014d9f89a0"
+    },
+    {
+      "id": "6619bfeb147cd50b646776dd",
+      "alimentoId": 104,
+      "name": "Chirimoya",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "08b6349db42b316bc090a3e4c94079204791ebb6b1f9d9d140d09b216d72c981"
+    },
+    {
+      "id": "6619bfeb147cd50b646776de",
+      "alimentoId": 105,
+      "name": "Choclo entero",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "87ad035e6810d555388952007a5e1ae0b697d11bc05c7e979c45033e84b62003"
+    },
+    {
+      "id": "6619bfeb147cd50b646776e6",
+      "alimentoId": 113,
+      "name": "Churrasco magro",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "42586b2853e4fc8513843184a7ef214d39d939a263d81dc9ece6ac4471807382"
+    },
+    {
+      "id": "6619bfeb147cd50b646776e7",
+      "alimentoId": 114,
+      "name": "Ciruela",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "1ecb23ab61bc28e0c9140071c5df20680b0b6a59c10fd9e5e9d1a45e470dc9fe"
+    },
+    {
+      "id": "6619bfeb147cd50b646776e8",
+      "alimentoId": 115,
+      "name": "Claras de huevos",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "9d37ba30ffeb6b28c6117f0643db7ae9917d2f59c7dfb971a92bed8333cb9444"
+    },
+    {
+      "id": "6619bfeb147cd50b646776ea",
+      "alimentoId": 117,
+      "name": "Coliflor",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": true,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "91142a2c60ddf519e7394082b2f11db0cec24f1a487e69ee5c010f229c7e8827"
+    },
+    {
+      "id": "6619bfeb147cd50b646776ed",
+      "alimentoId": 120,
+      "name": "Copos de maiz sin azucar",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "c2e226acc4d031622a8a12de5ddc1bcd9e3a86ce9df7d1ffa89377c499be83d6"
+    },
+    {
+      "id": "6619bfeb147cd50b646776f6",
+      "alimentoId": 129,
+      "name": "Cuadrada (Ternera)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "1da8a32669c9d19d1d4ea04041f6ddfe64ba5f7d34980911f2d15fddf502001c"
+    },
+    {
+      "id": "6619bfeb147cd50b646776f9",
+      "alimentoId": 132,
+      "name": "Damasco",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "020fb5dac6751938a014fb87e35502dd51cb80da68c9d1a6f2846389375764cc"
+    },
+    {
+      "id": "6619bfeb147cd50b64677709",
+      "alimentoId": 148,
+      "name": "Durazno",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "bc411f4d9d8e87efc95baff08dea3425732431e28b54fe8943cdb823ae741a35"
+    },
+    {
+      "id": "6619bfeb147cd50b6467770a",
+      "alimentoId": 149,
+      "name": "Durazno chico",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "33be4b6717c3c2f54bea9ac58e1f864dada40ac5ddc1e6ebde1fee8c697713a3"
+    },
+    {
+      "id": "6619bfeb147cd50b6467770b",
+      "alimentoId": 150,
+      "name": "Durazno grande",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "6684e1528b6e97626fc83106abd31abb70bef82602cd31ee24d1e7932992f281"
+    },
+    {
+      "id": "6619bfeb147cd50b6467770c",
+      "alimentoId": 151,
+      "name": "Durazno mediano",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "b0949c87a61a3b158cdf1583e215d0cf58d3ea92475b7ddfe76ebe4774cf8eb8"
+    },
+    {
+      "id": "6619bfeb147cd50b64677714",
+      "alimentoId": 159,
+      "name": "Esparragos",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": true,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "c848611c27c96bdc91e30d125080fa0ef7c0ed3f9e480bab3f1766eb0b4c90ce"
+    },
+    {
+      "id": "6619bfeb147cd50b64677715",
+      "alimentoId": 160,
+      "name": "espinaca",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": true,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "28ccbdda96589aac0f16d553974635da947ada8756707e1e866dc1004c4ad02d"
+    },
+    {
+      "id": "6619bfeb147cd50b64677717",
+      "alimentoId": 162,
+      "name": "Fideos",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "7e2ea6b37f5567570788ad4582af331741ec75232558e9329236218b4affb7a0"
+    },
+    {
+      "id": "6619bfeb147cd50b64677718",
+      "alimentoId": 163,
+      "name": "Fideos (Cocidos)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "e019afae88feb4677ded522954b8b81a71140b25a92b005ece965e3081e1d183"
+    },
+    {
+      "id": "6619bfeb147cd50b64677719",
+      "alimentoId": 164,
+      "name": "Fideos sin gluten",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "53fceeeeb08ef5da87c37a4a148cee3600b0db29dbc8d3a95a5cfa642ff57d01"
+    },
+    {
+      "id": "6619bfeb147cd50b6467771a",
+      "alimentoId": 165,
+      "name": "Filet de merluza",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "6408ee02185443b767d6f60fbad2917208b426b354a81691459758ddca46b14c"
+    },
+    {
+      "id": "6619bfeb147cd50b6467771e",
+      "alimentoId": 169,
+      "name": "Frambuesa",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "501e3d0223809371f2693ee2bf1152853d86fdf596b5d57a961413b3f4a0bc95"
+    },
+    {
+      "id": "6619bfeb147cd50b64677722",
+      "alimentoId": 173,
+      "name": "Frutillas",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "666cdfc735c84db92412cd4cd7bc0939a056d2c71a15d45c58976112113bc8c6"
+    },
+    {
+      "id": "6619bfeb147cd50b64677723",
+      "alimentoId": 174,
+      "name": "Galletas de arroz",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "f1dbb911c26f90fb27c880b2f95c7309d33154c2ebf9155349737201dceb997b"
+    },
+    {
+      "id": "6619bfeb147cd50b64677728",
+      "alimentoId": 179,
+      "name": "Galletitas de agua",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "a09743fa03c1188ce12ce6e1728d4c23121997580ae0458e0b2de7d4ee0d02f9"
+    },
+    {
+      "id": "6619bfeb147cd50b6467773c",
+      "alimentoId": 199,
+      "name": "Gambas",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "2f0183ab5ebada37577886305543031819291c58ca008eb3762978f9da93ad2c"
+    },
+    {
+      "id": "6619bfeb147cd50b64677744",
+      "alimentoId": 207,
+      "name": "Granada",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "52af06e6374f11d65d96141dd1c4133d805e74077d2f9404f67d8743c7098631"
+    },
+    {
+      "id": "6619bfeb147cd50b64677753",
+      "alimentoId": 222,
+      "name": "Higado",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "c136eb4c9c2a8950323a013de9f85d629f42a4fddaf62fe2c129ff43d9a45a47"
+    },
+    {
+      "id": "6619bfeb147cd50b64677754",
+      "alimentoId": 223,
+      "name": "Higo",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "4ef56c6f1b7fad7a4654aab1e91cf3faf62a4eddf17397a376387376ce70fc41"
+    },
+    {
+      "id": "6619bfeb147cd50b64677755",
+      "alimentoId": 224,
+      "name": "Huevos",
+      "beforeGenerationPresent": true,
+      "beforeRawGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "5874e51bd34fe4a7acc0c5d6d622a63abaf5887574368f30e993781b8c359f16"
+    },
+    {
+      "id": "6619bfeb147cd50b64677758",
+      "alimentoId": 228,
+      "name": "Jamon cocido",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "382930db73929dcae199b5f6fa372198c619755ad6f5753e1563fbe2ece28a07"
+    },
+    {
+      "id": "6619bfeb147cd50b6467775a",
+      "alimentoId": 229,
+      "name": "Jamon cocido cagnoli",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "43ec7c54898be21f6497f3af5fa0f82c629a1bd3c6c723e962def8f70467fdc9"
+    },
+    {
+      "id": "6619bfeb147cd50b6467775b",
+      "alimentoId": 230,
+      "name": "Jamon cocido feteado",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "3ae22d836a6035d72d50f06dcaab89dd577ac905a864ddcd6a3c50ad9856d634"
+    },
+    {
+      "id": "6619bfeb147cd50b6467775c",
+      "alimentoId": 231,
+      "name": "Jamon cocido lario",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "b0cb885e7c1cfcd703d139feb22ebf55bc7746ac802d7d5229b0fa135686a5bd"
+    },
+    {
+      "id": "6619bfeb147cd50b6467775d",
+      "alimentoId": 232,
+      "name": "Jamon cocido paladini",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "03b4e97ce46071d89c7ba7aa916a1ccb9d328dcfdb1f9d6f9cd76b951d42a3e9"
+    },
+    {
+      "id": "6619bfeb147cd50b64677764",
+      "alimentoId": 239,
+      "name": "Kiwi",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "2abc93d38973563ff0be9ba93e0c2794704b5e070e4c69a8653bea602ba8ce71"
+    },
+    {
+      "id": "6619bfeb147cd50b64677765",
+      "alimentoId": 240,
+      "name": "Kiwi (mediano)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "834ef62c8ffa7065c9f0a6cb6c3f766a2fe864a8b1272d465e1ef8b674ccb7c1"
+    },
+    {
+      "id": "6619bfeb147cd50b64677766",
+      "alimentoId": 241,
+      "name": "Langostinos",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "1a17816270ee56cef3d955525635e910409a3a26cada819427d9b30006f7c981"
+    },
+    {
+      "id": "6619bfeb147cd50b6467776c",
+      "alimentoId": 247,
+      "name": "Leche descremada",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "014a6dcd6e8c4a71b908f891836523bb3f274b00092384cfc4a08776d2c5ea2f"
+    },
+    {
+      "id": "6619bfeb147cd50b6467776d",
+      "alimentoId": 248,
+      "name": "Leche descremada (Apostoles)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "5a8aeef7be81e205e02053c324ad781acf0435892b435fba04baad883d1820e0"
+    },
+    {
+      "id": "6619bfeb147cd50b6467776e",
+      "alimentoId": 249,
+      "name": "Leche descremada alta en proteínas",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "c6fe33fcdab10c2793268ffe4e04611d077455ac7b6f3524e42ed23b59551c08"
+    },
+    {
+      "id": "6619bfeb147cd50b6467776f",
+      "alimentoId": 250,
+      "name": "Leche descremada Apostoles",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "96196ea34a3551d34b23976b72ac43f9be394034845ec06bd872e5e86292af9e"
+    },
+    {
+      "id": "6619bfeb147cd50b64677770",
+      "alimentoId": 251,
+      "name": "Leche descremada en polvo",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "33b0726d88118e63a2775eb0484ddd551fef2cd01868a2ed322c5ca849be8382"
+    },
+    {
+      "id": "6619bfeb147cd50b64677771",
+      "alimentoId": 252,
+      "name": "Leche descremada la serenisima",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "0081a259645020d2a0e4ea9eb0ea4d6ab432085dce020569ffc9a2ba5a53aaf0"
+    },
+    {
+      "id": "6619bfeb147cd50b64677772",
+      "alimentoId": 253,
+      "name": "Leche descremada sin lactosa",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "224fd1d56b66351cbc1fa74f4868007a5074c5a742c52a8ed43dbc38e2ecddde"
+    },
+    {
+      "id": "6619bfeb147cd50b64677773",
+      "alimentoId": 254,
+      "name": "Leche descremada tregar",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "151565f1b7ddffd89092fe7fc49ef35643b2af5c98b44511d86b858d2c3602a6"
+    },
+    {
+      "id": "6619bfeb147cd50b64677774",
+      "alimentoId": 255,
+      "name": "Leche deslactosada descremada (La serenisima)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "e4ec58628cfde02eee4060065bf58a9c169996b36f26623b9cb56fc7b0f819d7"
+    },
+    {
+      "id": "6619bfeb147cd50b64677777",
+      "alimentoId": 258,
+      "name": "Leche entera",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "0a7a163901703a126aa6379d62effebc1386f8011ad44ab5bd69d63176b0ec09"
+    },
+    {
+      "id": "6619bfeb147cd50b6467777b",
+      "alimentoId": 262,
+      "name": "Leche parcialmente descremada (Veronica)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "d3c908de2aec7f15aa5c656457ca720bfab362b05581fb341413eb564f0122db"
+    },
+    {
+      "id": "6619bfeb147cd50b6467777c",
+      "alimentoId": 263,
+      "name": "lechuga",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": true,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "ce0996b19753b232ad011ba7b5dbe9d9a30524f3e0a09c2da7dbb8ff7d66e7b0"
+    },
+    {
+      "id": "6619bfeb147cd50b64677783",
+      "alimentoId": 270,
+      "name": "Lomo de cerdo magro",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "3af28a656c4a37baa4b42b9fa83b761fd0cf2a8e91c22d134a3c064efcd02397"
+    },
+    {
+      "id": "6619bfeb147cd50b64677785",
+      "alimentoId": 272,
+      "name": "Lubina",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "e99727345195521e41e65fe27f58577b983ab6d3679405132a459a1aa73db84c"
+    },
+    {
+      "id": "6619bfeb147cd50b64677786",
+      "alimentoId": 273,
+      "name": "Maiz",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "cdd5920dffb914d7594841eb6bf9af59308e9f916a1edb9731392ca98d748359"
+    },
+    {
+      "id": "6619bfeb147cd50b64677789",
+      "alimentoId": 276,
+      "name": "Mandarina",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "ae7c08d729b34c2c1c4ad7d00125f28607961e6d8ac302fc06ef1bb0c2b14f40"
+    },
+    {
+      "id": "6619bfeb147cd50b6467778a",
+      "alimentoId": 277,
+      "name": "Mandarina chica",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "23019609194bad47286ad8f540e967111a562ada313cba0c8a83a06d166af956"
+    },
+    {
+      "id": "6619bfeb147cd50b6467778b",
+      "alimentoId": 278,
+      "name": "Mandarina grande",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "26d826b7c90942f19c5dec06ed01deaf912d8a685eeda3a946f1e654553a93c8"
+    },
+    {
+      "id": "6619bfeb147cd50b6467778c",
+      "alimentoId": 279,
+      "name": "Mandarina mediana",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "cacfa49ccddbbb61e507e727fc323776ff82655fb165eba146cc81b4c116c93b"
+    },
+    {
+      "id": "6619bfeb147cd50b6467778e",
+      "alimentoId": 281,
+      "name": "Mango",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "7fb3465ead9bcf2e508d22de1c598977218c660831101dc48bbac9b680c4f563"
+    },
+    {
+      "id": "6619bfeb147cd50b6467778f",
+      "alimentoId": 282,
+      "name": "Mani",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "10ef34ffc3a82c438ff8500e36b2a01c4c61c158e40bd061e339c880093b6b10"
+    },
+    {
+      "id": "6619bfeb147cd50b64677793",
+      "alimentoId": 286,
+      "name": "Mantequilla de mani",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "9766b46c7337c8268d077289f07d74bf5df5a1ac15e7ca5d08f5d1caad9554fb"
+    },
+    {
+      "id": "6619bfeb147cd50b64677794",
+      "alimentoId": 287,
+      "name": "Manzana",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "7df4e51de980c9a302481751d0b889bce428ae94bdda74ecb7479026e433375b"
+    },
+    {
+      "id": "6619bfeb147cd50b64677795",
+      "alimentoId": 288,
+      "name": "Manzana chica",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "2be95af1fef7bf7632427e632b11b5657ebdd212d6f0089dc347cd64f4180661"
+    },
+    {
+      "id": "6619bfeb147cd50b64677796",
+      "alimentoId": 289,
+      "name": "Manzana grande",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "d2e0a2a63b91fede814cfb41ad6159bdb1f6b878ae77e8deafa0a8609f41326f"
+    },
+    {
+      "id": "6619bfeb147cd50b64677797",
+      "alimentoId": 290,
+      "name": "Manzana mediana",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "13475e63dc4ed0cf9d17b811585d148ae470b3462729a476f0a4da45ce25326c"
+    },
+    {
+      "id": "6619bfeb147cd50b64677798",
+      "alimentoId": 291,
+      "name": "Mariscos",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "355cf1a6c5a77a3296c7cbb14d6021d7385d039c9dea48a63322783b5db0b136"
+    },
+    {
+      "id": "6619bfeb147cd50b646777a0",
+      "alimentoId": 299,
+      "name": "Melon",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "5f3cd97f916eb886609fa0330cf57c13db5cea280db613410238bb08f6535d81"
+    },
+    {
+      "id": "6619bfeb147cd50b646777cb",
+      "alimentoId": 342,
+      "name": "Naranja",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "2f9accab4318bb8ac7193cee2b3b99f5ef12ab079c395aeedee0f5136083bc74"
+    },
+    {
+      "id": "6619bfeb147cd50b646777cc",
+      "alimentoId": 343,
+      "name": "Naranja chica",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "89c50762d0f3edc95e43e04f2f4395be7aece4f92923c77666d3ee66c460e333"
+    },
+    {
+      "id": "6619bfeb147cd50b646777cd",
+      "alimentoId": 344,
+      "name": "Naranja grande",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "f5e5d2291085a4f157145a14be35edea95a1c1df1de50dbe1677b6eaa710af79"
+    },
+    {
+      "id": "6619bfeb147cd50b646777ce",
+      "alimentoId": 345,
+      "name": "Naranja mediana",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "dabc4b822d48c13dd6c090036e353970fefb240a18101aa2f507d1d708b7e6c1"
+    },
+    {
+      "id": "6619bfeb147cd50b646777d1",
+      "alimentoId": 349,
+      "name": "Nueces peladas",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "64cd13ae14dffb74d5ee3eab7c011da4403680be1078cfb336c4be5832cb1ecb"
+    },
+    {
+      "id": "6619bfeb147cd50b646777d6",
+      "alimentoId": 353,
+      "name": "Ñoquis con papa",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "d5e1a53f702d1ce30747f62072e3bbfe2141efe35c116d86990ec75760d5c4f8"
+    },
+    {
+      "id": "6619bfeb147cd50b646777d7",
+      "alimentoId": 354,
+      "name": "Ñoquis con papa carrefour",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "304c3cfafe8af04e282034bb46a0448d72f18fd0664d7feff2e0c5ae14dfae82"
+    },
+    {
+      "id": "6619bfeb147cd50b646777d8",
+      "alimentoId": 355,
+      "name": "ñoquis de papa",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "0c354628bd495be2bf5cc096437b1d9b778bf591d98c1f440e2a6a816c32d695"
+    },
+    {
+      "id": "6619bfeb147cd50b646777db",
+      "alimentoId": 358,
+      "name": "Paleta de ternera",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "45dee505ba25c4641d662edf303795b80cc7e2548b61651dda4529b2c964d188"
+    },
+    {
+      "id": "6619bfeb147cd50b646777dd",
+      "alimentoId": 360,
+      "name": "Palomita (Carne magra)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "7dcf92c0f393ebc22d5dfe381d55f36dfbf7f7130aa9418a8e1f70e4c38da54a"
+    },
+    {
+      "id": "6619bfeb147cd50b646777de",
+      "alimentoId": 361,
+      "name": "Palta",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "f82e2626c990463d0712de59119ec70f288c82ed73f7f9e542017471e9a58026"
+    },
+    {
+      "id": "6619bfeb147cd50b646777df",
+      "alimentoId": 362,
+      "name": "Pan",
+      "beforeGenerationPresent": true,
+      "beforeRawGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "138ad3cc59052bcfcefd2c557109a79b426c20e34d363ddf6ea777d1fd85ba4a"
+    },
+    {
+      "id": "6619bfeb147cd50b646777e0",
+      "alimentoId": 363,
+      "name": "Pan artesano bimbo",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "af7721f7b6fbc352f8c8af29be9b6d83f9d87d362d77e04917cadd63aa9a9cff"
+    },
+    {
+      "id": "6619bfeb147cd50b646777e1",
+      "alimentoId": 364,
+      "name": "Pan baguette",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "5f30c8173bdc72c5cd39e33d6e90bfc50f82cb0703b528846f41ab709c2a2e8c"
+    },
+    {
+      "id": "6619bfeb147cd50b646777e2",
+      "alimentoId": 365,
+      "name": "Pan blanco",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "6ff997a3d9e2fd5d19d8d5937bdeb5f829f38dcc47ae788783c44a464d6e8193"
+    },
+    {
+      "id": "6619bfeb147cd50b646777e3",
+      "alimentoId": 366,
+      "name": "Pan con salvado carrefour",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "4e8935ca2085fd1bf0ff641488c0ced67452af1d1b10a17ad1493371c0aab362"
+    },
+    {
+      "id": "6619bfeb147cd50b646777e4",
+      "alimentoId": 367,
+      "name": "Pan con salvado fargo plus",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "9d0b8ffac01a9f72a2f9a241a2d5005d709485c59aa57aca0f8ddae0d47f838c"
+    },
+    {
+      "id": "6619bfeb147cd50b646777e5",
+      "alimentoId": 368,
+      "name": "Pan con salvado Noly",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "5bbd94a65c50e486e5d34efad37bfe37993202690da702795f56862924dca672"
+    },
+    {
+      "id": "6619bfeb147cd50b646777e6",
+      "alimentoId": 369,
+      "name": "Pan de centeno",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "1a0727c46ff1a6079ca37b39debc0224051513a9cf7fd022ba6e3f55d1c89bf6"
+    },
+    {
+      "id": "6619bfeb147cd50b646777e7",
+      "alimentoId": 370,
+      "name": "Pan de molde Bio sin gluten",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "750b278631f17a2bfa40ed793bce43f92f9f45de4d776fa79d19ac5e0d60a1fa"
+    },
+    {
+      "id": "6619bfeb147cd50b646777e8",
+      "alimentoId": 371,
+      "name": "Pan de salvado (Fargo)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "4570c3428fded6f23904e346a435c6ae55ae4711f4d5bb199f459f534150cd5a"
+    },
+    {
+      "id": "6619bfeb147cd50b646777e9",
+      "alimentoId": 372,
+      "name": "Pan de salvado doble fargo",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "625c192ebdb1674a4bb6edd0bda196660f5a876621e07c508a4143ae659b6f16"
+    },
+    {
+      "id": "6619bfeb147cd50b646777ea",
+      "alimentoId": 373,
+      "name": "Pan doble integral fargo",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "2cbf3b550fa72ae3963dda116a97dd7b970a71a7b34b8b32b22a84c7a23e7918"
+    },
+    {
+      "id": "6619bfeb147cd50b646777eb",
+      "alimentoId": 374,
+      "name": "Pan frances",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "6195b1203987e20415ff4e3f2c0790784fcd892931a372f2ea4c79cd4ac81bf3"
+    },
+    {
+      "id": "6619bfeb147cd50b646777ee",
+      "alimentoId": 377,
+      "name": "Pan lactal",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "f78a13aecab4dfeb9c7e9d0ec6c43e581d80f6f9c53f4f7c582ab3dbd359eb45"
+    },
+    {
+      "id": "6619bfeb147cd50b646777ef",
+      "alimentoId": 378,
+      "name": "Pan lactal bimbo",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "d8442e0a7152da7af8096d9770aebb7de7b18e2d6faa3f5c5ec6012de72eaca5"
+    },
+    {
+      "id": "6619bfeb147cd50b646777f0",
+      "alimentoId": 379,
+      "name": "Pan lactal de salvado carrefour",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "ed34e8745255a6ad6178bbb0f32968714073ad0fa6f52468b2009c2561ede0b2"
+    },
+    {
+      "id": "6619bfeb147cd50b646777f1",
+      "alimentoId": 380,
+      "name": "Pan lactal noly",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "560e4d83fb46630ac3f0e1709eb26608e58548d61bc6acc993ee7be50ad66ab1"
+    },
+    {
+      "id": "6619bfeb147cd50b646777f2",
+      "alimentoId": 381,
+      "name": "Pan negro",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "6bae7f11a730d4161183a70fa0a450fd01cd71981f7fe378dd5ce62b984e2df4"
+    },
+    {
+      "id": "6619bfeb147cd50b646777f8",
+      "alimentoId": 387,
+      "name": "Pan tipo artesano bimbo semillas del campo",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "7b762a66033dd07f6239aca5f65e62f55947e3225db45e3f95401068b082bb33"
+    },
+    {
+      "id": "6619bfeb147cd50b646777fc",
+      "alimentoId": 391,
+      "name": "Papas",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "1ead4c1fe8bb3db090db03280633c3090f42aac4ba1f135999b250f785769f6d"
+    },
+    {
+      "id": "6619bfeb147cd50b64677801",
+      "alimentoId": 396,
+      "name": "Papaya",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "e7b73821b94d51504fe3867c2e338b726d37d8f67896446d6f02ca81cd537323"
+    },
+    {
+      "id": "6619bfeb147cd50b64677802",
+      "alimentoId": 397,
+      "name": "Pasas de uva",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "39e199c952cc826918d175ab5e138c77273abe6f8a99acb929fba12b05a583c6"
+    },
+    {
+      "id": "6619bfeb147cd50b64677803",
+      "alimentoId": 398,
+      "name": "Pasta de mani",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "bc86a8a4edc3c09ff413258f45184f024181c99b40565764b5ff835a7c70d4b9"
+    },
+    {
+      "id": "6619bfeb147cd50b64677804",
+      "alimentoId": 399,
+      "name": "Pasta de mani Sin tacc",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "6058c243c6303c356b14ff6e3aac7dbfbb35e9df683a05dffdc10df7c02773c8"
+    },
+    {
+      "id": "6619bfeb147cd50b64677807",
+      "alimentoId": 402,
+      "name": "Peceto",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "0557a88ee2da209e2d95ed8b9e4aa38289909ef492ff8c8a4d5a8fe3908c24b3"
+    },
+    {
+      "id": "6619bfeb147cd50b64677808",
+      "alimentoId": 403,
+      "name": "Pechuga de pavo",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "fcb52a2325d93e6a4b082a3fadbb8665b82a3de309c72243cc9475d735549209"
+    },
+    {
+      "id": "6619bfeb147cd50b6467780a",
+      "alimentoId": 405,
+      "name": "Pechuga de pollo con piel",
+      "beforeGenerationPresent": true,
+      "beforeRawGeneration": {
+        "mode": "EXPLICIT_ONLY",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": false,
+          "snack": false,
+          "dinner": false,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": 100,
+          "max": 350,
+          "step": 10,
+          "allowedValues": []
+        }
+      },
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": 100,
+          "max": 350,
+          "step": 10,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "5154227f3f196b6d2238e12cdaa3cfcdcb6b77c5a5b7b5e2f4faa297c5d06ff7"
+    },
+    {
+      "id": "6619bfeb147cd50b6467780d",
+      "alimentoId": 408,
+      "name": "Pera",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "183c5c11db506aca6485870b6dace70825c5300eb2b4c61323cca6e0ab372405"
+    },
+    {
+      "id": "6619bfeb147cd50b6467780e",
+      "alimentoId": 409,
+      "name": "Pera chica",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "f9db82d446c070490c4c363e6f951501a5e1c04f17e36dda0dac2b75bc702f3f"
+    },
+    {
+      "id": "6619bfeb147cd50b6467780f",
+      "alimentoId": 410,
+      "name": "Pera grande",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "03961dad716deb685d45b5b353379961b978eeba6c34bdc279db38dc51a87d90"
+    },
+    {
+      "id": "6619bfeb147cd50b64677810",
+      "alimentoId": 411,
+      "name": "Pera mediana",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "dfe4f95660d99dedeac48d950a0e290c47fed5e5db803fa64359980d5c419ecc"
+    },
+    {
+      "id": "6619bfeb147cd50b64677811",
+      "alimentoId": 412,
+      "name": "Pescado blanco",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "d3f512c61b0d8e7b7293d70ca342ebf859f0cb9e772e7ed4e94d8f5d17b48e08"
+    },
+    {
+      "id": "6619bfeb147cd50b64677813",
+      "alimentoId": 415,
+      "name": "Pistachos",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "bd43371c411f27c1f249d27d7b82dc84cf5d220af185d4d2117e60fc2c063190"
+    },
+    {
+      "id": "6619bfeb147cd50b64677818",
+      "alimentoId": 419,
+      "name": "Polenta",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "ffdcb6d8d64ccfc65d3356a3d0b63b82e0f7504950c30d04b32594e8326dcb7f"
+    },
+    {
+      "id": "6619bfeb147cd50b64677819",
+      "alimentoId": 420,
+      "name": "Polenta (Coto)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "8aa4e55295711b0bfc2a9e148c30c21aedbe00edba4fbcbe8ee06ce9a12adadb"
+    },
+    {
+      "id": "6619bfeb147cd50b6467781a",
+      "alimentoId": 421,
+      "name": "Polenta (Presto pronta)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "6abfdc112e1d18c99c146530e5e32019318b88a9592f66211d9a84f72bc202c7"
+    },
+    {
+      "id": "6619bfeb147cd50b6467781b",
+      "alimentoId": 422,
+      "name": "Polenta (Quaker)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "56fa4064593c477aac542b35de082a18979827cf661c36a77d8b1f9ece43f3f1"
+    },
+    {
+      "id": "6619bfeb147cd50b6467781c",
+      "alimentoId": 423,
+      "name": "Polenta carrefour",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "c33d751b57db541852c66ebb5848a15591c9b7b1705d217be26aaf3b2606e1a3"
+    },
+    {
+      "id": "6619bfeb147cd50b6467781d",
+      "alimentoId": 424,
+      "name": "Pomelo",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "d86fcf1753f389ecea1b67ba56b79e340d68e1a9a7f9bacc62a2241693b09628"
+    },
+    {
+      "id": "6619bfeb147cd50b64677825",
+      "alimentoId": 432,
+      "name": "Pure de papas (General)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "a5402191df90ee3cb073a4432025966c089267d7302d6f27058dae6f6685d884"
+    },
+    {
+      "id": "6619bfeb147cd50b64677840",
+      "alimentoId": 454,
+      "name": "Queso cremon cremoso",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "bbede7ce88d3fed96c320e2458561c3b403a76508394de3ab8936c95bbe29db0"
+    },
+    {
+      "id": "6619bfeb147cd50b64677842",
+      "alimentoId": 456,
+      "name": "Queso cremoso",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "73c8d1c78decf7c16384139c1f0c5ffd87fad9bf83411afaeb3e02602e5ce328"
+    },
+    {
+      "id": "6619bfeb147cd50b64677843",
+      "alimentoId": 457,
+      "name": "Queso cremoso (cremac)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "9e235f76e7211a89bb1288cc8097a0f8bf8039cdb63c8e84d56a4cd69e585585"
+    },
+    {
+      "id": "6619bfeb147cd50b64677845",
+      "alimentoId": 459,
+      "name": "Queso cremoso cremac",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "b313fc7a3932fa02983e35deb1a2aa642ba3f4e3d8a4d39d9a944ff3783db599"
+    },
+    {
+      "id": "6619bfeb147cd50b64677846",
+      "alimentoId": 460,
+      "name": "Queso cremoso light",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "76095940b758efc93cf2e8556a7665623c24ee27ccea02820e05560c715b0b62"
+    },
+    {
+      "id": "6619bfeb147cd50b64677847",
+      "alimentoId": 461,
+      "name": "Queso cremoso port salut",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "f001975204f6097112d9cd1dd0175d21a2a181960081d272aff461db414d7dc7"
+    },
+    {
+      "id": "6619bfeb147cd50b64677848",
+      "alimentoId": 462,
+      "name": "Queso cremoso punta del agua",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "ec7ed4548f1ac369b59d9a090afecc5f05000c17efa4dc19a8f195cb27bd9cbb"
+    },
+    {
+      "id": "6619bfeb147cd50b64677849",
+      "alimentoId": 463,
+      "name": "Queso cremoso punta del agua light",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "081fa1582e88adf64988f937e8338c04925ec50b18b0a8f6db6af10a9abbb459"
+    },
+    {
+      "id": "6619bfeb147cd50b6467784a",
+      "alimentoId": 464,
+      "name": "Queso cremoso saint paulin",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "5217c0fe3d790b635dc76d8a254c4c44cd13dea914661699ef981d03a58de89c"
+    },
+    {
+      "id": "6619bfeb147cd50b6467784b",
+      "alimentoId": 466,
+      "name": "Queso cremoso temblay",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "c5b45c5f4ad5c9d783f2b14aaf072826ae56832fd4fecd05cbd9bc343c17fa8e"
+    },
+    {
+      "id": "6619bfeb147cd50b64677865",
+      "alimentoId": 491,
+      "name": "Ravioles (Carrefour)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "d82540d555e56d1968d77000547780f0b58e67fd55c3163de3a1df1f5b8c4878"
+    },
+    {
+      "id": "6619bfeb147cd50b64677866",
+      "alimentoId": 492,
+      "name": "Remolacha",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": true,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "6168b75d1a99db829d60a7cd61574db05f8ffcf6d0ec221ded3c25a35ee83bfb"
+    },
+    {
+      "id": "6619bfeb147cd50b6467787f",
+      "alimentoId": 515,
+      "name": "Sandia",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "00064692fbd92cd4ed5fadb47300a691d8919ef5b43ffabc7b64518330e58fa5"
+    },
+    {
+      "id": "6619bfeb147cd50b64677881",
+      "alimentoId": 517,
+      "name": "Sardinas",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "2cbfcd155e04efae415fbcec18dcc12f07faf0d1d70f2ab994ff9e2b0c9d2353"
+    },
+    {
+      "id": "6619bfeb147cd50b64677883",
+      "alimentoId": 519,
+      "name": "Seitan",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "5f39ce479a3a3361e7d81084a9a211df1a44650630c986b1799a8a40e546100f"
+    },
+    {
+      "id": "6619bfeb147cd50b64677884",
+      "alimentoId": 520,
+      "name": "Semillas de calabaza",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "9dc1e7921dd7a7edded48013588c157b5b0983196dfb3c9dc34a3819c2d46810"
+    },
+    {
+      "id": "6619bfeb147cd50b64677887",
+      "alimentoId": 523,
+      "name": "Semillas de girasol",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "70c1189ec4ffb566293580530cc53ccd6e18118f11692043eb3daffeb4544aa5"
+    },
+    {
+      "id": "6619bfeb147cd50b64677888",
+      "alimentoId": 524,
+      "name": "Semillas de lino",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": true
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "651874530157311a0351e83b9fbdb1db24da9307232e19e8b6377d949f3db342"
+    },
+    {
+      "id": "6619bfeb147cd50b6467788c",
+      "alimentoId": 528,
+      "name": "Soja texturizada",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "c94a4d155b356d7207830564f95cbac31950f14e4ec2b29ba52c327594a3254b"
+    },
+    {
+      "id": "6619bfeb147cd50b64677891",
+      "alimentoId": 533,
+      "name": "Tallarines al huevo (Coto)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "f77bad0ff343c5cc67210ca8fd4e3866f14ddfbb947581d6ec333ff4f1f5b6d6"
+    },
+    {
+      "id": "6619bfeb147cd50b64677899",
+      "alimentoId": 541,
+      "name": "Ternera magra",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "1af184ed0b4b4b6da1ba2ec95566f1f1752957d22e37ddbeb799f358e03ffb9d"
+    },
+    {
+      "id": "6619bfeb147cd50b6467789b",
+      "alimentoId": 543,
+      "name": "tofu",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "3cb6f032d0915b12e3a7d12b3399fdfd511946b2c70ef3f77bec072dd715bd3b"
+    },
+    {
+      "id": "6619bfeb147cd50b646778a0",
+      "alimentoId": 548,
+      "name": "Tostadas clasicas",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "005c96559789e919189448106f1217656680553b1df69550971647afa94955b4"
+    },
+    {
+      "id": "6619bfeb147cd50b646778a3",
+      "alimentoId": 551,
+      "name": "Tostadas de arroz",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "60a278d99bfde47b21c49c15a596b293c2fbcd551562c347abaf579bcd60e5e2"
+    },
+    {
+      "id": "6619bfeb147cd50b646778ad",
+      "alimentoId": 561,
+      "name": "Tostadas de mesa",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": true,
+          "C2": true,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "b14aff4ac3070681ae398acf512e7a80324ffcc4be6d584c99371a0254c8dbdf"
+    },
+    {
+      "id": "6619bfeb147cd50b646778c6",
+      "alimentoId": 584,
+      "name": "Uvas",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": true,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": true,
+          "snack": true,
+          "dinner": true,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "80d510af99eb60ecf107647e48f8ff6b7ba9a355f9b455c2f08d62d56089447e"
+    },
+    {
+      "id": "6619bfeb147cd50b646778c9",
+      "alimentoId": 587,
+      "name": "Verduras",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": true,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "eca021c9777e0af817eaa15a8028d0898f030249110d2ab21228bf88fa91c1c1"
+    },
+    {
+      "id": "6619bfeb147cd50b646778cb",
+      "alimentoId": 589,
+      "name": "Whey protein Isolate",
+      "beforeGenerationPresent": true,
+      "beforeRawGeneration": {
+        "mode": "EXPLICIT_ONLY",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": false,
+          "snack": false,
+          "dinner": false,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": 20,
+          "max": 50,
+          "step": 5,
+          "allowedValues": []
+        }
+      },
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": 20,
+          "max": 50,
+          "step": 5,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "c932af411abdbe9b156696351bfb37d1381a5f835ce7fa72613a8302b3bcab77"
+    },
+    {
+      "id": "6619bfeb147cd50b646778cc",
+      "alimentoId": 591,
+      "name": "Whey protein SN",
+      "beforeGenerationPresent": true,
+      "beforeRawGeneration": {
+        "mode": "EXPLICIT_ONLY",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": false,
+          "snack": false,
+          "dinner": false,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": 20,
+          "max": 50,
+          "step": 5,
+          "allowedValues": []
+        }
+      },
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": 20,
+          "max": 50,
+          "step": 5,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "7412cac1477618b5151c7880ce6e350d2a2c771c1043f7314d95e734a9423d5e"
+    },
+    {
+      "id": "6619bfeb147cd50b646778ce",
+      "alimentoId": 592,
+      "name": "Yogurisimo bebible",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "cc01afae5fa69e898927db20d55c77fc58e876f31706b2b4d6e89844380e7f5e"
+    },
+    {
+      "id": "6619bfeb147cd50b646778cf",
+      "alimentoId": 593,
+      "name": "Yogurisimo firme la serenisima (190 grs)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "829c8e164001bdc0be27bd140b48c943a89d9f9f3ac7c3da458b321980bb3156"
+    },
+    {
+      "id": "6619bfeb147cd50b646778d0",
+      "alimentoId": 594,
+      "name": "Yogurt activia bebible",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "73734f453d0085f686f1a794b1c667c8fe9ba318fb885970cd0c9d582aba8535"
+    },
+    {
+      "id": "6619bfeb147cd50b646778d1",
+      "alimentoId": 595,
+      "name": "Yogurt bebible (Ser)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "e33d92fc298f4f8b175a2f37a73d8ddd53dd4d94e10b520224c8d0b7fed8661c"
+    },
+    {
+      "id": "6619bfeb147cd50b646778d2",
+      "alimentoId": 596,
+      "name": "Yogurt bebible vida light",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "fab98ca7a7fa84fb4856842cf3265af158816559c5e4cf900b9fd77446f64f15"
+    },
+    {
+      "id": "6619bfeb147cd50b646778d3",
+      "alimentoId": 597,
+      "name": "Yogurt descremado bebible Ilolay",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "49859b0be5853b83eac0aaa448e9343bccb97f6dc735baecfe78e92f8d4268e7"
+    },
+    {
+      "id": "6619bfeb147cd50b646778d4",
+      "alimentoId": 598,
+      "name": "Yogurt descremado bebible vida",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "c53f8827a86b1975ee71679198464e01e5402e5003850a0df9c69ef3a669d6dd"
+    },
+    {
+      "id": "6619bfeb147cd50b646778d5",
+      "alimentoId": 599,
+      "name": "Yogurt descremado gran compra",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "faf9c7d1b45cb3242f67d14747913ee6f0994295d12691d9b5c80628410fda50"
+    },
+    {
+      "id": "6619bfeb147cd50b646778d6",
+      "alimentoId": 600,
+      "name": "Yogurt entero bebible Ilolay",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "ef8b31462274d76348c68bc10220f93d04a41e2c526dce2b9533053e68118a8a"
+    },
+    {
+      "id": "6619bfeb147cd50b646778d7",
+      "alimentoId": 601,
+      "name": "Yogurt entero bebible Yogs",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "6152e925c293bd449ed5697a09169167af1841dbde7be53d102ec7c9b361bdf1"
+    },
+    {
+      "id": "6619bfeb147cd50b646778d8",
+      "alimentoId": 602,
+      "name": "Yogurt entero gran compra",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "d999f99e116eab8a1beeddbb4614a9e79b64ed876cb51284435b812908d6d0e5"
+    },
+    {
+      "id": "6619bfeb147cd50b646778d9",
+      "alimentoId": 603,
+      "name": "Yogurt light gran compra",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "93631d21c5f68ab5b0d69895db5f5dfb925076d6be61d6e38340c27098a1338c"
+    },
+    {
+      "id": "6619bfeb147cd50b646778da",
+      "alimentoId": 604,
+      "name": "Yogurt light la serenisima (Bebible)",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": true,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": true,
+          "lunch": false,
+          "snack": true,
+          "dinner": false,
+          "extraSnack": true
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "ba8d563880ebcdd01cd45608d1912892602625df5837c51c319982e4e1feed8a"
+    },
+    {
+      "id": "6619bfeb147cd50b646778db",
+      "alimentoId": 605,
+      "name": "Zanahorias",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": true,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "fd57d207726dcf1df624c009c2d6a50dcd15e50903c12feeb417a5e19a35837b"
+    },
+    {
+      "id": "6619bfeb147cd50b646778dd",
+      "alimentoId": 607,
+      "name": "Zapallo",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": false,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": true,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "79ab22c3b804b561b642597a0cc0ba7f9ee9c29d8436b41b4034473a2bd09bfb"
+    },
+    {
+      "id": "6a2eb93430b2bab0d4573ff6",
+      "alimentoId": 609,
+      "name": "Pata muslo de pollo sin piel",
+      "beforeGenerationPresent": false,
+      "beforeRawGeneration": null,
+      "afterGeneration": {
+        "mode": "GENERIC",
+        "roles": {
+          "P1": true,
+          "P2": false,
+          "C1": false,
+          "C2": false,
+          "V": false,
+          "F": false,
+          "G": false
+        },
+        "mealTypes": {
+          "breakfast": false,
+          "lunch": true,
+          "snack": false,
+          "dinner": true,
+          "extraSnack": false
+        },
+        "portionRule": {
+          "unit": null,
+          "min": null,
+          "max": null,
+          "step": null,
+          "allowedValues": []
+        }
+      },
+      "nonGenerationHash": "4acfd213be7e65ca851de0e960ab566106699ce508479c51a7e1f416101ea38b"
+    }
+  ]
+}

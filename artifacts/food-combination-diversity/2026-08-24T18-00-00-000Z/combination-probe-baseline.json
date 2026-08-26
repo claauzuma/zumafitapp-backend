@@ -1,0 +1,1542 @@
+{
+  "generatedAt": "2026-08-24T16:45:56.204Z",
+  "mode": "read-only combination probe",
+  "safety": {
+    "totalBefore": 574,
+    "totalAfter": 574,
+    "generationFingerprintBefore": "c80b7a48ffca154c09e1e97ffaa0d55705afc51e70b43204354fbcfa3df44680",
+    "generationFingerprintAfter": "c80b7a48ffca154c09e1e97ffaa0d55705afc51e70b43204354fbcfa3df44680",
+    "generationUnchanged": true
+  },
+  "probes": [
+    {
+      "mealType": "breakfast",
+      "limit": 32,
+      "candidateCount": 32,
+      "structures": {
+        "P1+C1": 32
+      },
+      "roleCounts": {
+        "baseOnly": 32,
+        "P2": 0,
+        "C2": 0,
+        "V": 0,
+        "F": 0,
+        "G": 0,
+        "uniqueStructures": 1
+      },
+      "candidateGenerationTiming": {
+        "samples": 10,
+        "averageMs": 329.74,
+        "p50Ms": 313.11,
+        "p95Ms": 388.43,
+        "maxMs": 397.08
+      },
+      "generatorMeta": {
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 32,
+        "candidatesGeneratedBeforeLimit": 1008,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresEvaluated": 32
+      },
+      "optionalStructureCandidates": 0,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776ed",
+              "name": "Copos de maiz sin azucar",
+              "role": "C1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "breakfast",
+      "limit": 100,
+      "candidateCount": 100,
+      "structures": {
+        "P1+C1": 48,
+        "P1+C1+C2": 52
+      },
+      "roleCounts": {
+        "baseOnly": 48,
+        "P2": 0,
+        "C2": 52,
+        "V": 0,
+        "F": 0,
+        "G": 0,
+        "uniqueStructures": 2
+      },
+      "candidateGenerationTiming": {
+        "samples": 1,
+        "averageMs": 439.78,
+        "p50Ms": 439.78,
+        "p95Ms": 439.78,
+        "maxMs": 439.78
+      },
+      "generatorMeta": {
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 100,
+        "candidatesGeneratedBeforeLimit": 1488,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresEvaluated": 32
+      },
+      "optionalStructureCandidates": 52,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776ed",
+              "name": "Copos de maiz sin azucar",
+              "role": "C1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "lunch",
+      "limit": 32,
+      "candidateCount": 32,
+      "structures": {
+        "P1+C1": 32
+      },
+      "roleCounts": {
+        "baseOnly": 32,
+        "P2": 0,
+        "C2": 0,
+        "V": 0,
+        "F": 0,
+        "G": 0,
+        "uniqueStructures": 1
+      },
+      "candidateGenerationTiming": {
+        "samples": 10,
+        "averageMs": 311.82,
+        "p50Ms": 314.33,
+        "p95Ms": 325.17,
+        "maxMs": 385.8
+      },
+      "generatorMeta": {
+        "mealType": "lunch",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 32,
+        "candidatesGeneratedBeforeLimit": 1024,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresEvaluated": 32
+      },
+      "optionalStructureCandidates": 0,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776bd",
+              "name": "Bola de lomo",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776cd",
+              "name": "Carne de cerdo magro",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "lunch",
+      "limit": 100,
+      "candidateCount": 100,
+      "structures": {
+        "P1+C1": 96,
+        "P1+C1+F": 4
+      },
+      "roleCounts": {
+        "baseOnly": 96,
+        "P2": 0,
+        "C2": 0,
+        "V": 0,
+        "F": 4,
+        "G": 0,
+        "uniqueStructures": 2
+      },
+      "candidateGenerationTiming": {
+        "samples": 1,
+        "averageMs": 312.3,
+        "p50Ms": 312.3,
+        "p95Ms": 312.3,
+        "maxMs": 312.3
+      },
+      "generatorMeta": {
+        "mealType": "lunch",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 100,
+        "candidatesGeneratedBeforeLimit": 1536,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresEvaluated": 32
+      },
+      "optionalStructureCandidates": 4,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776bd",
+              "name": "Bola de lomo",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776cd",
+              "name": "Carne de cerdo magro",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "snack",
+      "limit": 32,
+      "candidateCount": 32,
+      "structures": {
+        "P1+C1": 32
+      },
+      "roleCounts": {
+        "baseOnly": 32,
+        "P2": 0,
+        "C2": 0,
+        "V": 0,
+        "F": 0,
+        "G": 0,
+        "uniqueStructures": 1
+      },
+      "candidateGenerationTiming": {
+        "samples": 10,
+        "averageMs": 318.73,
+        "p50Ms": 307.24,
+        "p95Ms": 335.47,
+        "maxMs": 370.64
+      },
+      "generatorMeta": {
+        "mealType": "snack",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 32,
+        "candidatesGeneratedBeforeLimit": 1008,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresEvaluated": 32
+      },
+      "optionalStructureCandidates": 0,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776ed",
+              "name": "Copos de maiz sin azucar",
+              "role": "C1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "snack",
+      "limit": 100,
+      "candidateCount": 100,
+      "structures": {
+        "P1+C1": 48,
+        "P1+C1+C2": 52
+      },
+      "roleCounts": {
+        "baseOnly": 48,
+        "P2": 0,
+        "C2": 52,
+        "V": 0,
+        "F": 0,
+        "G": 0,
+        "uniqueStructures": 2
+      },
+      "candidateGenerationTiming": {
+        "samples": 1,
+        "averageMs": 385.04,
+        "p50Ms": 385.04,
+        "p95Ms": 385.04,
+        "maxMs": 385.04
+      },
+      "generatorMeta": {
+        "mealType": "snack",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 100,
+        "candidatesGeneratedBeforeLimit": 1488,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresEvaluated": 32
+      },
+      "optionalStructureCandidates": 52,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776ed",
+              "name": "Copos de maiz sin azucar",
+              "role": "C1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "dinner",
+      "limit": 32,
+      "candidateCount": 32,
+      "structures": {
+        "P1+C1": 32
+      },
+      "roleCounts": {
+        "baseOnly": 32,
+        "P2": 0,
+        "C2": 0,
+        "V": 0,
+        "F": 0,
+        "G": 0,
+        "uniqueStructures": 1
+      },
+      "candidateGenerationTiming": {
+        "samples": 10,
+        "averageMs": 299.9,
+        "p50Ms": 292.63,
+        "p95Ms": 328.66,
+        "maxMs": 331.9
+      },
+      "generatorMeta": {
+        "mealType": "dinner",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 32,
+        "candidatesGeneratedBeforeLimit": 1024,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresEvaluated": 32
+      },
+      "optionalStructureCandidates": 0,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776bd",
+              "name": "Bola de lomo",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776cd",
+              "name": "Carne de cerdo magro",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "dinner",
+      "limit": 100,
+      "candidateCount": 100,
+      "structures": {
+        "P1+C1": 96,
+        "P1+C1+F": 4
+      },
+      "roleCounts": {
+        "baseOnly": 96,
+        "P2": 0,
+        "C2": 0,
+        "V": 0,
+        "F": 4,
+        "G": 0,
+        "uniqueStructures": 2
+      },
+      "candidateGenerationTiming": {
+        "samples": 1,
+        "averageMs": 330.22,
+        "p50Ms": 330.22,
+        "p95Ms": 330.22,
+        "maxMs": 330.22
+      },
+      "generatorMeta": {
+        "mealType": "dinner",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 100,
+        "candidatesGeneratedBeforeLimit": 1536,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresEvaluated": 32
+      },
+      "optionalStructureCandidates": 4,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776bd",
+              "name": "Bola de lomo",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776cd",
+              "name": "Carne de cerdo magro",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "extraSnack",
+      "limit": 32,
+      "candidateCount": 32,
+      "structures": {
+        "P1+C1": 32
+      },
+      "roleCounts": {
+        "baseOnly": 32,
+        "P2": 0,
+        "C2": 0,
+        "V": 0,
+        "F": 0,
+        "G": 0,
+        "uniqueStructures": 1
+      },
+      "candidateGenerationTiming": {
+        "samples": 10,
+        "averageMs": 327.54,
+        "p50Ms": 320.28,
+        "p95Ms": 337.93,
+        "maxMs": 426.62
+      },
+      "generatorMeta": {
+        "mealType": "extraSnack",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 32,
+        "candidatesGeneratedBeforeLimit": 1008,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresEvaluated": 32
+      },
+      "optionalStructureCandidates": 0,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776ed",
+              "name": "Copos de maiz sin azucar",
+              "role": "C1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "extraSnack",
+      "limit": 100,
+      "candidateCount": 100,
+      "structures": {
+        "P1+C1": 48,
+        "P1+C1+C2": 52
+      },
+      "roleCounts": {
+        "baseOnly": 48,
+        "P2": 0,
+        "C2": 52,
+        "V": 0,
+        "F": 0,
+        "G": 0,
+        "uniqueStructures": 2
+      },
+      "candidateGenerationTiming": {
+        "samples": 1,
+        "averageMs": 331.17,
+        "p50Ms": 331.17,
+        "p95Ms": 331.17,
+        "maxMs": 331.17
+      },
+      "generatorMeta": {
+        "mealType": "extraSnack",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 100,
+        "candidatesGeneratedBeforeLimit": 1488,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresEvaluated": 32
+      },
+      "optionalStructureCandidates": 52,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776ed",
+              "name": "Copos de maiz sin azucar",
+              "role": "C1"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "solverProbes": [
+    {
+      "mealType": "breakfast",
+      "target": {
+        "kcal": 720,
+        "proteina": 52,
+        "carbs": 84,
+        "grasas": 20
+      },
+      "elapsedMs": 1583.01,
+      "status": "NO_SOLUTION",
+      "recommended": false,
+      "meta": {
+        "structuresEvaluated": 32,
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 96,
+        "quantitySolutionsFound": 96,
+        "recommendedSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 367
+          },
+          {
+            "level": "RELAX_STEP",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 275
+          },
+          {
+            "level": "RELAX_MIN",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 267
+          }
+        ],
+        "elapsedMs": 1583
+      },
+      "alternative": null
+    },
+    {
+      "mealType": "lunch",
+      "target": {
+        "kcal": 620,
+        "proteina": 42,
+        "carbs": 72,
+        "grasas": 18
+      },
+      "elapsedMs": 1124.98,
+      "status": "SUCCESS",
+      "recommended": true,
+      "meta": {
+        "structuresEvaluated": 32,
+        "mealType": "lunch",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "combination-probe-lunch",
+        "variantPoolSize": 8,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 21,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 21,
+            "elapsedMs": 303
+          }
+        ],
+        "elapsedMs": 1125
+      },
+      "alternative": {
+        "structure": "P1+C1",
+        "totals": {
+          "kcal": 619.4,
+          "proteina": 49.4,
+          "carbs": 71.25,
+          "grasas": 15.2
+        },
+        "difference": {
+          "kcal": -0.6,
+          "proteina": 7.4,
+          "carbs": -0.75,
+          "grasas": -2.8
+        },
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b6467769f",
+            "name": "Arroz integral",
+            "role": "C1",
+            "quantity": 95,
+            "unit": "Grs",
+            "kcal": 332.5,
+            "proteina": 7.6,
+            "carbs": 71.25,
+            "grasas": 1.9,
+            "image": {
+              "exactaKey": "arrozintegral",
+              "genericaKey": "arrozintegral",
+              "urlExacta": "/images/foods/arrozintegral.jpeg",
+              "urlGenerica": "/images/foods/arrozintegral.jpeg",
+              "url": "/images/foods/arrozintegral.jpeg",
+              "alt": "Arroz integral",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/arrozintegral.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776cd",
+            "name": "Carne de cerdo magro",
+            "role": "P1",
+            "quantity": 190,
+            "unit": "Grs",
+            "kcal": 286.9,
+            "proteina": 41.8,
+            "carbs": 0,
+            "grasas": 13.3,
+            "image": {
+              "exactaKey": "carnedecerdomagro",
+              "genericaKey": "carnecerdomagro",
+              "urlExacta": "/images/foods/carnedecerdomagro.jpeg",
+              "urlGenerica": "/images/foods/carnecerdomagro.jpeg",
+              "url": "/images/foods/carnecerdomagro.jpeg",
+              "alt": "Carne de cerdo magro",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/carnecerdomagro.jpeg"
+          }
+        ]
+      }
+    },
+    {
+      "mealType": "snack",
+      "target": {
+        "kcal": 360,
+        "proteina": 25,
+        "carbs": 42,
+        "grasas": 10
+      },
+      "elapsedMs": 1101.81,
+      "status": "SUCCESS",
+      "recommended": true,
+      "meta": {
+        "structuresEvaluated": 32,
+        "mealType": "snack",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "combination-probe-snack",
+        "variantPoolSize": 8,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 13,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 13,
+            "elapsedMs": 283
+          }
+        ],
+        "elapsedMs": 1102
+      },
+      "alternative": {
+        "structure": "P1+C1",
+        "totals": {
+          "kcal": 359.33,
+          "proteina": 35.65,
+          "carbs": 45.7,
+          "grasas": 3.77
+        },
+        "difference": {
+          "kcal": -0.67,
+          "proteina": 10.65,
+          "carbs": 3.7,
+          "grasas": -6.23
+        },
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b646776e8",
+            "name": "Claras de huevos",
+            "role": "P1",
+            "quantity": 8,
+            "unit": "Unid",
+            "kcal": 125.6,
+            "proteina": 28,
+            "carbs": 1.6,
+            "grasas": 0.8,
+            "image": {
+              "exactaKey": "clarasdehuevos",
+              "genericaKey": "clarashuevos",
+              "urlExacta": "/images/foods/clarasdehuevos.jpeg",
+              "urlGenerica": "/images/foods/clarashuevos.jpeg",
+              "url": "/images/foods/clarashuevos.jpeg",
+              "alt": "Claras de huevos",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/clarashuevos.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646777e6",
+            "name": "Pan de centeno",
+            "role": "C1",
+            "quantity": 90,
+            "unit": "Grs",
+            "kcal": 233.73,
+            "proteina": 7.65,
+            "carbs": 44.1,
+            "grasas": 2.97,
+            "image": {
+              "exactaKey": "pandecenteno",
+              "genericaKey": "pan",
+              "urlExacta": "/images/foods/pandecenteno.jpeg",
+              "urlGenerica": "/images/foods/pan.jpeg",
+              "url": "/images/foods/pan.jpeg",
+              "alt": "Pan de centeno",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/pan.jpeg"
+          }
+        ]
+      }
+    },
+    {
+      "mealType": "dinner",
+      "target": {
+        "kcal": 620,
+        "proteina": 42,
+        "carbs": 72,
+        "grasas": 18
+      },
+      "elapsedMs": 949.27,
+      "status": "SUCCESS",
+      "recommended": true,
+      "meta": {
+        "structuresEvaluated": 32,
+        "mealType": "dinner",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "combination-probe-dinner",
+        "variantPoolSize": 8,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 21,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 21,
+            "elapsedMs": 266
+          }
+        ],
+        "elapsedMs": 949
+      },
+      "alternative": {
+        "structure": "P1+C1",
+        "totals": {
+          "kcal": 619.4,
+          "proteina": 49.4,
+          "carbs": 71.25,
+          "grasas": 15.2
+        },
+        "difference": {
+          "kcal": -0.6,
+          "proteina": 7.4,
+          "carbs": -0.75,
+          "grasas": -2.8
+        },
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b6467769f",
+            "name": "Arroz integral",
+            "role": "C1",
+            "quantity": 95,
+            "unit": "Grs",
+            "kcal": 332.5,
+            "proteina": 7.6,
+            "carbs": 71.25,
+            "grasas": 1.9,
+            "image": {
+              "exactaKey": "arrozintegral",
+              "genericaKey": "arrozintegral",
+              "urlExacta": "/images/foods/arrozintegral.jpeg",
+              "urlGenerica": "/images/foods/arrozintegral.jpeg",
+              "url": "/images/foods/arrozintegral.jpeg",
+              "alt": "Arroz integral",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/arrozintegral.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776cd",
+            "name": "Carne de cerdo magro",
+            "role": "P1",
+            "quantity": 190,
+            "unit": "Grs",
+            "kcal": 286.9,
+            "proteina": 41.8,
+            "carbs": 0,
+            "grasas": 13.3,
+            "image": {
+              "exactaKey": "carnedecerdomagro",
+              "genericaKey": "carnecerdomagro",
+              "urlExacta": "/images/foods/carnedecerdomagro.jpeg",
+              "urlGenerica": "/images/foods/carnecerdomagro.jpeg",
+              "url": "/images/foods/carnecerdomagro.jpeg",
+              "alt": "Carne de cerdo magro",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/carnecerdomagro.jpeg"
+          }
+        ]
+      }
+    },
+    {
+      "mealType": "extraSnack",
+      "target": {
+        "kcal": 300,
+        "proteina": 20,
+        "carbs": 35,
+        "grasas": 8
+      },
+      "elapsedMs": 1101.34,
+      "status": "SUCCESS",
+      "recommended": true,
+      "meta": {
+        "structuresEvaluated": 32,
+        "mealType": "extraSnack",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "combination-probe-extraSnack",
+        "variantPoolSize": 8,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 20,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 20,
+            "elapsedMs": 299
+          }
+        ],
+        "elapsedMs": 1101
+      },
+      "alternative": {
+        "structure": "P1+C1",
+        "totals": {
+          "kcal": 299,
+          "proteina": 23,
+          "carbs": 36,
+          "grasas": 7
+        },
+        "difference": {
+          "kcal": -1,
+          "proteina": 3,
+          "carbs": 1,
+          "grasas": -1
+        },
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b646776e8",
+            "name": "Claras de huevos",
+            "role": "P1",
+            "quantity": 5,
+            "unit": "Unid",
+            "kcal": 78.5,
+            "proteina": 17.5,
+            "carbs": 1,
+            "grasas": 0.5,
+            "image": {
+              "exactaKey": "clarasdehuevos",
+              "genericaKey": "clarashuevos",
+              "urlExacta": "/images/foods/clarasdehuevos.jpeg",
+              "urlGenerica": "/images/foods/clarashuevos.jpeg",
+              "url": "/images/foods/clarashuevos.jpeg",
+              "alt": "Claras de huevos",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/clarashuevos.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b64677728",
+            "name": "Galletitas de agua",
+            "role": "C1",
+            "quantity": 50,
+            "unit": "Grs",
+            "kcal": 220.5,
+            "proteina": 5.5,
+            "carbs": 35,
+            "grasas": 6.5,
+            "image": {
+              "exactaKey": "galletitasdeagua",
+              "genericaKey": "galletitasdeagua",
+              "urlExacta": "/images/foods/galletitasdeagua.jpeg",
+              "urlGenerica": "/images/foods/galletitasdeagua.jpeg",
+              "url": "/images/foods/galletitasdeagua.jpeg",
+              "alt": "Galletitas de agua",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/galletitasdeagua.jpeg"
+          }
+        ]
+      }
+    }
+  ]
+}

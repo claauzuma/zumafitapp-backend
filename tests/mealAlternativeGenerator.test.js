@@ -129,8 +129,142 @@ test("C: ONLY_SELECTED conserva exactamente pollo y arroz y declara best effort"
   }), { model: modelFor() });
   assert.equal(result.status, "SUCCESS");
   assert.deepEqual(result.alternative.foods.map((entry) => entry.foodId).sort(), ["arroz", "pollo"]);
-  assert.equal(result.alternative.status, "TARGET_NOT_REACHABLE_WITH_SELECTED_FOODS");
-  assert.ok(result.alternative.totals.kcal <= target.kcal);
+  assert.equal(result.classification, "BEST_EFFORT");
+  assert.equal(result.alternative.status, "BEST_EFFORT");
+  assert.equal(result.recommended, false);
+  assert.equal(result.usable, true);
+  assert.ok(Math.abs(result.alternative.totals.kcal - target.kcal) <= 10);
+});
+
+test("diversidad diaria elige otra composición recomendada aunque cambien sólo los IDs", async () => {
+  const makeUnit = (id, role, macros) => withPortionRule(
+    food(id, id, role, macros, { unit: "unidad" }),
+    { unit: "unidad", min: 1, max: 1, step: 1 },
+  );
+  const diverseCatalog = [
+    makeUnit("protein-a", "P1", { kcal: 100, proteina: 20, carbs: 0, grasas: 0 }),
+    makeUnit("protein-b", "P1", { kcal: 100, proteina: 20, carbs: 0, grasas: 0 }),
+    makeUnit("carb-a", "C1", { kcal: 100, proteina: 0, carbs: 20, grasas: 0 }),
+    makeUnit("carb-b", "C1", { kcal: 100, proteina: 0, carbs: 20, grasas: 0 }),
+  ];
+  const target = { kcal: 200, proteina: 20, carbs: 20, grasas: 0 };
+  const baseline = await generateMealAlternative(request({ target }), {
+    model: modelFor(diverseCatalog),
+  });
+  const prior = baseline.alternative.composition;
+  const result = await generateMealAlternative(request({
+    target,
+    diversityContext: { previousMeals: [prior] },
+  }), { model: modelFor(diverseCatalog) });
+
+  assert.equal(result.status, "SUCCESS");
+  assert.equal(result.classification, "RECOMMENDED");
+  assert.notEqual(result.alternative.composition.fingerprint, prior.fingerprint);
+  assert.equal(result.meta.repeatInevitable, false);
+  assert.equal(result.meta.selectedDiversity.exactMatches, 0);
+  assert.equal(new Set([
+    result.alternative,
+    ...result.alternatives,
+  ].map((entry) => entry.composition.fingerprint)).size, 4);
+});
+
+test("diversidad nunca desplaza una solucion RECOMMENDED por una BEST_EFFORT", async () => {
+  const makeUnit = (id, role, macros) => withPortionRule(
+    food(id, id, role, macros, { unit: "unidad" }),
+    { unit: "unidad", min: 1, max: 1, step: 1 },
+  );
+  const priorityCatalog = [
+    makeUnit("shared-protein", "P1", { kcal: 100, proteina: 20, carbs: 0, grasas: 0 }),
+    makeUnit("balanced-carb", "C1", { kcal: 50, proteina: 0, carbs: 10, grasas: 0 }),
+    makeUnit("diverse-carb", "C1", { kcal: 100, proteina: 0, carbs: 20, grasas: 0 }),
+    makeUnit("balanced-fat", "G", { kcal: 50, proteina: 0, carbs: 0, grasas: 5.56 }),
+  ];
+  const target = { kcal: 200, proteina: 20, carbs: 10, grasas: 5.56 };
+  const repeatedRecommended = {
+    foodIds: ["shared-protein", "balanced-carb", "balanced-fat"],
+  };
+  const result = await generateMealAlternative(request({
+    target,
+    diversityContext: { previousMeals: [repeatedRecommended] },
+  }), { model: modelFor(priorityCatalog) });
+
+  assert.equal(result.status, "SUCCESS");
+  assert.equal(result.classification, "RECOMMENDED");
+  assert.equal(result.recommended, true);
+  assert.deepEqual(
+    result.alternative.composition.foodIds,
+    ["balanced-carb", "balanced-fat", "shared-protein"],
+  );
+  assert.equal(result.alternative.diversity.exactMatches, 1);
+  assert.equal(result.meta.repeatInevitable, true);
+  assert.ok(result.alternatives.some((alternative) => (
+    alternative.classification === "BEST_EFFORT" &&
+    alternative.composition.foodIds.includes("diverse-carb")
+  )));
+});
+
+test("repetición inevitable sigue usable y queda documentada, no se vuelve NO_SOLUTION", async () => {
+  const selectedCatalog = [
+    withPortionRule(
+      food("only-protein", "Sólo proteína", "P1", { kcal: 1, proteina: 0.2, carbs: 0, grasas: 0 }),
+      { unit: "g", min: 100, max: 200, step: 10 },
+    ),
+    withPortionRule(
+      food("only-carb", "Sólo carbo", "C1", { kcal: 1, proteina: 0, carbs: 0.2, grasas: 0 }),
+      { unit: "g", min: 80, max: 200, step: 10 },
+    ),
+  ];
+  const result = await generateMealAlternative(request({
+    target: { kcal: 200, proteina: 20, carbs: 20, grasas: 0 },
+    requiredFoodIds: ["only-protein", "only-carb"],
+    generationMode: FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS,
+    diversityContext: {
+      previousMeals: [{ foodIds: ["only-protein", "only-carb"] }],
+    },
+  }), { model: modelFor(selectedCatalog) });
+
+  assert.equal(result.status, "SUCCESS");
+  assert.equal(result.usable, true);
+  assert.equal(result.meta.repeatInevitable, true);
+  assert.equal(result.alternative.diversity.repeatInevitable, true);
+  assert.equal(result.alternative.warnings.some((warning) => (
+    warning.code === "MEAL_COMPOSITION_REPEAT_UNAVOIDABLE" && warning.severity === "info"
+  )), true);
+});
+
+test("solapamiento alto inevitable se informa sin bloquear una solución recomendada", async () => {
+  const limitedCatalog = [
+    withPortionRule(
+      food("subset-protein", "Proteína subset", "P1", { kcal: 1, proteina: 0.2, carbs: 0, grasas: 0 }),
+      { unit: "g", min: 100, max: 100, step: 10 },
+    ),
+    withPortionRule(
+      food("subset-carb", "Carbo subset", "C1", { kcal: 1, proteina: 0, carbs: 0.2, grasas: 0 }),
+      { unit: "g", min: 100, max: 100, step: 10 },
+    ),
+  ];
+  const result = await generateMealAlternative(request({
+    target: { kcal: 200, proteina: 20, carbs: 20, grasas: 0 },
+    diversityContext: {
+      previousMeals: [{ foodIds: ["subset-protein", "subset-carb", "previous-extra"] }],
+    },
+  }), { model: modelFor(limitedCatalog) });
+
+  assert.equal(result.status, "SUCCESS");
+  assert.equal(result.classification, "RECOMMENDED");
+  assert.equal(result.usable, true);
+  assert.equal(result.meta.repeatInevitable, false);
+  assert.equal(result.meta.highOverlapInevitable, true);
+  assert.equal(result.alternative.warnings.some((warning) => (
+    warning.code === "MEAL_COMPOSITION_HIGH_OVERLAP_UNAVOIDABLE"
+  )), true);
+});
+
+test("generar otra opción expone sólo alternativas con composición semántica única", async () => {
+  const result = await generateMealAlternative(request(), { model: modelFor(catalog) });
+  const fingerprints = [result.alternative, ...result.alternatives]
+    .map((entry) => entry.composition.fingerprint);
+  assert.equal(new Set(fingerprints).size, fingerprints.length);
 });
 
 test("D: excluded banana jamas llega a ninguna solucion", async () => {
@@ -152,6 +286,23 @@ test("E: EXPLICIT_ONLY requerido entra al solver con macros y unidad reales", as
   assert.ok([result.alternative, ...result.alternatives].every((alternative) =>
     alternative.foods.some((entry) => entry.foodId === "pan" && entry.quantity > 0)
   ));
+});
+
+test("arroz requerido en desayuno participa aunque breakfast sea false", async () => {
+  const breakfastCatalog = catalog.map((entry) => ({
+    ...entry,
+    generation: {
+      ...entry.generation,
+      mealTypes: { ...entry.generation.mealTypes, breakfast: false },
+    },
+  }));
+  const result = await generateMealAlternative(request({
+    mealType: "desayuno",
+    requiredFoodIds: ["pollo", "arroz"],
+    generationMode: FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS,
+  }), { model: modelFor(breakfastCatalog) });
+  assert.equal(result.status, "SUCCESS");
+  assert.deepEqual(result.alternative.foods.map((entry) => entry.foodId).sort(), ["arroz", "pollo"]);
 });
 
 test("la regla generation del alimento prevalece sobre constraints legacy incompatibles", async () => {
@@ -214,9 +365,9 @@ test("la regla generation del alimento prevalece sobre constraints legacy incomp
   assert.equal(riceConstraint.minExplicit, true);
   assert.equal(riceConstraint.maxExplicit, true);
   assert.equal(riceConstraint.stepExplicit, true);
-  assert.equal(riceConstraint.minSource, "catalog.minGramos");
-  assert.equal(riceConstraint.maxSource, "catalog.maxGramos");
-  assert.equal(riceConstraint.stepSource, "catalog.stepGramos");
+  assert.equal(riceConstraint.minSource, "catalog.generation.portionRule.min");
+  assert.equal(riceConstraint.maxSource, "catalog.generation.portionRule.max");
+  assert.equal(riceConstraint.stepSource, "catalog.generation.portionRule.step");
   assert.equal(chickenConstraint.recommendedMin, 100);
   assert.equal(chickenConstraint.recommendedMax, 350);
   assert.equal(chickenConstraint.recommendedStep, 10);
@@ -278,15 +429,15 @@ test("STRICT gana antes de relajar cuando ya cumple kcal y proteina recomendadas
 
 test("RELAX_STEP evalua toda la ronda y solo cambia step 10 continuo a 5", async () => {
   const rice = withPortionRule(
-    food("riceStep", "Arroz step", "C1", { kcal: 1, proteina: 0.1, carbs: 0.2, grasas: 0 }),
-    { unit: "g", min: 80, max: 200, step: 10 },
+    food("riceStep", "Arroz step", "C1", { kcal: 1, proteina: 0, carbs: 0, grasas: 0 }),
+    { unit: "g", min: 80, max: 80, step: 10 },
   );
   const chicken = withPortionRule(
-    food("chickenStep", "Pollo step", "P1", { kcal: 1, proteina: 0.2, carbs: 0, grasas: 0 }),
-    { unit: "g", min: 100, max: 350, step: 10 },
+    food("chickenStep", "Pollo step", "P1", { kcal: 1, proteina: 1, carbs: 0, grasas: 0 }),
+    { unit: "g", min: 100, max: 105, step: 10 },
   );
   const result = await generateMealAlternative(request({
-    target: { kcal: 185, proteina: 31, carbs: 15, grasas: 0 },
+    target: { kcal: 185, proteina: 105.1, carbs: 0, grasas: 0 },
     requiredFoodIds: ["chickenStep", "riceStep"],
     generationMode: FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS,
   }), { model: modelFor([rice, chicken]) });
@@ -297,11 +448,11 @@ test("RELAX_STEP evalua toda la ronda y solo cambia step 10 continuo a 5", async
   assert.ok(result.meta.rounds.every((round) => round.candidatesProcessed === result.meta.combinationCandidatesEvaluated));
   assert.ok(result.alternative.optimization.constraints.every((constraint) => constraint.step === 5));
   assert.ok(result.alternative.optimization.constraints.every((constraint) =>
-    constraint.recommendedMax === (constraint.foodId === "riceStep" ? 200 : 350)
+    constraint.recommendedMax === (constraint.foodId === "riceStep" ? 80 : 105)
   ));
   assert.ok(result.alternative.foods.every((entry) => entry.quantity % 5 === 0));
   assert.ok(result.alternative.foods.every((entry) =>
-    entry.quantity <= (entry.foodId === "riceStep" ? 200 : 350)
+    entry.quantity <= (entry.foodId === "riceStep" ? 80 : 105)
   ));
 });
 
@@ -328,11 +479,15 @@ test("RELAX_STEP no cambia el step de una unidad discreta", async () => {
     generationMode: FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS,
   }), { model: modelFor([egg, rice]), quantityService });
 
-  assert.equal(result.status, "NO_SOLUTION");
-  assert.equal(result.code, "MEAL_TARGET_NOT_REACHABLE_WITH_PORTION_RULES");
+  assert.equal(result.status, "SUCCESS");
+  assert.equal(result.classification, "BEST_EFFORT");
+  assert.equal(result.usable, true);
   assert.equal(result.meta.rounds.length, 3);
   assert.deepEqual(effectiveEggRules.map((rule) => rule.step), [10, 10, 10]);
   assert.deepEqual(effectiveEggRules.map((rule) => rule.min), [1, 1, 1]);
+  const selectedEgg = result.alternative.foods.find((entry) => entry.foodId === "eggDiscrete");
+  assert.ok(selectedEgg);
+  assert.equal(selectedEgg.quantity % 10, 0);
 });
 
 test("portionRule sin configurar conserva los constraints legacy en lugar de borrarlos", async () => {
@@ -419,14 +574,14 @@ test("una unidad discreta conserva su min durante RELAX_MIN", async () => {
   assert.ok(outputEgg.quantity >= 2);
 });
 
-test("threshold de proteina acepta 37.5 para P40 pero 37.4 permite relajar", async () => {
+test("distancia proteica hasta 5 g es recomendable y por encima queda BEST_EFFORT", async () => {
   const candidate = (id, protein) => withPortionRule(
     food(id, id, "P1", { kcal: 1, proteina: protein / 100, carbs: 0, grasas: 0 }),
-    { unit: "g", min: 100, max: 200, step: 10 },
+    { unit: "g", min: 100, max: 100, step: 10 },
   );
   const carb = (id) => withPortionRule(
     food(id, id, "C1", { kcal: 1, proteina: 0, carbs: 0.5, grasas: 0 }),
-    { unit: "g", min: 100, max: 200, step: 10 },
+    { unit: "g", min: 100, max: 100, step: 10 },
   );
   const accepted = await generateMealAlternative(request({
     target: { kcal: 200, proteina: 40, carbs: 50, grasas: 0 },
@@ -436,17 +591,18 @@ test("threshold de proteina acepta 37.5 para P40 pero 37.4 permite relajar", asy
   assert.equal(accepted.status, "SUCCESS");
   assert.equal(accepted.relaxation.level, "STRICT");
 
-  const rejected = await generateMealAlternative(request({
+  const bestEffort = await generateMealAlternative(request({
     target: { kcal: 200, proteina: 40, carbs: 50, grasas: 0 },
-    requiredFoodIds: ["p374", "c374"],
+    requiredFoodIds: ["p349", "c349"],
     generationMode: FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS,
-  }), { model: modelFor([candidate("p374", 37.4), carb("c374")]) });
-  assert.equal(rejected.status, "SUCCESS");
-  assert.notEqual(rejected.relaxation.level, "STRICT");
-  assert.equal(rejected.meta.rounds.length, 3);
+  }), { model: modelFor([candidate("p349", 34.9), carb("c349")]) });
+  assert.equal(bestEffort.status, "SUCCESS");
+  assert.equal(bestEffort.classification, "BEST_EFFORT");
+  assert.equal(bestEffort.usable, true);
+  assert.equal(bestEffort.meta.rounds.length, 3);
 });
 
-test("sin solucion recomendable agota las tres rondas, conserva MAX y no expone best effort", async () => {
+test("si hay solucion fisica pero no recomendable agota rondas y expone BEST_EFFORT usable", async () => {
   const protein = withPortionRule(
     food("proteinHardMax", "Proteina hard max", "P1", { kcal: 1, proteina: 0.374, carbs: 0, grasas: 0 }),
     { unit: "g", min: 100, max: 100, step: 10 },
@@ -461,13 +617,15 @@ test("sin solucion recomendable agota las tres rondas, conserva MAX y no expone 
     generationMode: FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS,
   }), { model: modelFor([protein, carb]) });
 
-  assert.equal(result.status, "NO_SOLUTION");
-  assert.equal(result.code, "MEAL_TARGET_NOT_REACHABLE_WITH_PORTION_RULES");
+  assert.equal(result.status, "SUCCESS");
+  assert.equal(result.classification, "BEST_EFFORT");
   assert.equal(result.recommended, false);
-  assert.equal(result.alternative, null);
-  assert.deepEqual(result.alternatives, []);
+  assert.equal(result.usable, true);
+  assert.equal(result.alternative.status, "BEST_EFFORT");
+  assert.ok(result.alternative.foods.every((entry) => entry.quantity <= 100));
   assert.deepEqual(result.meta.rounds.map((round) => round.level), ["STRICT", "RELAX_STEP", "RELAX_MIN"]);
   assert.equal(result.meta.recommendedSolutionsFound, 0);
+  assert.ok(result.meta.bestEffortSolutionsFound > 0);
 });
 
 test("el ranking es determinista y conserva kcal, proteina y luego C/G", async () => {
@@ -540,6 +698,90 @@ test("el servicio de cliente valida capability, reutiliza ajustes guardados y no
   assert.deepEqual(captured.requiredFoodIds, ["pollo", "arroz"]);
   assert.deepEqual(captured.excludedFoodIds, ["banana"]);
   assert.equal(captured.generationMode, FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS);
+});
+
+test("el menú automático reutiliza el generador individual y hace fallback GENERIC si el slot no tiene elegidos", async () => {
+  const service = new ServicioClientOwnMenus();
+  const actor = { _id: "client-auto", role: "cliente", personalPlan: "pro" };
+  service._actor = async () => actor;
+  service.capabilities = async () => ({
+    plan: "pro",
+    canGenerateAutomaticMenu: true,
+    canAutoCalculateTrackingQuantities: true,
+    limits: { equivalentMealFoods: 6 },
+  });
+  let captured = null;
+  service.mealAlternativeGenerator = async (input) => {
+    captured = input;
+    return { status: "SUCCESS", alternative: { foods: [] }, alternatives: [], meta: {} };
+  };
+
+  await service.generateAutomaticMenuMeal(actor, {
+    mealType: "desayuno",
+    target: baseTarget,
+    strategy: "selected_only",
+    requiredFoodIds: [],
+    excludedFoodIds: ["banana"],
+    variantSeed: "daily-run:0",
+    diversityContext: {
+      previousMeals: [{ foodIds: ["pollo", "arroz"], roleFoodPairs: ["pollo:P1", "arroz:C1"] }],
+    },
+  });
+  assert.equal(captured.generationMode, FOOD_COMBINATION_MODES.ALLOW_SUGGESTIONS);
+  assert.deepEqual(captured.requiredFoodIds, []);
+  assert.deepEqual(captured.excludedFoodIds, ["banana"]);
+  assert.equal(captured.variantSeed, "daily-run:0");
+  assert.deepEqual(captured.diversityContext.previousMeals[0].foodIds, ["pollo", "arroz"]);
+
+  await service.generateAutomaticMenuMeal(actor, {
+    mealType: "desayuno",
+    target: baseTarget,
+    strategy: "selected_only",
+    requiredFoodIds: ["arroz", "yogur"],
+  });
+  assert.equal(captured.generationMode, FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS);
+  assert.deepEqual(captured.requiredFoodIds, ["arroz", "yogur"]);
+});
+
+test("el menú automático hereda restricciones del cliente para sugerencias y requeridos", async () => {
+  const service = new ServicioClientOwnMenus();
+  const actor = {
+    _id: "client-restricted",
+    role: "cliente",
+    personalPlan: "pro",
+    menu: { restrictions: { excludedFoods: ["banana"] } },
+  };
+  service._actor = async () => actor;
+  service.capabilities = async () => ({
+    plan: "pro",
+    canGenerateAutomaticMenu: true,
+    canAutoCalculateTrackingQuantities: true,
+    limits: { equivalentMealFoods: 6 },
+  });
+  service.alimentosModel = modelFor();
+  let suggested = [];
+  service.mealAlternativeGenerator = async (input, dependencies) => {
+    suggested = await dependencies.getAutomaticGenerationFoods({
+      mealType: "lunch",
+      roles: ["C1", "F"],
+    });
+    return { status: "SUCCESS", alternative: { foods: [] }, alternatives: [], meta: {} };
+  };
+
+  await service.generateAutomaticMenuMeal(actor, {
+    mealType: "almuerzo",
+    target: baseTarget,
+    strategy: "assisted_food_addition",
+  });
+  assert.ok(suggested.some((entry) => entry._id === "arroz"));
+  assert.ok(suggested.every((entry) => entry._id !== "banana"));
+
+  await assert.rejects(() => service.generateAutomaticMenuMeal(actor, {
+    mealType: "almuerzo",
+    target: baseTarget,
+    strategy: "selected_only",
+    requiredFoodIds: ["banana"],
+  }), (error) => error.code === "MENU_FOOD_RESTRICTED" && error.foodId === "banana");
 });
 
 test("el servicio falla cerrado cuando el cliente no tiene permiso", async () => {
@@ -628,7 +870,7 @@ test("recalcular mantiene el candado exacto y optimiza solo los alimentos Auto",
   assert.equal(result.status, "SUCCESS");
   assert.deepEqual(result.alternative.foods.map((entry) => entry.foodId), ["lockedChicken", "autoRice"]);
   assert.equal(result.alternative.foods.find((entry) => entry.foodId === "lockedChicken").quantity, 130);
-  assert.equal(result.alternative.foods.find((entry) => entry.foodId === "autoRice").quantity, 100);
+  assert.equal(result.alternative.foods.find((entry) => entry.foodId === "autoRice").quantity, 90);
   assert.equal(result.meta.fixedFoods, 1);
 });
 
@@ -656,7 +898,7 @@ test("recalcular no invoca el motor de combinaciones ni puede agregar alimentos"
   assert.deepEqual(result.alternative.foods.map((entry) => entry.foodId), ["onlyChicken", "onlyRice"]);
 });
 
-test("recalcular redistribuye cantidades cuando existe otra opcion valida para los mismos alimentos", async () => {
+test("recalcular aplica el ranking central a los mismos alimentos sin pedir una variante peor", async () => {
   const chicken = withPortionRule(
     food("variantChicken", "Pechuga variante", "P1", { kcal: 1, proteina: 0.2, carbs: 0, grasas: 0 }),
     { unit: "g", min: 100, max: 350, step: 10 },
@@ -670,8 +912,8 @@ test("recalcular redistribuye cantidades cuando existe otra opcion valida para l
     { unit: "g", min: 50, max: 250, step: 10 },
   );
   const original = new Map([
-    ["variantChicken", 100],
-    ["variantRice", 100],
+    ["variantChicken", 120],
+    ["variantRice", 80],
     ["variantBanana", 100],
   ]);
   const result = await recalculateMealAlternativeQuantities({
@@ -684,7 +926,7 @@ test("recalcular redistribuye cantidades cuando existe otra opcion valida para l
   }, { model: modelFor([chicken, rice, banana]) });
 
   assert.equal(result.status, "SUCCESS");
-  assert.equal(result.alternative.variant?.applied, true);
+  assert.equal(result.alternative.variant?.applied, false);
   assert.deepEqual(result.alternative.foods.map((entry) => entry.foodId), [...original.keys()]);
   assert.ok(result.alternative.foods.some((entry) => entry.quantity !== original.get(entry.foodId)));
   assert.ok(result.alternative.foods.every((entry) => entry.quantity % 10 === 0));
@@ -692,7 +934,7 @@ test("recalcular redistribuye cantidades cuando existe otra opcion valida para l
   assert.ok(300 - result.alternative.totals.kcal <= 10);
 });
 
-test("si no existe otra distribucion, recalcular devuelve la base valida sin warning de variante", async () => {
+test("si la distribucion actual ya es optima, recalcular devuelve la base sin warning de variante", async () => {
   const chicken = withPortionRule(
     food("fallbackChicken", "Pechuga fallback", "P1", { kcal: 1, proteina: 0.2, carbs: 0, grasas: 0 }),
     { unit: "g", min: 100, max: 350, step: 10 },
@@ -713,13 +955,271 @@ test("si no existe otra distribucion, recalcular devuelve la base valida sin war
   }, { model: modelFor([chicken, rice]) });
 
   assert.equal(result.status, "SUCCESS");
-  assert.equal(result.meta.variantFallback, true);
+  assert.equal(result.meta.variantFallback, undefined);
   assert.deepEqual(result.alternative.variant, { requested: false, applied: false });
   assert.deepEqual(result.alternative.foods.map((entry) => [entry.foodId, entry.quantity]), [
     ["fallbackChicken", 100],
     ["fallbackRice", 100],
   ]);
-  assert.ok(result.alternative.warnings.every((warning) => !/misma fuente|variante/i.test(warning)));
+  assert.ok(result.alternative.warnings.every((warning) =>
+    !/misma fuente|variante/i.test(String(warning?.message || warning))
+  ));
+});
+
+test("manual lock 1: un fijo queda exacto y dos Auto se redistribuyen", async () => {
+  const chicken = withPortionRule(
+    food("lock1Chicken", "Pollo lock 1", "P1", { kcal: 1, proteina: 0.2, carbs: 0, grasas: 0 }),
+    { unit: "g", min: 100, max: 350, step: 10 },
+  );
+  const rice = withPortionRule(
+    food("lock1Rice", "Arroz lock 1", "C1", { kcal: 1, proteina: 0.1, carbs: 0.2, grasas: 0 }),
+    { unit: "g", min: 80, max: 200, step: 10 },
+  );
+  const banana = withPortionRule(
+    food("lock1Banana", "Banana lock 1", "F", { kcal: 1, proteina: 0, carbs: 0.2, grasas: 0 }),
+    { unit: "g", min: 50, max: 250, step: 10 },
+  );
+  const result = await recalculateMealAlternativeQuantities({
+    mealType: "almuerzo",
+    target: { kcal: 300, proteina: 34, carbs: 34, grasas: 0 },
+    selectedFoodIds: ["lock1Chicken", "lock1Rice", "lock1Banana"],
+    fixedFoods: [{ foodId: "lock1Chicken", quantity: 130 }],
+    currentFoods: [
+      { foodId: "lock1Rice", quantity: 120 },
+      { foodId: "lock1Banana", quantity: 50 },
+    ],
+  }, { model: modelFor([chicken, rice, banana]) });
+
+  assert.equal(result.status, "SUCCESS");
+  assert.equal(result.alternative.foods.find((entry) => entry.foodId === "lock1Chicken").quantity, 130);
+  assert.deepEqual(result.alternative.foods.map((entry) => entry.foodId), [
+    "lock1Chicken",
+    "lock1Rice",
+    "lock1Banana",
+  ]);
+  assert.ok(result.alternative.foods.some((entry) =>
+    entry.foodId !== "lock1Chicken" && entry.quantity !== (entry.foodId === "lock1Rice" ? 120 : 50)
+  ));
+});
+
+test("manual lock 2: dos fijos de cuatro permanecen exactos y solo cambian los Auto", async () => {
+  const foods = [
+    withPortionRule(food("lock2Chicken", "Pollo lock 2", "P1", { kcal: 1, proteina: 0.2, carbs: 0, grasas: 0 }), { unit: "g", min: 100, max: 300, step: 10 }),
+    withPortionRule(food("lock2Oil", "Aceite lock 2", "G", { kcal: 9, proteina: 0, carbs: 0, grasas: 1 }), { unit: "g", min: 5, max: 20, step: 5 }),
+    withPortionRule(food("lock2Rice", "Arroz lock 2", "C1", { kcal: 1, proteina: 0.1, carbs: 0.2, grasas: 0 }), { unit: "g", min: 80, max: 200, step: 10 }),
+    withPortionRule(food("lock2Banana", "Banana lock 2", "F", { kcal: 1, proteina: 0, carbs: 0.2, grasas: 0 }), { unit: "g", min: 50, max: 250, step: 10 }),
+  ];
+  const result = await recalculateMealAlternativeQuantities({
+    mealType: "almuerzo",
+    target: { kcal: 300, proteina: 33, carbs: 27, grasas: 5 },
+    selectedFoodIds: foods.map((entry) => entry._id),
+    fixedFoods: [
+      { foodId: "lock2Chicken", quantity: 120 },
+      { foodId: "lock2Oil", quantity: 5 },
+    ],
+    currentFoods: [
+      { foodId: "lock2Rice", quantity: 100 },
+      { foodId: "lock2Banana", quantity: 50 },
+    ],
+  }, { model: modelFor(foods) });
+
+  assert.equal(result.status, "SUCCESS");
+  assert.equal(result.alternative.foods.find((entry) => entry.foodId === "lock2Chicken").quantity, 120);
+  assert.equal(result.alternative.foods.find((entry) => entry.foodId === "lock2Oil").quantity, 5);
+  assert.deepEqual(result.alternative.foods.map((entry) => entry.foodId), foods.map((entry) => entry._id));
+});
+
+test("manual lock 3/4/7: todos locked se evaluan sin cambios y pueden ser BEST_EFFORT usable", async () => {
+  const chicken = withPortionRule(
+    food("allLockedChicken", "Pollo all locked", "P1", { kcal: 1, proteina: 0.2, carbs: 0, grasas: 0 }),
+    { unit: "g", min: 100, max: 350, step: 10 },
+  );
+  const rice = withPortionRule(
+    food("allLockedRice", "Arroz all locked", "C1", { kcal: 1, proteina: 0.1, carbs: 0.2, grasas: 0 }),
+    { unit: "g", min: 80, max: 200, step: 10 },
+  );
+  const result = await recalculateMealAlternativeQuantities({
+    mealType: "almuerzo",
+    target: { kcal: 300, proteina: 60, carbs: 50, grasas: 10 },
+    selectedFoodIds: ["allLockedChicken", "allLockedRice"],
+    fixedFoods: [
+      { foodId: "allLockedChicken", quantity: 130 },
+      { foodId: "allLockedRice", quantity: 100 },
+    ],
+  }, { model: modelFor([chicken, rice]) });
+
+  assert.equal(result.status, "SUCCESS");
+  assert.equal(result.classification, "BEST_EFFORT");
+  assert.equal(result.usable, true);
+  assert.deepEqual(result.alternative.foods.map((entry) => [entry.foodId, entry.quantity]), [
+    ["allLockedChicken", 130],
+    ["allLockedRice", 100],
+  ]);
+  assert.equal(result.alternative.optimization.lockedFoods, 2);
+  assert.equal(result.alternative.warnings.filter((entry) => entry.category === "nutrition").length, 1);
+});
+
+test("MAX y grilla siguen duros para locks: nunca corrige ni acepta una cantidad invalida", async () => {
+  const chicken = withPortionRule(
+    food("invalidLockedChicken", "Pollo locked invalido", "P1", { kcal: 1, proteina: 0.2, carbs: 0, grasas: 0 }),
+    { unit: "g", min: 100, max: 200, step: 10 },
+  );
+  const rice = withPortionRule(
+    food("invalidLockedRice", "Arroz locked valido", "C1", { kcal: 1, proteina: 0.1, carbs: 0.2, grasas: 0 }),
+    { unit: "g", min: 80, max: 200, step: 10 },
+  );
+
+  for (const invalidQuantity of [205, 250]) {
+    const result = await recalculateMealAlternativeQuantities({
+      mealType: "almuerzo",
+      target: { kcal: 350, proteina: 50, carbs: 30, grasas: 0 },
+      selectedFoodIds: ["invalidLockedChicken", "invalidLockedRice"],
+      fixedFoods: [
+        { foodId: "invalidLockedChicken", quantity: invalidQuantity },
+        { foodId: "invalidLockedRice", quantity: 100 },
+      ],
+    }, { model: modelFor([chicken, rice]) });
+    assert.equal(result.status, "NO_SOLUTION");
+    assert.equal(result.usable, false);
+    assert.equal(result.meta.quantitySolutionsFound, 0);
+  }
+});
+
+test("manual lock 5: al desbloquear un alimento vuelve a participar del calculo", async () => {
+  const chicken = withPortionRule(
+    food("unlockChicken", "Pollo unlock", "P1", { kcal: 1, proteina: 0.2, carbs: 0, grasas: 0 }),
+    { unit: "g", min: 100, max: 350, step: 10 },
+  );
+  const rice = withPortionRule(
+    food("unlockRice", "Arroz unlock", "C1", { kcal: 1, proteina: 0.1, carbs: 0.2, grasas: 0 }),
+    { unit: "g", min: 80, max: 200, step: 10 },
+  );
+  const locked = await recalculateMealAlternativeQuantities({
+    mealType: "almuerzo",
+    target: { kcal: 230, proteina: 30, carbs: 20, grasas: 0 },
+    selectedFoodIds: ["unlockChicken", "unlockRice"],
+    fixedFoods: [{ foodId: "unlockChicken", quantity: 150 }],
+  }, { model: modelFor([chicken, rice]) });
+  const unlocked = await recalculateMealAlternativeQuantities({
+    mealType: "almuerzo",
+    target: { kcal: 230, proteina: 30, carbs: 20, grasas: 0 },
+    selectedFoodIds: ["unlockChicken", "unlockRice"],
+    currentFoods: locked.alternative.foods,
+  }, { model: modelFor([chicken, rice]) });
+
+  assert.equal(locked.alternative.foods.find((entry) => entry.foodId === "unlockChicken").quantity, 150);
+  assert.notEqual(unlocked.alternative.foods.find((entry) => entry.foodId === "unlockChicken").quantity, 150);
+});
+
+test("ONLY_SELECTED devuelve BEST_EFFORT cuando los minimos fisicos obligan a superar +10 kcal", async () => {
+  const protein = withPortionRule(
+    food(
+      "minimumOvershootProtein",
+      "Proteina minima discreta",
+      "P1",
+      { kcal: 60, proteina: 10, carbs: 0, grasas: 0 },
+      { unit: "unidad" },
+    ),
+    { unit: "unidad", min: 1, max: 2, step: 1 },
+  );
+  const carb = withPortionRule(
+    food(
+      "minimumOvershootCarb",
+      "Carbo minimo discreto",
+      "C1",
+      { kcal: 60, proteina: 0, carbs: 20, grasas: 0 },
+      { unit: "unidad" },
+    ),
+    { unit: "unidad", min: 1, max: 2, step: 1 },
+  );
+  const target = { kcal: 100, proteina: 10, carbs: 20, grasas: 0 };
+
+  const result = await generateMealAlternative(request({
+    target,
+    requiredFoodIds: [protein._id, carb._id],
+    generationMode: FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS,
+  }), { model: modelFor([protein, carb]) });
+
+  assert.equal(result.status, "SUCCESS");
+  assert.equal(result.classification, "BEST_EFFORT");
+  assert.equal(result.recommended, false);
+  assert.equal(result.usable, true);
+  assert.ok(result.meta.quantitySolutionsFound > 0);
+  assert.ok(result.alternative.totals.kcal - target.kcal > 10);
+  assert.deepEqual(
+    result.alternative.foods.map((entry) => entry.foodId).sort(),
+    [protein._id, carb._id].sort(),
+  );
+  assert.ok(result.alternative.foods.every((entry) => entry.quantity === 1));
+});
+
+test("generation evalua el siguiente paso discreto sobre +10 y elige 120 kcal antes que 60", async () => {
+  const discrete = withPortionRule(
+    food(
+      "optionalOvershootDiscrete",
+      "Unidad discreta de 60 kcal",
+      "P1",
+      { kcal: 60, proteina: 0, carbs: 0, grasas: 0 },
+      { unit: "unidad" },
+    ),
+    { unit: "unidad", min: 1, max: 2, step: 1 },
+  );
+  const target = { kcal: 100, proteina: 0, carbs: 0, grasas: 0 };
+
+  const result = await recalculateMealAlternativeQuantities({
+    mealType: "almuerzo",
+    target,
+    selectedFoodIds: [discrete._id],
+  }, { model: modelFor([discrete]) });
+
+  assert.equal(result.status, "SUCCESS");
+  assert.equal(result.classification, "BEST_EFFORT");
+  assert.equal(result.recommended, false);
+  assert.equal(result.usable, true);
+  assert.ok(result.meta.quantitySolutionsFound > 0);
+  assert.equal(result.alternative.foods[0].quantity, 2);
+  assert.equal(result.alternative.totals.kcal, 120);
+  assert.equal(result.alternative.difference.kcal, 20);
+});
+
+test("un lock valido que obliga a superar +10 kcal se conserva y devuelve BEST_EFFORT", async () => {
+  const chicken = withPortionRule(
+    food("lockedOvershootChicken", "Pollo locked overshoot", "P1", {
+      kcal: 1,
+      proteina: 0.2,
+      carbs: 0,
+      grasas: 0,
+    }),
+    { unit: "g", min: 100, max: 250, step: 10 },
+  );
+  const rice = withPortionRule(
+    food("lockedOvershootRice", "Arroz auto overshoot", "C1", {
+      kcal: 1,
+      proteina: 0.1,
+      carbs: 0.2,
+      grasas: 0,
+    }),
+    { unit: "g", min: 80, max: 200, step: 10 },
+  );
+  const target = { kcal: 200, proteina: 32, carbs: 16, grasas: 0 };
+
+  const result = await recalculateMealAlternativeQuantities({
+    mealType: "almuerzo",
+    target,
+    selectedFoodIds: [chicken._id, rice._id],
+    fixedFoods: [{ foodId: chicken._id, quantity: 200 }],
+  }, { model: modelFor([chicken, rice]) });
+
+  assert.equal(result.status, "SUCCESS");
+  assert.equal(result.classification, "BEST_EFFORT");
+  assert.equal(result.recommended, false);
+  assert.equal(result.usable, true);
+  assert.ok(result.meta.quantitySolutionsFound > 0);
+  assert.ok(result.alternative.totals.kcal - target.kcal > 10);
+  assert.equal(
+    result.alternative.foods.find((entry) => entry.foodId === chicken._id).quantity,
+    200,
+  );
 });
 
 test("el servicio de cliente valida permisos y conserva el contexto cerrado al recalcular", async () => {

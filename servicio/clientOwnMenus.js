@@ -20,6 +20,11 @@ import {
   generateMealAlternative,
   recalculateMealAlternativeQuantities,
 } from "./mealAlternativeGenerator.js";
+import { MEAL_NUTRITION_POLICY } from "./mealNutritionPolicy.js";
+import {
+  filterEquivalentCandidateFoods,
+  isEquivalentFoodAllowed,
+} from "./trackingEquivalences.js";
 import {
   canViewNutritionItem,
   idValues,
@@ -73,6 +78,18 @@ function toMongoIdOrString(id) {
 
 function cleanString(value = "", max = 500) {
   return String(value || "").trim().slice(0, max);
+}
+
+function userHasFoodRestrictions(user = {}) {
+  const restrictions = user?.menu?.restrictions || {};
+  const tracking = user?.clientPermissions?.tracking || {};
+  return [
+    restrictions.allergies,
+    restrictions.intolerances,
+    restrictions.excludedFoods,
+    tracking.forbiddenFoods,
+    tracking.forbiddenFoodIds,
+  ].some((value) => Array.isArray(value) ? value.length > 0 : Boolean(String(value || "").trim()));
 }
 
 const EQUIVALENT_GENERATION_MODES = new Set(["library", "combine", "scratch"]);
@@ -691,11 +708,75 @@ class ServicioClientOwnMenus {
     }
     return {
       authorized: true,
-      policy: "tracking_calorie_fill_v1",
+      policy: MEAL_NUTRITION_POLICY,
       plan: capabilities.plan,
       limits: capabilities.limits,
       previewOnly: true,
     };
+  }
+
+  async generateAutomaticMenuMeal(user, payload = {}) {
+    const actor = await this._actor(user);
+    const capabilities = await this.capabilities(actor);
+    if (capabilities.canGenerateAutomaticMenu !== true || capabilities.canAutoCalculateTrackingQuantities !== true) {
+      throw serviceError("PLAN_CAPABILITY_REQUIRED", "La generacion automatica esta disponible en Pro y VIP", {
+        resource: "nutrition.autoMenus",
+        plan: capabilities.plan,
+      });
+    }
+
+    const requiredFoodIds = [...new Set((Array.isArray(payload.requiredFoodIds) ? payload.requiredFoodIds : [])
+      .map((value) => cleanString(value, 120))
+      .filter(Boolean))];
+    const excludedFoodIds = [...new Set((Array.isArray(payload.excludedFoodIds) ? payload.excludedFoodIds : [])
+      .map((value) => cleanString(value, 120))
+      .filter(Boolean))];
+    const strategy = cleanString(payload.strategy, 80) === "selected_only"
+      ? "selected_only"
+      : "assisted_food_addition";
+    // "Solo elegidos" sin elegidos en este slot no significa comida vacia:
+    // vuelve al combinador GENERIC normal, tal como requiere el flujo diario.
+    const generationMode = strategy === "selected_only" && requiredFoodIds.length
+      ? FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS
+      : FOOD_COMBINATION_MODES.ALLOW_SUGGESTIONS;
+    const maxFoods = Math.max(1, Math.min(10, Number(capabilities?.limits?.equivalentMealFoods) || 6));
+
+    if (requiredFoodIds.length && userHasFoodRestrictions(actor)) {
+      const requiredFoods = await Promise.all(requiredFoodIds.map((id) =>
+        this.alimentosModel.obtenerAlimentoPorId(id)
+      ));
+      const restrictedIndex = requiredFoods.findIndex((food) => (
+        food && !isEquivalentFoodAllowed(actor, food)
+      ));
+      if (restrictedIndex >= 0) {
+        throw serviceError(
+          "MENU_FOOD_RESTRICTED",
+          `El alimento ${requiredFoodIds[restrictedIndex]} está bloqueado por tus restricciones alimentarias.`,
+          { foodId: requiredFoodIds[restrictedIndex] }
+        );
+      }
+    }
+
+    return await this.mealAlternativeGenerator({
+      mealType: payload.mealType,
+      target: payload.target,
+      requiredFoodIds,
+      excludedFoodIds,
+      generationMode,
+      preferredCombinations: payload.preferredCombinations,
+      diversityContext: payload.diversityContext,
+      variantSeed: cleanString(payload.variantSeed, 160),
+      limit: payload.limit,
+      maxFoods,
+    }, {
+      model: this.alimentosModel,
+      // Mismo filtro semántico usado por equivalencias: IDs, nombres, tags,
+      // alergias, intolerancias y prohibiciones de Tracking.
+      getAutomaticGenerationFoods: async (filters = {}) => {
+        const foods = await this.alimentosModel.obtenerAlimentosGeneracionAutomatica(filters);
+        return filterEquivalentCandidateFoods(actor, foods);
+      },
+    });
   }
 
   async _canonicalEquivalentGenerationFoods(values = []) {

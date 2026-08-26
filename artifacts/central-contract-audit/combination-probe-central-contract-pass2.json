@@ -1,0 +1,2435 @@
+{
+  "generatedAt": "2026-08-25T15:43:17.648Z",
+  "mode": "read-only combination and solver benchmark over one Mongo snapshot",
+  "config": {
+    "limits": [
+      32
+    ],
+    "mealTypes": [
+      "breakfast",
+      "lunch",
+      "snack",
+      "dinner",
+      "extraSnack"
+    ],
+    "candidateSamples": 3,
+    "solverSamples": 2,
+    "warmups": 1,
+    "fixedSeed": "combination-probe-fixed-v1",
+    "snapshotDocuments": 574
+  },
+  "safety": {
+    "totalBefore": 574,
+    "totalAfter": 574,
+    "directMongoReads": 2,
+    "directMongoWrites": 0,
+    "generationFingerprintBefore": "e80d0a9b7455a65f9caa5cc6c512eec4254bd43165cce58fe6f3cfcb0d7dc386",
+    "generationFingerprintAfter": "e80d0a9b7455a65f9caa5cc6c512eec4254bd43165cce58fe6f3cfcb0d7dc386",
+    "generationUnchanged": true,
+    "catalogFingerprintBefore": "b979ad885318581c20b3bb0855bde38f2ec7f2ae77ddca2c7d3ef82f3f86fe3e",
+    "catalogFingerprintAfter": "b979ad885318581c20b3bb0855bde38f2ec7f2ae77ddca2c7d3ef82f3f86fe3e",
+    "catalogUnchanged": true,
+    "databaseUnchanged": true
+  },
+  "probes": [
+    {
+      "mealType": "breakfast",
+      "limit": 32,
+      "candidateCount": 32,
+      "structures": {
+        "P1+C1": 25,
+        "P1+C1+P2": 1,
+        "P1+C1+C2": 1,
+        "P1+C1+F": 1,
+        "P1+C1+G": 1,
+        "P1+C1+C2+F": 1,
+        "P1+C1+C2+F+G": 1,
+        "P1+C1+P2+C2+F+G": 1
+      },
+      "roleCounts": {
+        "baseOnly": 25,
+        "P2": 2,
+        "C2": 4,
+        "V": 0,
+        "F": 4,
+        "G": 3,
+        "uniqueStructures": 8
+      },
+      "candidateGenerationTiming": {
+        "samples": 3,
+        "averageMs": 127.67,
+        "p50Ms": 129.12,
+        "p95Ms": 129.12,
+        "maxMs": 131.79
+      },
+      "generatorMeta": {
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 32,
+        "candidatesGeneratedBeforeLimit": 1008,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresSelected": 8,
+        "selectionPolicy": "ranked_structural_frontier_v1",
+        "structuralRepresentativesSelected": 8,
+        "structuresEvaluated": 32
+      },
+      "optionalStructureCandidates": 7,
+      "deterministicAcrossSamples": true,
+      "catalogQueries": {
+        "obtenerAlimentos": 0,
+        "obtenerAlimentosPorIds": 0,
+        "obtenerAlimentoPorId": 0,
+        "obtenerAlimentosGeneracionAutomatica": 4
+      },
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+P2",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "role": "P2"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+C2",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776ed",
+              "name": "Copos de maiz sin azucar",
+              "role": "C2"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+F",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677698",
+              "name": "Anana",
+              "role": "F"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+G",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677696",
+              "name": "Almendras",
+              "role": "G"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "lunch",
+      "limit": 32,
+      "candidateCount": 32,
+      "structures": {
+        "P1+C1": 25,
+        "P1+C1+P2": 1,
+        "P1+C1+V": 1,
+        "P1+C1+F": 1,
+        "P1+C1+G": 1,
+        "P1+C1+F+G": 1,
+        "P1+C1+P2+F+G": 1,
+        "P1+C1+P2+V+F+G": 1
+      },
+      "roleCounts": {
+        "baseOnly": 25,
+        "P2": 3,
+        "C2": 0,
+        "V": 2,
+        "F": 4,
+        "G": 4,
+        "uniqueStructures": 8
+      },
+      "candidateGenerationTiming": {
+        "samples": 3,
+        "averageMs": 172.7,
+        "p50Ms": 165.55,
+        "p95Ms": 165.55,
+        "maxMs": 197.54
+      },
+      "generatorMeta": {
+        "mealType": "lunch",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 32,
+        "candidatesGeneratedBeforeLimit": 1024,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresSelected": 8,
+        "selectionPolicy": "ranked_structural_frontier_v1",
+        "structuralRepresentativesSelected": 8,
+        "structuresEvaluated": 32
+      },
+      "optionalStructureCandidates": 7,
+      "deterministicAcrossSamples": true,
+      "catalogQueries": {
+        "obtenerAlimentos": 0,
+        "obtenerAlimentosPorIds": 0,
+        "obtenerAlimentoPorId": 0,
+        "obtenerAlimentosGeneracionAutomatica": 4
+      },
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+P2",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P2"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+V",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776b3",
+              "name": "Berenjena",
+              "role": "V"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+F",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677698",
+              "name": "Anana",
+              "role": "F"
+            },
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+G",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677676",
+              "name": "Aceite de coco",
+              "role": "G"
+            },
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "snack",
+      "limit": 32,
+      "candidateCount": 32,
+      "structures": {
+        "P1+C1": 25,
+        "P1+C1+P2": 1,
+        "P1+C1+C2": 1,
+        "P1+C1+F": 1,
+        "P1+C1+G": 1,
+        "P1+C1+C2+F": 1,
+        "P1+C1+C2+F+G": 1,
+        "P1+C1+P2+C2+F+G": 1
+      },
+      "roleCounts": {
+        "baseOnly": 25,
+        "P2": 2,
+        "C2": 4,
+        "V": 0,
+        "F": 4,
+        "G": 3,
+        "uniqueStructures": 8
+      },
+      "candidateGenerationTiming": {
+        "samples": 3,
+        "averageMs": 194.47,
+        "p50Ms": 175.84,
+        "p95Ms": 175.84,
+        "maxMs": 246.92
+      },
+      "generatorMeta": {
+        "mealType": "snack",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 32,
+        "candidatesGeneratedBeforeLimit": 1008,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresSelected": 8,
+        "selectionPolicy": "ranked_structural_frontier_v1",
+        "structuralRepresentativesSelected": 8,
+        "structuresEvaluated": 32
+      },
+      "optionalStructureCandidates": 7,
+      "deterministicAcrossSamples": true,
+      "catalogQueries": {
+        "obtenerAlimentos": 0,
+        "obtenerAlimentosPorIds": 0,
+        "obtenerAlimentoPorId": 0,
+        "obtenerAlimentosGeneracionAutomatica": 4
+      },
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+P2",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "role": "P2"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+C2",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776ed",
+              "name": "Copos de maiz sin azucar",
+              "role": "C2"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+F",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677698",
+              "name": "Anana",
+              "role": "F"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+G",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677696",
+              "name": "Almendras",
+              "role": "G"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "dinner",
+      "limit": 32,
+      "candidateCount": 32,
+      "structures": {
+        "P1+C1": 25,
+        "P1+C1+P2": 1,
+        "P1+C1+V": 1,
+        "P1+C1+F": 1,
+        "P1+C1+G": 1,
+        "P1+C1+F+G": 1,
+        "P1+C1+P2+F+G": 1,
+        "P1+C1+P2+V+F+G": 1
+      },
+      "roleCounts": {
+        "baseOnly": 25,
+        "P2": 3,
+        "C2": 0,
+        "V": 2,
+        "F": 4,
+        "G": 4,
+        "uniqueStructures": 8
+      },
+      "candidateGenerationTiming": {
+        "samples": 3,
+        "averageMs": 213.44,
+        "p50Ms": 207.36,
+        "p95Ms": 207.36,
+        "maxMs": 262.24
+      },
+      "generatorMeta": {
+        "mealType": "dinner",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 32,
+        "candidatesGeneratedBeforeLimit": 1024,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresSelected": 8,
+        "selectionPolicy": "ranked_structural_frontier_v1",
+        "structuralRepresentativesSelected": 8,
+        "structuresEvaluated": 32
+      },
+      "optionalStructureCandidates": 7,
+      "deterministicAcrossSamples": true,
+      "catalogQueries": {
+        "obtenerAlimentos": 0,
+        "obtenerAlimentosPorIds": 0,
+        "obtenerAlimentoPorId": 0,
+        "obtenerAlimentosGeneracionAutomatica": 4
+      },
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+P2",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P2"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+V",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776b3",
+              "name": "Berenjena",
+              "role": "V"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+F",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677698",
+              "name": "Anana",
+              "role": "F"
+            },
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+G",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677676",
+              "name": "Aceite de coco",
+              "role": "G"
+            },
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "extraSnack",
+      "limit": 32,
+      "candidateCount": 32,
+      "structures": {
+        "P1+C1": 25,
+        "P1+C1+P2": 1,
+        "P1+C1+C2": 1,
+        "P1+C1+F": 1,
+        "P1+C1+G": 1,
+        "P1+C1+C2+F": 1,
+        "P1+C1+C2+F+G": 1,
+        "P1+C1+P2+C2+F+G": 1
+      },
+      "roleCounts": {
+        "baseOnly": 25,
+        "P2": 2,
+        "C2": 4,
+        "V": 0,
+        "F": 4,
+        "G": 3,
+        "uniqueStructures": 8
+      },
+      "candidateGenerationTiming": {
+        "samples": 3,
+        "averageMs": 170.44,
+        "p50Ms": 172.11,
+        "p95Ms": 172.11,
+        "maxMs": 179.06
+      },
+      "generatorMeta": {
+        "mealType": "extraSnack",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 32,
+        "candidatesGeneratedBeforeLimit": 1008,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresSelected": 8,
+        "selectionPolicy": "ranked_structural_frontier_v1",
+        "structuralRepresentativesSelected": 8,
+        "structuresEvaluated": 32
+      },
+      "optionalStructureCandidates": 7,
+      "deterministicAcrossSamples": true,
+      "catalogQueries": {
+        "obtenerAlimentos": 0,
+        "obtenerAlimentosPorIds": 0,
+        "obtenerAlimentoPorId": 0,
+        "obtenerAlimentosGeneracionAutomatica": 4
+      },
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+P2",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "role": "P2"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+C2",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776ed",
+              "name": "Copos de maiz sin azucar",
+              "role": "C2"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+F",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677698",
+              "name": "Anana",
+              "role": "F"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1+G",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677696",
+              "name": "Almendras",
+              "role": "G"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "solverBenchmarks": [
+    {
+      "mealType": "breakfast",
+      "limit": 32,
+      "target": {
+        "kcal": 720,
+        "proteina": 52,
+        "carbs": 84,
+        "grasas": 20
+      },
+      "variantSeed": "combination-probe-fixed-v1:breakfast",
+      "status": "SUCCESS",
+      "classification": "RECOMMENDED",
+      "code": null,
+      "recommended": true,
+      "usable": true,
+      "wallTiming": {
+        "samples": 2,
+        "averageMs": 536.15,
+        "p50Ms": 518.74,
+        "p95Ms": 518.74,
+        "maxMs": 553.55
+      },
+      "reportedTotalTiming": {
+        "samples": 2,
+        "averageMs": 536.5,
+        "p50Ms": 519,
+        "p95Ms": 519,
+        "maxMs": 554
+      },
+      "combinationCandidatesEvaluated": {
+        "samples": 2,
+        "average": 32,
+        "p50": 32,
+        "p95": 32,
+        "max": 32
+      },
+      "totalCandidateExecutions": {
+        "samples": 2,
+        "average": 32,
+        "p50": 32,
+        "p95": 32,
+        "max": 32
+      },
+      "quantitySolutionsFound": {
+        "samples": 2,
+        "average": 32,
+        "p50": 32,
+        "p95": 32,
+        "max": 32
+      },
+      "recommendedSolutionsFound": {
+        "samples": 2,
+        "average": 1,
+        "p50": 1,
+        "p95": 1,
+        "max": 1
+      },
+      "bestEffortSolutionsFound": {
+        "samples": 2,
+        "average": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "rounds": [
+        {
+          "level": "STRICT",
+          "occurrences": 2,
+          "candidatesProcessed": {
+            "samples": 2,
+            "average": 32,
+            "p50": 32,
+            "p95": 32,
+            "max": 32
+          },
+          "quantitySolutionsFound": {
+            "samples": 2,
+            "average": 32,
+            "p50": 32,
+            "p95": 32,
+            "max": 32
+          },
+          "recommendedSolutionsFound": {
+            "samples": 2,
+            "average": 1,
+            "p50": 1,
+            "p95": 1,
+            "max": 1
+          },
+          "elapsed": {
+            "samples": 2,
+            "averageMs": 353,
+            "p50Ms": 334,
+            "p95Ms": 334,
+            "maxMs": 372
+          }
+        }
+      ],
+      "deterministicAcrossSamples": true,
+      "catalogQueries": {
+        "obtenerAlimentos": 3,
+        "obtenerAlimentosPorIds": 0,
+        "obtenerAlimentoPorId": 0,
+        "obtenerAlimentosGeneracionAutomatica": 3
+      },
+      "meta": {
+        "structuresEvaluated": 32,
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "combination-probe-fixed-v1:breakfast",
+        "variantPoolSize": 1,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 1,
+        "bestEffortSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 1,
+            "elapsedMs": 334
+          }
+        ],
+        "elapsedMs": 519
+      },
+      "alternative": {
+        "status": "RECOMMENDED",
+        "structure": "P1+C1+P2+C2+F+G",
+        "totals": {
+          "kcal": 720.17,
+          "proteina": 50.61,
+          "carbs": 93.13,
+          "grasas": 16.13
+        },
+        "difference": {
+          "kcal": 0.17,
+          "proteina": -1.39,
+          "carbs": 9.13,
+          "grasas": -3.87
+        },
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b64677696",
+            "name": "Almendras",
+            "role": "G",
+            "quantity": 1,
+            "unit": "Unid",
+            "kcal": 7.15,
+            "proteina": 0.26,
+            "carbs": 0.16,
+            "grasas": 0.61,
+            "image": {
+              "exactaKey": "almendras",
+              "genericaKey": "almendras",
+              "urlExacta": "/images/foods/almendras.jpeg",
+              "urlGenerica": "/images/foods/almendras.jpeg",
+              "url": "/images/foods/almendras.jpeg",
+              "alt": "Almendras",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/almendras.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b64677698",
+            "name": "Anana",
+            "role": "F",
+            "quantity": 80,
+            "unit": "Grs",
+            "kcal": 40.8,
+            "proteina": 0.4,
+            "carbs": 8,
+            "grasas": 0.8,
+            "image": {
+              "exactaKey": "anana",
+              "genericaKey": "anana",
+              "urlExacta": "/images/foods/anana.jpeg",
+              "urlGenerica": "/images/foods/anana.jpeg",
+              "url": "/images/foods/anana.jpeg",
+              "alt": "Anana",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/anana.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776a6",
+            "name": "Avena instantanea",
+            "role": "C1",
+            "quantity": 110,
+            "unit": "Grs",
+            "kcal": 387.2,
+            "proteina": 14.3,
+            "carbs": 62.7,
+            "grasas": 8.8,
+            "image": {
+              "exactaKey": "avenainstantanea",
+              "genericaKey": "avenainstantanea",
+              "urlExacta": "/images/foods/avenainstantanea.jpeg",
+              "urlGenerica": "/images/foods/avenainstantanea.jpeg",
+              "url": "/images/foods/avenainstantanea.jpeg",
+              "alt": "Avena instantanea",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/avenainstantanea.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776e8",
+            "name": "Claras de huevos",
+            "role": "P1",
+            "quantity": 8,
+            "unit": "Unid",
+            "kcal": 125.6,
+            "proteina": 28,
+            "carbs": 1.6,
+            "grasas": 0.8,
+            "image": {
+              "exactaKey": "clarasdehuevos",
+              "genericaKey": "clarashuevos",
+              "urlExacta": "/images/foods/clarasdehuevos.jpeg",
+              "urlGenerica": "/images/foods/clarashuevos.jpeg",
+              "url": "/images/foods/clarashuevos.jpeg",
+              "alt": "Claras de huevos",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/clarashuevos.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776ed",
+            "name": "Copos de maiz sin azucar",
+            "role": "C2",
+            "quantity": 25,
+            "unit": "Grs",
+            "kcal": 90.43,
+            "proteina": 1.65,
+            "carbs": 20.67,
+            "grasas": 0.13,
+            "image": {
+              "exactaKey": "coposdemaizsinazucar",
+              "genericaKey": "coposmaizsinazucar",
+              "urlExacta": "/images/foods/coposdemaizsinazucar.jpeg",
+              "urlGenerica": "/images/foods/coposmaizsinazucar.jpeg",
+              "url": "/images/foods/coposmaizsinazucar.jpeg",
+              "alt": "Copos de maiz sin azucar",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/coposmaizsinazucar.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b64677755",
+            "name": "Huevos",
+            "role": "P2",
+            "quantity": 1,
+            "unit": "Unid",
+            "kcal": 69,
+            "proteina": 6,
+            "carbs": 0,
+            "grasas": 5,
+            "image": {
+              "exactaKey": "huevos",
+              "genericaKey": "huevos",
+              "urlExacta": "/images/foods/huevos.jpeg",
+              "urlGenerica": "/images/foods/huevos.jpeg",
+              "url": "/images/foods/huevos.jpeg",
+              "alt": "Huevos",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/huevos.jpeg"
+          }
+        ]
+      }
+    },
+    {
+      "mealType": "lunch",
+      "limit": 32,
+      "target": {
+        "kcal": 620,
+        "proteina": 42,
+        "carbs": 72,
+        "grasas": 18
+      },
+      "variantSeed": "combination-probe-fixed-v1:lunch",
+      "status": "SUCCESS",
+      "classification": "RECOMMENDED",
+      "code": null,
+      "recommended": true,
+      "usable": true,
+      "wallTiming": {
+        "samples": 2,
+        "averageMs": 474.85,
+        "p50Ms": 448.05,
+        "p95Ms": 448.05,
+        "maxMs": 501.65
+      },
+      "reportedTotalTiming": {
+        "samples": 2,
+        "averageMs": 475,
+        "p50Ms": 448,
+        "p95Ms": 448,
+        "maxMs": 502
+      },
+      "combinationCandidatesEvaluated": {
+        "samples": 2,
+        "average": 32,
+        "p50": 32,
+        "p95": 32,
+        "max": 32
+      },
+      "totalCandidateExecutions": {
+        "samples": 2,
+        "average": 32,
+        "p50": 32,
+        "p95": 32,
+        "max": 32
+      },
+      "quantitySolutionsFound": {
+        "samples": 2,
+        "average": 32,
+        "p50": 32,
+        "p95": 32,
+        "max": 32
+      },
+      "recommendedSolutionsFound": {
+        "samples": 2,
+        "average": 11,
+        "p50": 11,
+        "p95": 11,
+        "max": 11
+      },
+      "bestEffortSolutionsFound": {
+        "samples": 2,
+        "average": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "rounds": [
+        {
+          "level": "STRICT",
+          "occurrences": 2,
+          "candidatesProcessed": {
+            "samples": 2,
+            "average": 32,
+            "p50": 32,
+            "p95": 32,
+            "max": 32
+          },
+          "quantitySolutionsFound": {
+            "samples": 2,
+            "average": 32,
+            "p50": 32,
+            "p95": 32,
+            "max": 32
+          },
+          "recommendedSolutionsFound": {
+            "samples": 2,
+            "average": 11,
+            "p50": 11,
+            "p95": 11,
+            "max": 11
+          },
+          "elapsed": {
+            "samples": 2,
+            "averageMs": 307,
+            "p50Ms": 288,
+            "p95Ms": 288,
+            "maxMs": 326
+          }
+        }
+      ],
+      "deterministicAcrossSamples": true,
+      "catalogQueries": {
+        "obtenerAlimentos": 3,
+        "obtenerAlimentosPorIds": 0,
+        "obtenerAlimentoPorId": 0,
+        "obtenerAlimentosGeneracionAutomatica": 3
+      },
+      "meta": {
+        "structuresEvaluated": 32,
+        "mealType": "lunch",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "combination-probe-fixed-v1:lunch",
+        "variantPoolSize": 8,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 11,
+        "bestEffortSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 11,
+            "elapsedMs": 288
+          }
+        ],
+        "elapsedMs": 448
+      },
+      "alternative": {
+        "status": "RECOMMENDED",
+        "structure": "P1+C1",
+        "totals": {
+          "kcal": 616.2,
+          "proteina": 43.2,
+          "carbs": 82.5,
+          "grasas": 15
+        },
+        "difference": {
+          "kcal": -3.8,
+          "proteina": 1.2,
+          "carbs": 10.5,
+          "grasas": -3
+        },
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b6467769f",
+            "name": "Arroz integral",
+            "role": "C1",
+            "quantity": 110,
+            "unit": "Grs",
+            "kcal": 385,
+            "proteina": 8.8,
+            "carbs": 82.5,
+            "grasas": 2.2,
+            "image": {
+              "exactaKey": "arrozintegral",
+              "genericaKey": "arrozintegral",
+              "urlExacta": "/images/foods/arrozintegral.jpeg",
+              "urlGenerica": "/images/foods/arrozintegral.jpeg",
+              "url": "/images/foods/arrozintegral.jpeg",
+              "alt": "Arroz integral",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/arrozintegral.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776e6",
+            "name": "Churrasco magro",
+            "role": "P1",
+            "quantity": 160,
+            "unit": "Grs",
+            "kcal": 231.2,
+            "proteina": 34.4,
+            "carbs": 0,
+            "grasas": 12.8,
+            "image": {
+              "exactaKey": "churrascomagro",
+              "genericaKey": "churrascomagro",
+              "urlExacta": "/images/foods/churrascomagro.jpeg",
+              "urlGenerica": "/images/foods/churrascomagro.jpeg",
+              "url": "/images/foods/churrascomagro.jpeg",
+              "alt": "Churrasco magro",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/churrascomagro.jpeg"
+          }
+        ]
+      }
+    },
+    {
+      "mealType": "snack",
+      "limit": 32,
+      "target": {
+        "kcal": 360,
+        "proteina": 25,
+        "carbs": 42,
+        "grasas": 10
+      },
+      "variantSeed": "combination-probe-fixed-v1:snack",
+      "status": "SUCCESS",
+      "classification": "RECOMMENDED",
+      "code": null,
+      "recommended": true,
+      "usable": true,
+      "wallTiming": {
+        "samples": 2,
+        "averageMs": 596.31,
+        "p50Ms": 592.85,
+        "p95Ms": 592.85,
+        "maxMs": 599.76
+      },
+      "reportedTotalTiming": {
+        "samples": 2,
+        "averageMs": 596.5,
+        "p50Ms": 593,
+        "p95Ms": 593,
+        "maxMs": 600
+      },
+      "combinationCandidatesEvaluated": {
+        "samples": 2,
+        "average": 32,
+        "p50": 32,
+        "p95": 32,
+        "max": 32
+      },
+      "totalCandidateExecutions": {
+        "samples": 2,
+        "average": 32,
+        "p50": 32,
+        "p95": 32,
+        "max": 32
+      },
+      "quantitySolutionsFound": {
+        "samples": 2,
+        "average": 32,
+        "p50": 32,
+        "p95": 32,
+        "max": 32
+      },
+      "recommendedSolutionsFound": {
+        "samples": 2,
+        "average": 13,
+        "p50": 13,
+        "p95": 13,
+        "max": 13
+      },
+      "bestEffortSolutionsFound": {
+        "samples": 2,
+        "average": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "rounds": [
+        {
+          "level": "STRICT",
+          "occurrences": 2,
+          "candidatesProcessed": {
+            "samples": 2,
+            "average": 32,
+            "p50": 32,
+            "p95": 32,
+            "max": 32
+          },
+          "quantitySolutionsFound": {
+            "samples": 2,
+            "average": 32,
+            "p50": 32,
+            "p95": 32,
+            "max": 32
+          },
+          "recommendedSolutionsFound": {
+            "samples": 2,
+            "average": 13,
+            "p50": 13,
+            "p95": 13,
+            "max": 13
+          },
+          "elapsed": {
+            "samples": 2,
+            "averageMs": 368.5,
+            "p50Ms": 361,
+            "p95Ms": 361,
+            "maxMs": 376
+          }
+        }
+      ],
+      "deterministicAcrossSamples": true,
+      "catalogQueries": {
+        "obtenerAlimentos": 3,
+        "obtenerAlimentosPorIds": 0,
+        "obtenerAlimentoPorId": 0,
+        "obtenerAlimentosGeneracionAutomatica": 3
+      },
+      "meta": {
+        "structuresEvaluated": 32,
+        "mealType": "snack",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "combination-probe-fixed-v1:snack",
+        "variantPoolSize": 8,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 13,
+        "bestEffortSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 13,
+            "elapsedMs": 376
+          }
+        ],
+        "elapsedMs": 600
+      },
+      "alternative": {
+        "status": "RECOMMENDED",
+        "structure": "P1+C1+F",
+        "totals": {
+          "kcal": 360.2,
+          "proteina": 23.6,
+          "carbs": 50.7,
+          "grasas": 7
+        },
+        "difference": {
+          "kcal": 0.2,
+          "proteina": -1.4,
+          "carbs": 8.7,
+          "grasas": -3
+        },
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b64677698",
+            "name": "Anana",
+            "role": "F",
+            "quantity": 100,
+            "unit": "Grs",
+            "kcal": 51,
+            "proteina": 0.5,
+            "carbs": 10,
+            "grasas": 1,
+            "image": {
+              "exactaKey": "anana",
+              "genericaKey": "anana",
+              "urlExacta": "/images/foods/anana.jpeg",
+              "urlGenerica": "/images/foods/anana.jpeg",
+              "url": "/images/foods/anana.jpeg",
+              "alt": "Anana",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/anana.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776a6",
+            "name": "Avena instantanea",
+            "role": "C1",
+            "quantity": 70,
+            "unit": "Grs",
+            "kcal": 246.4,
+            "proteina": 9.1,
+            "carbs": 39.9,
+            "grasas": 5.6,
+            "image": {
+              "exactaKey": "avenainstantanea",
+              "genericaKey": "avenainstantanea",
+              "urlExacta": "/images/foods/avenainstantanea.jpeg",
+              "urlGenerica": "/images/foods/avenainstantanea.jpeg",
+              "url": "/images/foods/avenainstantanea.jpeg",
+              "alt": "Avena instantanea",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/avenainstantanea.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776e8",
+            "name": "Claras de huevos",
+            "role": "P1",
+            "quantity": 4,
+            "unit": "Unid",
+            "kcal": 62.8,
+            "proteina": 14,
+            "carbs": 0.8,
+            "grasas": 0.4,
+            "image": {
+              "exactaKey": "clarasdehuevos",
+              "genericaKey": "clarashuevos",
+              "urlExacta": "/images/foods/clarasdehuevos.jpeg",
+              "urlGenerica": "/images/foods/clarashuevos.jpeg",
+              "url": "/images/foods/clarashuevos.jpeg",
+              "alt": "Claras de huevos",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/clarashuevos.jpeg"
+          }
+        ]
+      }
+    },
+    {
+      "mealType": "dinner",
+      "limit": 32,
+      "target": {
+        "kcal": 620,
+        "proteina": 42,
+        "carbs": 72,
+        "grasas": 18
+      },
+      "variantSeed": "combination-probe-fixed-v1:dinner",
+      "status": "SUCCESS",
+      "classification": "RECOMMENDED",
+      "code": null,
+      "recommended": true,
+      "usable": true,
+      "wallTiming": {
+        "samples": 2,
+        "averageMs": 448.04,
+        "p50Ms": 434.68,
+        "p95Ms": 434.68,
+        "maxMs": 461.4
+      },
+      "reportedTotalTiming": {
+        "samples": 2,
+        "averageMs": 448,
+        "p50Ms": 435,
+        "p95Ms": 435,
+        "maxMs": 461
+      },
+      "combinationCandidatesEvaluated": {
+        "samples": 2,
+        "average": 32,
+        "p50": 32,
+        "p95": 32,
+        "max": 32
+      },
+      "totalCandidateExecutions": {
+        "samples": 2,
+        "average": 32,
+        "p50": 32,
+        "p95": 32,
+        "max": 32
+      },
+      "quantitySolutionsFound": {
+        "samples": 2,
+        "average": 32,
+        "p50": 32,
+        "p95": 32,
+        "max": 32
+      },
+      "recommendedSolutionsFound": {
+        "samples": 2,
+        "average": 11,
+        "p50": 11,
+        "p95": 11,
+        "max": 11
+      },
+      "bestEffortSolutionsFound": {
+        "samples": 2,
+        "average": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "rounds": [
+        {
+          "level": "STRICT",
+          "occurrences": 2,
+          "candidatesProcessed": {
+            "samples": 2,
+            "average": 32,
+            "p50": 32,
+            "p95": 32,
+            "max": 32
+          },
+          "quantitySolutionsFound": {
+            "samples": 2,
+            "average": 32,
+            "p50": 32,
+            "p95": 32,
+            "max": 32
+          },
+          "recommendedSolutionsFound": {
+            "samples": 2,
+            "average": 11,
+            "p50": 11,
+            "p95": 11,
+            "max": 11
+          },
+          "elapsed": {
+            "samples": 2,
+            "averageMs": 292,
+            "p50Ms": 281,
+            "p95Ms": 281,
+            "maxMs": 303
+          }
+        }
+      ],
+      "deterministicAcrossSamples": true,
+      "catalogQueries": {
+        "obtenerAlimentos": 3,
+        "obtenerAlimentosPorIds": 0,
+        "obtenerAlimentoPorId": 0,
+        "obtenerAlimentosGeneracionAutomatica": 3
+      },
+      "meta": {
+        "structuresEvaluated": 32,
+        "mealType": "dinner",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "combination-probe-fixed-v1:dinner",
+        "variantPoolSize": 8,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 11,
+        "bestEffortSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 11,
+            "elapsedMs": 303
+          }
+        ],
+        "elapsedMs": 461
+      },
+      "alternative": {
+        "status": "RECOMMENDED",
+        "structure": "P1+C1",
+        "totals": {
+          "kcal": 616.2,
+          "proteina": 43.2,
+          "carbs": 82.5,
+          "grasas": 15
+        },
+        "difference": {
+          "kcal": -3.8,
+          "proteina": 1.2,
+          "carbs": 10.5,
+          "grasas": -3
+        },
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b6467769f",
+            "name": "Arroz integral",
+            "role": "C1",
+            "quantity": 110,
+            "unit": "Grs",
+            "kcal": 385,
+            "proteina": 8.8,
+            "carbs": 82.5,
+            "grasas": 2.2,
+            "image": {
+              "exactaKey": "arrozintegral",
+              "genericaKey": "arrozintegral",
+              "urlExacta": "/images/foods/arrozintegral.jpeg",
+              "urlGenerica": "/images/foods/arrozintegral.jpeg",
+              "url": "/images/foods/arrozintegral.jpeg",
+              "alt": "Arroz integral",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/arrozintegral.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776e6",
+            "name": "Churrasco magro",
+            "role": "P1",
+            "quantity": 160,
+            "unit": "Grs",
+            "kcal": 231.2,
+            "proteina": 34.4,
+            "carbs": 0,
+            "grasas": 12.8,
+            "image": {
+              "exactaKey": "churrascomagro",
+              "genericaKey": "churrascomagro",
+              "urlExacta": "/images/foods/churrascomagro.jpeg",
+              "urlGenerica": "/images/foods/churrascomagro.jpeg",
+              "url": "/images/foods/churrascomagro.jpeg",
+              "alt": "Churrasco magro",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/churrascomagro.jpeg"
+          }
+        ]
+      }
+    },
+    {
+      "mealType": "extraSnack",
+      "limit": 32,
+      "target": {
+        "kcal": 300,
+        "proteina": 20,
+        "carbs": 35,
+        "grasas": 8
+      },
+      "variantSeed": "combination-probe-fixed-v1:extraSnack",
+      "status": "SUCCESS",
+      "classification": "RECOMMENDED",
+      "code": null,
+      "recommended": true,
+      "usable": true,
+      "wallTiming": {
+        "samples": 2,
+        "averageMs": 488.74,
+        "p50Ms": 451.37,
+        "p95Ms": 451.37,
+        "maxMs": 526.11
+      },
+      "reportedTotalTiming": {
+        "samples": 2,
+        "averageMs": 489,
+        "p50Ms": 452,
+        "p95Ms": 452,
+        "maxMs": 526
+      },
+      "combinationCandidatesEvaluated": {
+        "samples": 2,
+        "average": 32,
+        "p50": 32,
+        "p95": 32,
+        "max": 32
+      },
+      "totalCandidateExecutions": {
+        "samples": 2,
+        "average": 32,
+        "p50": 32,
+        "p95": 32,
+        "max": 32
+      },
+      "quantitySolutionsFound": {
+        "samples": 2,
+        "average": 32,
+        "p50": 32,
+        "p95": 32,
+        "max": 32
+      },
+      "recommendedSolutionsFound": {
+        "samples": 2,
+        "average": 17,
+        "p50": 17,
+        "p95": 17,
+        "max": 17
+      },
+      "bestEffortSolutionsFound": {
+        "samples": 2,
+        "average": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "rounds": [
+        {
+          "level": "STRICT",
+          "occurrences": 2,
+          "candidatesProcessed": {
+            "samples": 2,
+            "average": 32,
+            "p50": 32,
+            "p95": 32,
+            "max": 32
+          },
+          "quantitySolutionsFound": {
+            "samples": 2,
+            "average": 32,
+            "p50": 32,
+            "p95": 32,
+            "max": 32
+          },
+          "recommendedSolutionsFound": {
+            "samples": 2,
+            "average": 17,
+            "p50": 17,
+            "p95": 17,
+            "max": 17
+          },
+          "elapsed": {
+            "samples": 2,
+            "averageMs": 314.5,
+            "p50Ms": 279,
+            "p95Ms": 279,
+            "maxMs": 350
+          }
+        }
+      ],
+      "deterministicAcrossSamples": true,
+      "catalogQueries": {
+        "obtenerAlimentos": 3,
+        "obtenerAlimentosPorIds": 0,
+        "obtenerAlimentoPorId": 0,
+        "obtenerAlimentosGeneracionAutomatica": 3
+      },
+      "meta": {
+        "structuresEvaluated": 32,
+        "mealType": "extraSnack",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "combination-probe-fixed-v1:extraSnack",
+        "variantPoolSize": 8,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 17,
+        "bestEffortSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 17,
+            "elapsedMs": 350
+          }
+        ],
+        "elapsedMs": 526
+      },
+      "alternative": {
+        "status": "RECOMMENDED",
+        "structure": "P1+C1",
+        "totals": {
+          "kcal": 300.49,
+          "proteina": 20.84,
+          "carbs": 46.7,
+          "grasas": 3.37
+        },
+        "difference": {
+          "kcal": 0.49,
+          "proteina": 0.84,
+          "carbs": 11.7,
+          "grasas": -4.63
+        },
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b646776e8",
+            "name": "Claras de huevos",
+            "role": "P1",
+            "quantity": 4,
+            "unit": "Unid",
+            "kcal": 62.8,
+            "proteina": 14,
+            "carbs": 0.8,
+            "grasas": 0.4,
+            "image": {
+              "exactaKey": "clarasdehuevos",
+              "genericaKey": "clarashuevos",
+              "urlExacta": "/images/foods/clarasdehuevos.jpeg",
+              "urlGenerica": "/images/foods/clarashuevos.jpeg",
+              "url": "/images/foods/clarashuevos.jpeg",
+              "alt": "Claras de huevos",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/clarashuevos.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646777df",
+            "name": "Pan",
+            "role": "C1",
+            "quantity": 90,
+            "unit": "Grs",
+            "kcal": 237.69,
+            "proteina": 6.84,
+            "carbs": 45.9,
+            "grasas": 2.97,
+            "image": {
+              "exactaKey": "pan",
+              "genericaKey": "pan",
+              "urlExacta": "/images/foods/pan.jpeg",
+              "urlGenerica": "/images/foods/pan.jpeg",
+              "url": "/images/foods/pan.jpeg",
+              "alt": "Pan",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/pan.jpeg"
+          }
+        ]
+      }
+    }
+  ],
+  "solverProbes": [
+    {
+      "mealType": "breakfast",
+      "target": {
+        "kcal": 720,
+        "proteina": 52,
+        "carbs": 84,
+        "grasas": 20
+      },
+      "elapsedMs": 536.15,
+      "status": "SUCCESS",
+      "classification": "RECOMMENDED",
+      "recommended": true,
+      "usable": true,
+      "meta": {
+        "structuresEvaluated": 32,
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "combination-probe-fixed-v1:breakfast",
+        "variantPoolSize": 1,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 1,
+        "bestEffortSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 1,
+            "elapsedMs": 334
+          }
+        ],
+        "elapsedMs": 519
+      },
+      "alternative": {
+        "status": "RECOMMENDED",
+        "structure": "P1+C1+P2+C2+F+G",
+        "totals": {
+          "kcal": 720.17,
+          "proteina": 50.61,
+          "carbs": 93.13,
+          "grasas": 16.13
+        },
+        "difference": {
+          "kcal": 0.17,
+          "proteina": -1.39,
+          "carbs": 9.13,
+          "grasas": -3.87
+        },
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b64677696",
+            "name": "Almendras",
+            "role": "G",
+            "quantity": 1,
+            "unit": "Unid",
+            "kcal": 7.15,
+            "proteina": 0.26,
+            "carbs": 0.16,
+            "grasas": 0.61,
+            "image": {
+              "exactaKey": "almendras",
+              "genericaKey": "almendras",
+              "urlExacta": "/images/foods/almendras.jpeg",
+              "urlGenerica": "/images/foods/almendras.jpeg",
+              "url": "/images/foods/almendras.jpeg",
+              "alt": "Almendras",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/almendras.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b64677698",
+            "name": "Anana",
+            "role": "F",
+            "quantity": 80,
+            "unit": "Grs",
+            "kcal": 40.8,
+            "proteina": 0.4,
+            "carbs": 8,
+            "grasas": 0.8,
+            "image": {
+              "exactaKey": "anana",
+              "genericaKey": "anana",
+              "urlExacta": "/images/foods/anana.jpeg",
+              "urlGenerica": "/images/foods/anana.jpeg",
+              "url": "/images/foods/anana.jpeg",
+              "alt": "Anana",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/anana.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776a6",
+            "name": "Avena instantanea",
+            "role": "C1",
+            "quantity": 110,
+            "unit": "Grs",
+            "kcal": 387.2,
+            "proteina": 14.3,
+            "carbs": 62.7,
+            "grasas": 8.8,
+            "image": {
+              "exactaKey": "avenainstantanea",
+              "genericaKey": "avenainstantanea",
+              "urlExacta": "/images/foods/avenainstantanea.jpeg",
+              "urlGenerica": "/images/foods/avenainstantanea.jpeg",
+              "url": "/images/foods/avenainstantanea.jpeg",
+              "alt": "Avena instantanea",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/avenainstantanea.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776e8",
+            "name": "Claras de huevos",
+            "role": "P1",
+            "quantity": 8,
+            "unit": "Unid",
+            "kcal": 125.6,
+            "proteina": 28,
+            "carbs": 1.6,
+            "grasas": 0.8,
+            "image": {
+              "exactaKey": "clarasdehuevos",
+              "genericaKey": "clarashuevos",
+              "urlExacta": "/images/foods/clarasdehuevos.jpeg",
+              "urlGenerica": "/images/foods/clarashuevos.jpeg",
+              "url": "/images/foods/clarashuevos.jpeg",
+              "alt": "Claras de huevos",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/clarashuevos.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776ed",
+            "name": "Copos de maiz sin azucar",
+            "role": "C2",
+            "quantity": 25,
+            "unit": "Grs",
+            "kcal": 90.43,
+            "proteina": 1.65,
+            "carbs": 20.67,
+            "grasas": 0.13,
+            "image": {
+              "exactaKey": "coposdemaizsinazucar",
+              "genericaKey": "coposmaizsinazucar",
+              "urlExacta": "/images/foods/coposdemaizsinazucar.jpeg",
+              "urlGenerica": "/images/foods/coposmaizsinazucar.jpeg",
+              "url": "/images/foods/coposmaizsinazucar.jpeg",
+              "alt": "Copos de maiz sin azucar",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/coposmaizsinazucar.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b64677755",
+            "name": "Huevos",
+            "role": "P2",
+            "quantity": 1,
+            "unit": "Unid",
+            "kcal": 69,
+            "proteina": 6,
+            "carbs": 0,
+            "grasas": 5,
+            "image": {
+              "exactaKey": "huevos",
+              "genericaKey": "huevos",
+              "urlExacta": "/images/foods/huevos.jpeg",
+              "urlGenerica": "/images/foods/huevos.jpeg",
+              "url": "/images/foods/huevos.jpeg",
+              "alt": "Huevos",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/huevos.jpeg"
+          }
+        ]
+      }
+    },
+    {
+      "mealType": "lunch",
+      "target": {
+        "kcal": 620,
+        "proteina": 42,
+        "carbs": 72,
+        "grasas": 18
+      },
+      "elapsedMs": 474.85,
+      "status": "SUCCESS",
+      "classification": "RECOMMENDED",
+      "recommended": true,
+      "usable": true,
+      "meta": {
+        "structuresEvaluated": 32,
+        "mealType": "lunch",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "combination-probe-fixed-v1:lunch",
+        "variantPoolSize": 8,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 11,
+        "bestEffortSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 11,
+            "elapsedMs": 288
+          }
+        ],
+        "elapsedMs": 448
+      },
+      "alternative": {
+        "status": "RECOMMENDED",
+        "structure": "P1+C1",
+        "totals": {
+          "kcal": 616.2,
+          "proteina": 43.2,
+          "carbs": 82.5,
+          "grasas": 15
+        },
+        "difference": {
+          "kcal": -3.8,
+          "proteina": 1.2,
+          "carbs": 10.5,
+          "grasas": -3
+        },
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b6467769f",
+            "name": "Arroz integral",
+            "role": "C1",
+            "quantity": 110,
+            "unit": "Grs",
+            "kcal": 385,
+            "proteina": 8.8,
+            "carbs": 82.5,
+            "grasas": 2.2,
+            "image": {
+              "exactaKey": "arrozintegral",
+              "genericaKey": "arrozintegral",
+              "urlExacta": "/images/foods/arrozintegral.jpeg",
+              "urlGenerica": "/images/foods/arrozintegral.jpeg",
+              "url": "/images/foods/arrozintegral.jpeg",
+              "alt": "Arroz integral",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/arrozintegral.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776e6",
+            "name": "Churrasco magro",
+            "role": "P1",
+            "quantity": 160,
+            "unit": "Grs",
+            "kcal": 231.2,
+            "proteina": 34.4,
+            "carbs": 0,
+            "grasas": 12.8,
+            "image": {
+              "exactaKey": "churrascomagro",
+              "genericaKey": "churrascomagro",
+              "urlExacta": "/images/foods/churrascomagro.jpeg",
+              "urlGenerica": "/images/foods/churrascomagro.jpeg",
+              "url": "/images/foods/churrascomagro.jpeg",
+              "alt": "Churrasco magro",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/churrascomagro.jpeg"
+          }
+        ]
+      }
+    },
+    {
+      "mealType": "snack",
+      "target": {
+        "kcal": 360,
+        "proteina": 25,
+        "carbs": 42,
+        "grasas": 10
+      },
+      "elapsedMs": 596.31,
+      "status": "SUCCESS",
+      "classification": "RECOMMENDED",
+      "recommended": true,
+      "usable": true,
+      "meta": {
+        "structuresEvaluated": 32,
+        "mealType": "snack",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "combination-probe-fixed-v1:snack",
+        "variantPoolSize": 8,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 13,
+        "bestEffortSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 13,
+            "elapsedMs": 376
+          }
+        ],
+        "elapsedMs": 600
+      },
+      "alternative": {
+        "status": "RECOMMENDED",
+        "structure": "P1+C1+F",
+        "totals": {
+          "kcal": 360.2,
+          "proteina": 23.6,
+          "carbs": 50.7,
+          "grasas": 7
+        },
+        "difference": {
+          "kcal": 0.2,
+          "proteina": -1.4,
+          "carbs": 8.7,
+          "grasas": -3
+        },
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b64677698",
+            "name": "Anana",
+            "role": "F",
+            "quantity": 100,
+            "unit": "Grs",
+            "kcal": 51,
+            "proteina": 0.5,
+            "carbs": 10,
+            "grasas": 1,
+            "image": {
+              "exactaKey": "anana",
+              "genericaKey": "anana",
+              "urlExacta": "/images/foods/anana.jpeg",
+              "urlGenerica": "/images/foods/anana.jpeg",
+              "url": "/images/foods/anana.jpeg",
+              "alt": "Anana",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/anana.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776a6",
+            "name": "Avena instantanea",
+            "role": "C1",
+            "quantity": 70,
+            "unit": "Grs",
+            "kcal": 246.4,
+            "proteina": 9.1,
+            "carbs": 39.9,
+            "grasas": 5.6,
+            "image": {
+              "exactaKey": "avenainstantanea",
+              "genericaKey": "avenainstantanea",
+              "urlExacta": "/images/foods/avenainstantanea.jpeg",
+              "urlGenerica": "/images/foods/avenainstantanea.jpeg",
+              "url": "/images/foods/avenainstantanea.jpeg",
+              "alt": "Avena instantanea",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/avenainstantanea.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776e8",
+            "name": "Claras de huevos",
+            "role": "P1",
+            "quantity": 4,
+            "unit": "Unid",
+            "kcal": 62.8,
+            "proteina": 14,
+            "carbs": 0.8,
+            "grasas": 0.4,
+            "image": {
+              "exactaKey": "clarasdehuevos",
+              "genericaKey": "clarashuevos",
+              "urlExacta": "/images/foods/clarasdehuevos.jpeg",
+              "urlGenerica": "/images/foods/clarashuevos.jpeg",
+              "url": "/images/foods/clarashuevos.jpeg",
+              "alt": "Claras de huevos",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/clarashuevos.jpeg"
+          }
+        ]
+      }
+    },
+    {
+      "mealType": "dinner",
+      "target": {
+        "kcal": 620,
+        "proteina": 42,
+        "carbs": 72,
+        "grasas": 18
+      },
+      "elapsedMs": 448.04,
+      "status": "SUCCESS",
+      "classification": "RECOMMENDED",
+      "recommended": true,
+      "usable": true,
+      "meta": {
+        "structuresEvaluated": 32,
+        "mealType": "dinner",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "combination-probe-fixed-v1:dinner",
+        "variantPoolSize": 8,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 11,
+        "bestEffortSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 11,
+            "elapsedMs": 303
+          }
+        ],
+        "elapsedMs": 461
+      },
+      "alternative": {
+        "status": "RECOMMENDED",
+        "structure": "P1+C1",
+        "totals": {
+          "kcal": 616.2,
+          "proteina": 43.2,
+          "carbs": 82.5,
+          "grasas": 15
+        },
+        "difference": {
+          "kcal": -3.8,
+          "proteina": 1.2,
+          "carbs": 10.5,
+          "grasas": -3
+        },
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b6467769f",
+            "name": "Arroz integral",
+            "role": "C1",
+            "quantity": 110,
+            "unit": "Grs",
+            "kcal": 385,
+            "proteina": 8.8,
+            "carbs": 82.5,
+            "grasas": 2.2,
+            "image": {
+              "exactaKey": "arrozintegral",
+              "genericaKey": "arrozintegral",
+              "urlExacta": "/images/foods/arrozintegral.jpeg",
+              "urlGenerica": "/images/foods/arrozintegral.jpeg",
+              "url": "/images/foods/arrozintegral.jpeg",
+              "alt": "Arroz integral",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/arrozintegral.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776e6",
+            "name": "Churrasco magro",
+            "role": "P1",
+            "quantity": 160,
+            "unit": "Grs",
+            "kcal": 231.2,
+            "proteina": 34.4,
+            "carbs": 0,
+            "grasas": 12.8,
+            "image": {
+              "exactaKey": "churrascomagro",
+              "genericaKey": "churrascomagro",
+              "urlExacta": "/images/foods/churrascomagro.jpeg",
+              "urlGenerica": "/images/foods/churrascomagro.jpeg",
+              "url": "/images/foods/churrascomagro.jpeg",
+              "alt": "Churrasco magro",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/churrascomagro.jpeg"
+          }
+        ]
+      }
+    },
+    {
+      "mealType": "extraSnack",
+      "target": {
+        "kcal": 300,
+        "proteina": 20,
+        "carbs": 35,
+        "grasas": 8
+      },
+      "elapsedMs": 488.74,
+      "status": "SUCCESS",
+      "classification": "RECOMMENDED",
+      "recommended": true,
+      "usable": true,
+      "meta": {
+        "structuresEvaluated": 32,
+        "mealType": "extraSnack",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "combination-probe-fixed-v1:extraSnack",
+        "variantPoolSize": 8,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 17,
+        "bestEffortSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 17,
+            "elapsedMs": 350
+          }
+        ],
+        "elapsedMs": 526
+      },
+      "alternative": {
+        "status": "RECOMMENDED",
+        "structure": "P1+C1",
+        "totals": {
+          "kcal": 300.49,
+          "proteina": 20.84,
+          "carbs": 46.7,
+          "grasas": 3.37
+        },
+        "difference": {
+          "kcal": 0.49,
+          "proteina": 0.84,
+          "carbs": 11.7,
+          "grasas": -4.63
+        },
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b646776e8",
+            "name": "Claras de huevos",
+            "role": "P1",
+            "quantity": 4,
+            "unit": "Unid",
+            "kcal": 62.8,
+            "proteina": 14,
+            "carbs": 0.8,
+            "grasas": 0.4,
+            "image": {
+              "exactaKey": "clarasdehuevos",
+              "genericaKey": "clarashuevos",
+              "urlExacta": "/images/foods/clarasdehuevos.jpeg",
+              "urlGenerica": "/images/foods/clarashuevos.jpeg",
+              "url": "/images/foods/clarashuevos.jpeg",
+              "alt": "Claras de huevos",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/clarashuevos.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646777df",
+            "name": "Pan",
+            "role": "C1",
+            "quantity": 90,
+            "unit": "Grs",
+            "kcal": 237.69,
+            "proteina": 6.84,
+            "carbs": 45.9,
+            "grasas": 2.97,
+            "image": {
+              "exactaKey": "pan",
+              "genericaKey": "pan",
+              "urlExacta": "/images/foods/pan.jpeg",
+              "urlGenerica": "/images/foods/pan.jpeg",
+              "url": "/images/foods/pan.jpeg",
+              "alt": "Pan",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/pan.jpeg"
+          }
+        ]
+      }
+    }
+  ]
+}

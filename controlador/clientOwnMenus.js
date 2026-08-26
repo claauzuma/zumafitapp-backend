@@ -61,6 +61,14 @@ class ControladorClientOwnMenus {
     }
   };
 
+  generateAutomaticMenuMeal = async (req, res) => {
+    try {
+      return res.json(await this.servicio.generateAutomaticMenuMeal(req.user, req.body || {}));
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
   getEquivalentMealGenerationSettings = async (req, res) => {
     try {
       return res.json(await this.servicio.getEquivalentMealGenerationSettings(req.user, req.query || {}));

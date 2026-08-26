@@ -4,6 +4,7 @@ import menu, {
   TRACKING_OPTIMIZATION_POLICY,
 } from "../menu2.js";
 import { normalizeFoodGenerationForRead } from "./foodGenerationMetadata.js";
+import { MEAL_NUTRITION_POLICY } from "./mealNutritionPolicy.js";
 
 // Un Symbol no puede llegar desde JSON. El modo calorie_fill se habilita
 // solamente cuando el servicio especifico de Tracking entrega este contexto.
@@ -13,6 +14,12 @@ export const TRACKING_QUANTITY_INTERNAL_CONTEXT = Symbol("tracking_quantity_inte
 // precisión y su ranking; una diferencia visual de hasta 0,5 g no se anuncia
 // como déficit proteico al usuario.
 const TRACKING_PROTEIN_MESSAGE_EPSILON = 0.5;
+
+// Diagnóstico opt-in para analizar una generación puntual sin llenar los
+// logs normales del servidor. Activar con ZUMAFIT_GENERATION_DEBUG=1.
+const generationDebug = (...values) => {
+  if (process.env.ZUMAFIT_GENERATION_DEBUG === "1") console.log(...values);
+};
 
 const round = (value, digits = 2) => {
   const n = Number(value);
@@ -199,19 +206,57 @@ function foodUnit(food = {}) {
 
 function constraintFromShape(food = {}, kind = "max", label = "payload") {
   const fields = QUANTITY_CONSTRAINT_FIELDS[kind] || [];
-  for (const [shape, shapeLabel] of [[food, label], [food?.raw, `${label}.raw`]]) {
+
+  for (const [shape, shapeLabel] of [
+    [food, label],
+    [food?.raw, `${label}.raw`],
+  ]) {
     if (!shape || typeof shape !== "object") continue;
-    for (const field of fields) {
-      if (!hasValue(shape[field])) continue;
-      const value = toNumber(shape[field], 0);
-      if (value > 0) return { value, source: `${shapeLabel}.${field}` };
-    }
-    const generationValue = shape?.generation?.portionRule?.[kind];
+
+    /*
+     * =====================================================
+     * REGLA NUEVA - TIENE PRIORIDAD
+     * =====================================================
+     *
+     * generation.portionRule es la fuente oficial
+     * para generación automática.
+     */
+    const generationValue =
+      shape?.generation?.portionRule?.[kind];
+
     if (hasValue(generationValue)) {
       const value = toNumber(generationValue, 0);
-      if (value > 0) return { value, source: `${shapeLabel}.generation.portionRule.${kind}` };
+
+      if (value > 0) {
+        return {
+          value,
+          source: `${shapeLabel}.generation.portionRule.${kind}`,
+        };
+      }
+    }
+
+    /*
+     * =====================================================
+     * LEGACY - SOLO FALLBACK
+     * =====================================================
+     *
+     * Se conservan por compatibilidad con alimentos
+     * que todavía no tengan generation.portionRule.
+     */
+    for (const field of fields) {
+      if (!hasValue(shape[field])) continue;
+
+      const value = toNumber(shape[field], 0);
+
+      if (value > 0) {
+        return {
+          value,
+          source: `${shapeLabel}.${field}`,
+        };
+      }
     }
   }
+
   return null;
 }
 
@@ -791,26 +836,142 @@ class ServicioAlimentos {
         : payload.options?.trackingOptimizationPolicy === TRACKING_OPTIMIZATION_POLICY
           ? TRACKING_OPTIMIZATION_POLICY
           : undefined;
+    const mealNutritionPolicy = trackingContextAllowed &&
+      internalContext?.mealNutritionPolicy === MEAL_NUTRITION_POLICY
+      ? MEAL_NUTRITION_POLICY
+      : undefined;
     const internalCandidateRoles = trackingContextAllowed && Array.isArray(internalContext?.candidateRoles)
       ? internalContext.candidateRoles.filter((role) => ["proteicos", "carbohidratos", "grasas"].includes(role)).slice(0, 3)
       : [];
+
     const fixedFoods = Array.isArray(payload.fixedFoods) ? payload.fixedFoods : [];
     const pendingFoods = Array.isArray(payload.pendingFoods) ? payload.pendingFoods : [];
     const explicitCandidates = Array.isArray(payload.candidateFoods) ? payload.candidateFoods : [];
     const allFoods = await this.model.obtenerAlimentos();
+    generationDebug("\n========================================");
+generationDebug("🍽️ ZUMAFIT - GENERACIÓN DE COMIDA");
+generationDebug("========================================");
 
-    if (menuGenerationPolicy) {
-      const invalidSelected = pendingFoods.find((food) => {
-        const catalogFood = catalogFoodFor(food, allFoods);
-        const generation = normalizeFoodGenerationForRead(catalogFood?.generation);
-        return !catalogFood || generation.mode !== "GENERIC" || generation.mealTypes[generationMealType] !== true;
-      });
-      if (invalidSelected) {
-        const error = new Error(`El alimento ${invalidSelected.name || invalidSelected.nombre || "seleccionado"} no esta habilitado para esta generacion automatica.`);
-        error.code = "MENU_NON_GENERIC_FOOD";
-        throw error;
+generationDebug("Tipo de comida:", generationMealType);
+
+generationDebug("Target:", {
+  kcal: target.calorias,
+  proteina: target.proteina,
+  carbs: target.carbohidratos,
+  grasas: target.grasas,
+});
+
+generationDebug(
+  "Alimentos FIJOS:",
+  fixedFoods.map((food) => ({
+    nombre: food.name || food.nombre,
+    cantidad: food.quantity || food.cantidad,
+  }))
+);
+
+generationDebug(
+  "Alimentos seleccionados / AUTO:",
+  pendingFoods.map((food) => ({
+    nombre: food.name || food.nombre,
+    cantidad: food.quantity || food.cantidad,
+  }))
+);
+
+generationDebug(
+  "Candidatos recibidos:",
+  explicitCandidates.map(
+    (food) => food.name || food.nombre
+  )
+);
+
+if (menuGenerationPolicy) {
+  /*
+   * =====================================================
+   * ALIMENTOS ELEGIDOS EXPLÍCITAMENTE POR EL USUARIO
+   * =====================================================
+   *
+   * GENERIC:
+   *   puede ser elegido automáticamente por ZumaFit.
+   *
+   * EXPLICIT_ONLY:
+   *   no puede ser elegido solo por ZumaFit,
+   *   pero SÍ puede usarse si el usuario lo eligió.
+   *
+   * DISABLED:
+   *   no debe utilizarse ni siquiera explícitamente.
+   *
+   * Además, la elección explícita del usuario tiene
+   * prioridad sobre generation.mealTypes.
+   *
+   * Ej:
+   * Pan blanco -> Desayuno
+   *
+   * puede utilizarse aunque Pan no tenga
+   * mealTypes.breakfast = true.
+   */
+
+  const explicitlySelectedFoods = [
+    ...fixedFoods,
+    ...pendingFoods,
+  ];
+
+  const invalidSelected =
+    explicitlySelectedFoods.find((food) => {
+      const catalogFood =
+        catalogFoodFor(food, allFoods);
+
+      /*
+       * El alimento tiene que seguir existiendo
+       * en nuestro catálogo.
+       */
+      if (!catalogFood) {
+        return true;
       }
-    }
+
+      const generation =
+        normalizeFoodGenerationForRead(
+          catalogFood?.generation
+        );
+
+      /*
+       * Sólo DISABLED queda prohibido.
+       *
+       * GENERIC y EXPLICIT_ONLY son válidos
+       * cuando el usuario los eligió.
+       */
+      return generation.mode === "DISABLED";
+    });
+
+  if (invalidSelected) {
+    const catalogFood =
+      catalogFoodFor(
+        invalidSelected,
+        allFoods
+      );
+
+    const generation =
+      normalizeFoodGenerationForRead(
+        catalogFood?.generation
+      );
+
+    const foodName =
+      invalidSelected.name ||
+      invalidSelected.nombre ||
+      "seleccionado";
+
+    const error = new Error(
+      !catalogFood
+        ? `El alimento ${foodName} ya no está disponible en el catálogo.`
+        : generation.mode === "DISABLED"
+          ? `El alimento ${foodName} está deshabilitado y no puede utilizarse.`
+          : `No se pudo utilizar el alimento ${foodName}.`
+    );
+
+    error.code = "MENU_NON_GENERIC_FOOD";
+
+    throw error;
+  }
+}
 
     const normalizedFixed = fixedFoods.map((food) =>
       normalizeFoodLike(food, "", catalogFoodFor(food, allFoods))
@@ -857,6 +1018,20 @@ class ServicioAlimentos {
           })
         : rawCandidates;
       const candidates = pickCandidates(candidatesSource, selectedNames, Array.from(new Set(neededRoles)));
+
+generationDebug(
+  "🔎 Roles que faltaban:",
+  Array.from(new Set(neededRoles))
+);
+
+generationDebug(
+  "🤖 Candidatos agregados automáticamente:",
+  candidates.map((food) => ({
+    nombre: food.nombre || food.name,
+    rol: inferMacroRole(food),
+  }))
+);
+
       for (const candidate of candidates) {
         const role = inferMacroRole(candidate);
         alimentosBase.push(candidate);
@@ -877,6 +1052,53 @@ class ServicioAlimentos {
       // menu2 nunca debe decidir cuál de dos versiones rivales gana.
       ? catalogWithUniqueExactIdentities(allFoods, alimentosBase)
       : [...allFoods, ...alimentosBase];
+
+generationDebug("🧮 ALIMENTOS QUE ENTRAN AL MOTOR");
+
+generationDebug(
+  "Proteicos:",
+  groups.proteicos.map((food) => ({
+    nombre: food.nombre,
+
+    min: food.minGramos,
+    minSource: food.minSource,
+
+    max: food.maxGramos,
+    maxSource: food.maxSource,
+
+    step: food.stepGramos,
+    stepSource: food.stepSource,
+
+    fixed: food.fixedQuantity,
+    source: food.sourceKind,
+  }))
+);
+
+
+
+generationDebug(
+  "Carbohidratos:",
+  groups.carbohidratos.map((food) => ({
+    nombre: food.nombre,
+    min: food.minGramos,
+    max: food.maxGramos,
+    fixed: food.fixedQuantity,
+    source: food.sourceKind,
+  }))
+);
+
+generationDebug(
+  "Grasas:",
+  groups.grasas.map((food) => ({
+    nombre: food.nombre,
+    min: food.minGramos,
+    max: food.maxGramos,
+    fixed: food.fixedQuantity,
+    source: food.sourceKind,
+  }))
+);
+
+
     const result = menu.generarMenu({
       modo: mode,
       objetivo: target,
@@ -895,11 +1117,54 @@ class ServicioAlimentos {
         trackingOptimizationPolicy === TRACKING_OPTIMIZATION_POLICY &&
         payload.options?.trackingPriority === true,
       trackingOptimizationPolicy,
+      ...(mealNutritionPolicy ? { mealNutritionPolicy } : {}),
       // Sólo puede habilitarlo un contexto interno autorizado. No se confía en el payload HTTP.
       ...(enforceQuantityConstraints ? { enforceQuantityConstraints: true } : {}),
       generarVariante: payload.options?.generarVariante === true || payload.options?.generateVariant === true,
       variantSeed: payload.options?.variantSeed,
     });
+generationDebug("✅ RESULTADO DEL MOTOR");
+
+generationDebug("Status:", result.status);
+
+generationDebug("Totales:", result.totales);
+
+generationDebug("Diferencia:", result.diferencia);
+
+generationDebug(
+  "Proteicos finales:",
+  (result.proteicos || []).map((food) => ({
+    nombre: food.nombre,
+    cantidad: food.cantidad,
+    kcal: food.calorias,
+    proteina: food.proteina,
+  }))
+);
+
+generationDebug(
+  "Carbos finales:",
+  (result.carbohidratos || []).map((food) => ({
+    nombre: food.nombre,
+    cantidad: food.cantidad,
+    kcal: food.calorias,
+    proteina: food.proteina,
+  }))
+);
+
+generationDebug(
+  "Grasas finales:",
+  (result.grasas || []).map((food) => ({
+    nombre: food.nombre,
+    cantidad: food.cantidad,
+    kcal: food.calorias,
+    proteina: food.proteina,
+  }))
+);
+
+generationDebug("========================================\n");
+
+
+
 
     const sourceFoods = enforceQuantityConstraints
       ? engineFoods

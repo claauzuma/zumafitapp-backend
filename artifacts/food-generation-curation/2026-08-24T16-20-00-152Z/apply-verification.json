@@ -1,0 +1,76 @@
+{
+  "appliedAt": "2026-08-24T16:20:35.904Z",
+  "totalBefore": 574,
+  "totalAfter": 574,
+  "modified": 187,
+  "mismatches": [],
+  "modes": {
+    "GENERIC": 191,
+    "EXPLICIT_ONLY": 383,
+    "DISABLED": 0
+  },
+  "coverage": {
+    "breakfast": {
+      "P1": 4,
+      "P2": 43,
+      "C1": 26,
+      "C2": 26,
+      "V": 0,
+      "F": 40,
+      "G": 24
+    },
+    "lunch": {
+      "P1": 27,
+      "P2": 2,
+      "C1": 24,
+      "C2": 0,
+      "V": 12,
+      "F": 40,
+      "G": 15
+    },
+    "snack": {
+      "P1": 4,
+      "P2": 43,
+      "C1": 26,
+      "C2": 26,
+      "V": 0,
+      "F": 40,
+      "G": 24
+    },
+    "dinner": {
+      "P1": 27,
+      "P2": 2,
+      "C1": 24,
+      "C2": 0,
+      "V": 12,
+      "F": 40,
+      "G": 15
+    },
+    "extraSnack": {
+      "P1": 4,
+      "P2": 43,
+      "C1": 26,
+      "C2": 26,
+      "V": 0,
+      "F": 40,
+      "G": 23
+    }
+  },
+  "roles": {
+    "P1": 29,
+    "P2": 43,
+    "C1": 50,
+    "C2": 26,
+    "V": 12,
+    "F": 40,
+    "G": 28
+  },
+  "mealTypes": {
+    "breakfast": 123,
+    "lunch": 118,
+    "snack": 123,
+    "dinner": 118,
+    "extraSnack": 122
+  },
+  "genericWithoutCompletePortionRule": 189
+}

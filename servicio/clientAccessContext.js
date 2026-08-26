@@ -12,6 +12,7 @@ import { normalizeCoachPlanCode } from "./coachPlans.js";
 import { recordAccessAuditEvent } from "./accessAuditEvents.js";
 import { getRuntimeClientPlanSetting } from "./clientPlanSettings.js";
 import { resolveClientMenuAutonomyPermissions } from "./clientMenuAutonomy.js";
+import { MEAL_NUTRITION_POLICY } from "./mealNutritionPolicy.js";
 
 const MS_DAY = 24 * 60 * 60 * 1000;
 
@@ -518,7 +519,7 @@ function buildFeatureAvailability({
     : futureFeature(autoCoachMode);
   const automaticAvailability = isFree
     ? blockedFeature("plan_upgrade_required")
-    : includedFeature("tracking_calorie_fill_v1");
+    : includedFeature(MEAL_NUTRITION_POLICY);
   const canAutoCompleteRemainingMeals = hasCoach
     ? effectiveService?.nutrition?.autoCompleteRemainingMeals === true
     : planConfig?.nutrition?.autoCompleteRemainingMeals === true;

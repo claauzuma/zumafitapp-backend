@@ -95,6 +95,13 @@ class RouterClienteMenus {
       denyWriteWhenReadOnlyImpersonation,
       this.controladorClientOwnMenus.authorizeAutomaticGeneration
     );
+    this.router.post(
+      "/me/menus/automatic-meal/generate",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientOwnMenus.generateAutomaticMenuMeal
+    );
     this.router.get(
       "/me/menus/equivalent-generation-settings",
       authMiddleware,

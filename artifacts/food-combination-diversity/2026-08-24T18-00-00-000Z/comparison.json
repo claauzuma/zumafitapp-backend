@@ -1,0 +1,1486 @@
+{
+  "generatedAt": "2026-08-24T16:53:15.883Z",
+  "inputs": {
+    "candidateBefore": "combination-probe-baseline.json",
+    "candidateAfter": "combination-probe-after.json",
+    "dailyBefore": "real-generation-smoke-diversity-baseline.json",
+    "dailyAfter": "real-generation-smoke-diversity-after.json"
+  },
+  "safety": {
+    "totalFoods": 574,
+    "baselineGenerationUnchanged": true,
+    "afterGenerationUnchanged": true
+  },
+  "candidates": [
+    {
+      "mealType": "breakfast",
+      "before": {
+        "candidateCount": 32,
+        "baseOnly": 32,
+        "P2": 0,
+        "C2": 0,
+        "V": 0,
+        "F": 0,
+        "G": 0,
+        "uniqueStructures": 1,
+        "candidatesGeneratedBeforeLimit": 1008,
+        "candidateGenerationTiming": {
+          "samples": 10,
+          "averageMs": 329.74,
+          "p50Ms": 313.11,
+          "p95Ms": 388.43,
+          "maxMs": 397.08
+        }
+      },
+      "after": {
+        "candidateCount": 32,
+        "baseOnly": 25,
+        "P2": 2,
+        "C2": 4,
+        "V": 0,
+        "F": 4,
+        "G": 3,
+        "uniqueStructures": 8,
+        "candidatesGeneratedBeforeLimit": 1008,
+        "candidateGenerationTiming": {
+          "samples": 10,
+          "averageMs": 349.02,
+          "p50Ms": 346.49,
+          "p95Ms": 377.81,
+          "maxMs": 488.77
+        },
+        "structures": {
+          "P1+C1": 25,
+          "P1+C1+P2": 1,
+          "P1+C1+C2": 1,
+          "P1+C1+F": 1,
+          "P1+C1+G": 1,
+          "P1+C1+C2+F": 1,
+          "P1+C1+C2+F+G": 1,
+          "P1+C1+P2+C2+F+G": 1
+        }
+      }
+    },
+    {
+      "mealType": "lunch",
+      "before": {
+        "candidateCount": 32,
+        "baseOnly": 32,
+        "P2": 0,
+        "C2": 0,
+        "V": 0,
+        "F": 0,
+        "G": 0,
+        "uniqueStructures": 1,
+        "candidatesGeneratedBeforeLimit": 1024,
+        "candidateGenerationTiming": {
+          "samples": 10,
+          "averageMs": 311.82,
+          "p50Ms": 314.33,
+          "p95Ms": 325.17,
+          "maxMs": 385.8
+        }
+      },
+      "after": {
+        "candidateCount": 32,
+        "baseOnly": 25,
+        "P2": 3,
+        "C2": 0,
+        "V": 2,
+        "F": 4,
+        "G": 4,
+        "uniqueStructures": 8,
+        "candidatesGeneratedBeforeLimit": 1024,
+        "candidateGenerationTiming": {
+          "samples": 10,
+          "averageMs": 322.36,
+          "p50Ms": 322.5,
+          "p95Ms": 345.39,
+          "maxMs": 349.04
+        },
+        "structures": {
+          "P1+C1": 25,
+          "P1+C1+P2": 1,
+          "P1+C1+V": 1,
+          "P1+C1+F": 1,
+          "P1+C1+G": 1,
+          "P1+C1+F+G": 1,
+          "P1+C1+P2+F+G": 1,
+          "P1+C1+P2+V+F+G": 1
+        }
+      }
+    },
+    {
+      "mealType": "snack",
+      "before": {
+        "candidateCount": 32,
+        "baseOnly": 32,
+        "P2": 0,
+        "C2": 0,
+        "V": 0,
+        "F": 0,
+        "G": 0,
+        "uniqueStructures": 1,
+        "candidatesGeneratedBeforeLimit": 1008,
+        "candidateGenerationTiming": {
+          "samples": 10,
+          "averageMs": 318.73,
+          "p50Ms": 307.24,
+          "p95Ms": 335.47,
+          "maxMs": 370.64
+        }
+      },
+      "after": {
+        "candidateCount": 32,
+        "baseOnly": 25,
+        "P2": 2,
+        "C2": 4,
+        "V": 0,
+        "F": 4,
+        "G": 3,
+        "uniqueStructures": 8,
+        "candidatesGeneratedBeforeLimit": 1008,
+        "candidateGenerationTiming": {
+          "samples": 10,
+          "averageMs": 354.09,
+          "p50Ms": 323.02,
+          "p95Ms": 402.48,
+          "maxMs": 452.46
+        },
+        "structures": {
+          "P1+C1": 25,
+          "P1+C1+P2": 1,
+          "P1+C1+C2": 1,
+          "P1+C1+F": 1,
+          "P1+C1+G": 1,
+          "P1+C1+C2+F": 1,
+          "P1+C1+C2+F+G": 1,
+          "P1+C1+P2+C2+F+G": 1
+        }
+      }
+    },
+    {
+      "mealType": "dinner",
+      "before": {
+        "candidateCount": 32,
+        "baseOnly": 32,
+        "P2": 0,
+        "C2": 0,
+        "V": 0,
+        "F": 0,
+        "G": 0,
+        "uniqueStructures": 1,
+        "candidatesGeneratedBeforeLimit": 1024,
+        "candidateGenerationTiming": {
+          "samples": 10,
+          "averageMs": 299.9,
+          "p50Ms": 292.63,
+          "p95Ms": 328.66,
+          "maxMs": 331.9
+        }
+      },
+      "after": {
+        "candidateCount": 32,
+        "baseOnly": 25,
+        "P2": 3,
+        "C2": 0,
+        "V": 2,
+        "F": 4,
+        "G": 4,
+        "uniqueStructures": 8,
+        "candidatesGeneratedBeforeLimit": 1024,
+        "candidateGenerationTiming": {
+          "samples": 10,
+          "averageMs": 319.47,
+          "p50Ms": 308.54,
+          "p95Ms": 344.83,
+          "maxMs": 368.62
+        },
+        "structures": {
+          "P1+C1": 25,
+          "P1+C1+P2": 1,
+          "P1+C1+V": 1,
+          "P1+C1+F": 1,
+          "P1+C1+G": 1,
+          "P1+C1+F+G": 1,
+          "P1+C1+P2+F+G": 1,
+          "P1+C1+P2+V+F+G": 1
+        }
+      }
+    },
+    {
+      "mealType": "extraSnack",
+      "before": {
+        "candidateCount": 32,
+        "baseOnly": 32,
+        "P2": 0,
+        "C2": 0,
+        "V": 0,
+        "F": 0,
+        "G": 0,
+        "uniqueStructures": 1,
+        "candidatesGeneratedBeforeLimit": 1008,
+        "candidateGenerationTiming": {
+          "samples": 10,
+          "averageMs": 327.54,
+          "p50Ms": 320.28,
+          "p95Ms": 337.93,
+          "maxMs": 426.62
+        }
+      },
+      "after": {
+        "candidateCount": 32,
+        "baseOnly": 25,
+        "P2": 2,
+        "C2": 4,
+        "V": 0,
+        "F": 4,
+        "G": 3,
+        "uniqueStructures": 8,
+        "candidatesGeneratedBeforeLimit": 1008,
+        "candidateGenerationTiming": {
+          "samples": 10,
+          "averageMs": 325.48,
+          "p50Ms": 319.44,
+          "p95Ms": 354.21,
+          "maxMs": 362.43
+        },
+        "structures": {
+          "P1+C1": 25,
+          "P1+C1+P2": 1,
+          "P1+C1+C2": 1,
+          "P1+C1+F": 1,
+          "P1+C1+G": 1,
+          "P1+C1+C2+F": 1,
+          "P1+C1+C2+F+G": 1,
+          "P1+C1+P2+C2+F+G": 1
+        }
+      }
+    }
+  ],
+  "individualSolver": [
+    {
+      "mealType": "breakfast",
+      "before": {
+        "target": {
+          "kcal": 720,
+          "proteina": 52,
+          "carbs": 84,
+          "grasas": 20
+        },
+        "status": "NO_SOLUTION",
+        "recommended": false,
+        "selectedStructure": null,
+        "candidateExecutions": 96,
+        "physicalSolutions": 96,
+        "recommendedSolutions": 0,
+        "solverRoundsMs": 909,
+        "totalElapsedMs": 1583.01
+      },
+      "after": {
+        "target": {
+          "kcal": 720,
+          "proteina": 52,
+          "carbs": 84,
+          "grasas": 20
+        },
+        "status": "SUCCESS",
+        "recommended": true,
+        "selectedStructure": "P1+C1+P2",
+        "candidateExecutions": 32,
+        "physicalSolutions": 32,
+        "recommendedSolutions": 2,
+        "solverRoundsMs": 413,
+        "totalElapsedMs": 1010.84
+      }
+    },
+    {
+      "mealType": "lunch",
+      "before": {
+        "target": {
+          "kcal": 620,
+          "proteina": 42,
+          "carbs": 72,
+          "grasas": 18
+        },
+        "status": "SUCCESS",
+        "recommended": true,
+        "selectedStructure": "P1+C1",
+        "candidateExecutions": 32,
+        "physicalSolutions": 32,
+        "recommendedSolutions": 21,
+        "solverRoundsMs": 303,
+        "totalElapsedMs": 1124.98
+      },
+      "after": {
+        "target": {
+          "kcal": 620,
+          "proteina": 42,
+          "carbs": 72,
+          "grasas": 18
+        },
+        "status": "SUCCESS",
+        "recommended": true,
+        "selectedStructure": "P1+C1+P2+F+G",
+        "candidateExecutions": 32,
+        "physicalSolutions": 32,
+        "recommendedSolutions": 24,
+        "solverRoundsMs": 315,
+        "totalElapsedMs": 1004.96
+      }
+    },
+    {
+      "mealType": "snack",
+      "before": {
+        "target": {
+          "kcal": 360,
+          "proteina": 25,
+          "carbs": 42,
+          "grasas": 10
+        },
+        "status": "SUCCESS",
+        "recommended": true,
+        "selectedStructure": "P1+C1",
+        "candidateExecutions": 32,
+        "physicalSolutions": 32,
+        "recommendedSolutions": 13,
+        "solverRoundsMs": 283,
+        "totalElapsedMs": 1101.81
+      },
+      "after": {
+        "target": {
+          "kcal": 360,
+          "proteina": 25,
+          "carbs": 42,
+          "grasas": 10
+        },
+        "status": "SUCCESS",
+        "recommended": true,
+        "selectedStructure": "P1+C1+P2+C2+F+G",
+        "candidateExecutions": 32,
+        "physicalSolutions": 32,
+        "recommendedSolutions": 18,
+        "solverRoundsMs": 309,
+        "totalElapsedMs": 1011.02
+      }
+    },
+    {
+      "mealType": "dinner",
+      "before": {
+        "target": {
+          "kcal": 620,
+          "proteina": 42,
+          "carbs": 72,
+          "grasas": 18
+        },
+        "status": "SUCCESS",
+        "recommended": true,
+        "selectedStructure": "P1+C1",
+        "candidateExecutions": 32,
+        "physicalSolutions": 32,
+        "recommendedSolutions": 21,
+        "solverRoundsMs": 266,
+        "totalElapsedMs": 949.27
+      },
+      "after": {
+        "target": {
+          "kcal": 620,
+          "proteina": 42,
+          "carbs": 72,
+          "grasas": 18
+        },
+        "status": "SUCCESS",
+        "recommended": true,
+        "selectedStructure": "P1+C1+P2+F+G",
+        "candidateExecutions": 32,
+        "physicalSolutions": 32,
+        "recommendedSolutions": 24,
+        "solverRoundsMs": 299,
+        "totalElapsedMs": 907.86
+      }
+    },
+    {
+      "mealType": "extraSnack",
+      "before": {
+        "target": {
+          "kcal": 300,
+          "proteina": 20,
+          "carbs": 35,
+          "grasas": 8
+        },
+        "status": "SUCCESS",
+        "recommended": true,
+        "selectedStructure": "P1+C1",
+        "candidateExecutions": 32,
+        "physicalSolutions": 32,
+        "recommendedSolutions": 20,
+        "solverRoundsMs": 299,
+        "totalElapsedMs": 1101.34
+      },
+      "after": {
+        "target": {
+          "kcal": 300,
+          "proteina": 20,
+          "carbs": 35,
+          "grasas": 8
+        },
+        "status": "SUCCESS",
+        "recommended": true,
+        "selectedStructure": "P1+C1",
+        "candidateExecutions": 32,
+        "physicalSolutions": 32,
+        "recommendedSolutions": 21,
+        "solverRoundsMs": 290,
+        "totalElapsedMs": 907.6
+      }
+    }
+  ],
+  "dailySuccess": {
+    "before": {
+      "3": {
+        "successful": 1,
+        "total": 5
+      },
+      "4": {
+        "successful": 5,
+        "total": 5
+      },
+      "5": {
+        "successful": 5,
+        "total": 5
+      },
+      "6": {
+        "successful": 5,
+        "total": 5
+      }
+    },
+    "after": {
+      "3": {
+        "successful": 5,
+        "total": 5
+      },
+      "4": {
+        "successful": 5,
+        "total": 5
+      },
+      "5": {
+        "successful": 5,
+        "total": 5
+      },
+      "6": {
+        "successful": 5,
+        "total": 5
+      }
+    }
+  },
+  "nutrition": {
+    "allSuccessful": {
+      "before": {
+        "kcal": {
+          "samples": 16,
+          "averageAbsoluteError": 0.83,
+          "maxAbsoluteError": 1.85
+        },
+        "proteina": {
+          "samples": 16,
+          "averageAbsoluteError": 17.88,
+          "maxAbsoluteError": 36.03
+        },
+        "carbs": {
+          "samples": 16,
+          "averageAbsoluteError": 27.27,
+          "maxAbsoluteError": 76.15
+        },
+        "grasas": {
+          "samples": 16,
+          "averageAbsoluteError": 16.82,
+          "maxAbsoluteError": 37.58
+        }
+      },
+      "after": {
+        "kcal": {
+          "samples": 20,
+          "averageAbsoluteError": 0.46,
+          "maxAbsoluteError": 0.99
+        },
+        "proteina": {
+          "samples": 20,
+          "averageAbsoluteError": 10.05,
+          "maxAbsoluteError": 30.59
+        },
+        "carbs": {
+          "samples": 20,
+          "averageAbsoluteError": 26.19,
+          "maxAbsoluteError": 56.69
+        },
+        "grasas": {
+          "samples": 20,
+          "averageAbsoluteError": 13.77,
+          "maxAbsoluteError": 26.38
+        }
+      }
+    },
+    "paired": {
+      "before": {
+        "kcal": {
+          "samples": 16,
+          "averageAbsoluteError": 0.83,
+          "maxAbsoluteError": 1.85
+        },
+        "proteina": {
+          "samples": 16,
+          "averageAbsoluteError": 17.88,
+          "maxAbsoluteError": 36.03
+        },
+        "carbs": {
+          "samples": 16,
+          "averageAbsoluteError": 27.27,
+          "maxAbsoluteError": 76.15
+        },
+        "grasas": {
+          "samples": 16,
+          "averageAbsoluteError": 16.82,
+          "maxAbsoluteError": 37.58
+        }
+      },
+      "after": {
+        "kcal": {
+          "samples": 16,
+          "averageAbsoluteError": 0.48,
+          "maxAbsoluteError": 0.99
+        },
+        "proteina": {
+          "samples": 16,
+          "averageAbsoluteError": 8.92,
+          "maxAbsoluteError": 30.59
+        },
+        "carbs": {
+          "samples": 16,
+          "averageAbsoluteError": 26.25,
+          "maxAbsoluteError": 56.69
+        },
+        "grasas": {
+          "samples": 16,
+          "averageAbsoluteError": 13.75,
+          "maxAbsoluteError": 26.38
+        }
+      }
+    }
+  },
+  "performance": {
+    "before": {
+      "allDayRuns": {
+        "samples": 20,
+        "averageMs": 7321.24,
+        "p50Ms": 6541.14,
+        "p95Ms": 13468.31,
+        "maxMs": 15306.78
+      },
+      "successfulDayRuns": {
+        "samples": 16,
+        "averageMs": 8627.34,
+        "p50Ms": 7950.25,
+        "p95Ms": 13468.31,
+        "maxMs": 15306.78
+      },
+      "totalMealGeneration": {
+        "samples": 78,
+        "averageMs": 1769.35,
+        "p50Ms": 1609,
+        "p95Ms": 2508,
+        "maxMs": 4956
+      },
+      "solverRounds": {
+        "samples": 78,
+        "averageMs": 275.86,
+        "p50Ms": 273,
+        "p95Ms": 339,
+        "maxMs": 408
+      },
+      "solverCandidateExecutions": {
+        "samples": 78,
+        "average": 32,
+        "p50": 32,
+        "p95": 32,
+        "max": 32
+      }
+    },
+    "after": {
+      "allDayRuns": {
+        "samples": 20,
+        "averageMs": 5787.18,
+        "p50Ms": 4355.88,
+        "p95Ms": 9497.14,
+        "maxMs": 11716.08
+      },
+      "successfulDayRuns": {
+        "samples": 20,
+        "averageMs": 5787.18,
+        "p50Ms": 4355.88,
+        "p95Ms": 9497.14,
+        "maxMs": 11716.08
+      },
+      "totalMealGeneration": {
+        "samples": 90,
+        "averageMs": 1285.6,
+        "p50Ms": 1200,
+        "p95Ms": 1708,
+        "maxMs": 3235
+      },
+      "solverRounds": {
+        "samples": 90,
+        "averageMs": 289.18,
+        "p50Ms": 287,
+        "p95Ms": 343,
+        "maxMs": 390
+      },
+      "solverCandidateExecutions": {
+        "samples": 90,
+        "average": 32,
+        "p50": 32,
+        "p95": 32,
+        "max": 32
+      }
+    }
+  },
+  "baselineFailures": [
+    {
+      "requestedMealCount": 3,
+      "run": 1,
+      "seed": "curation-real-3-1",
+      "status": "ERROR",
+      "code": "MEAL_TARGET_NOT_REACHABLE_WITH_PORTION_RULES",
+      "error": "No encontramos una combinación válida para desayuno.",
+      "details": {
+        "structuresEvaluated": 32,
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 96,
+        "quantitySolutionsFound": 96,
+        "recommendedSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 431
+          },
+          {
+            "level": "RELAX_STEP",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 273
+          },
+          {
+            "level": "RELAX_MIN",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 282
+          }
+        ],
+        "elapsedMs": 2189
+      },
+      "elapsedMs": 2192.56
+    },
+    {
+      "requestedMealCount": 3,
+      "run": 3,
+      "seed": "curation-real-3-3",
+      "status": "ERROR",
+      "code": "MEAL_TARGET_NOT_REACHABLE_WITH_PORTION_RULES",
+      "error": "No encontramos una combinación válida para desayuno.",
+      "details": {
+        "structuresEvaluated": 32,
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 96,
+        "quantitySolutionsFound": 96,
+        "recommendedSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 277
+          },
+          {
+            "level": "RELAX_STEP",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 267
+          },
+          {
+            "level": "RELAX_MIN",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 281
+          }
+        ],
+        "elapsedMs": 2363
+      },
+      "elapsedMs": 2363.88
+    },
+    {
+      "requestedMealCount": 3,
+      "run": 4,
+      "seed": "curation-real-3-4",
+      "status": "ERROR",
+      "code": "MEAL_TARGET_NOT_REACHABLE_WITH_PORTION_RULES",
+      "error": "No encontramos una combinación válida para desayuno.",
+      "details": {
+        "structuresEvaluated": 32,
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 96,
+        "quantitySolutionsFound": 96,
+        "recommendedSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 270
+          },
+          {
+            "level": "RELAX_STEP",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 258
+          },
+          {
+            "level": "RELAX_MIN",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 248
+          }
+        ],
+        "elapsedMs": 2049
+      },
+      "elapsedMs": 2050.1
+    },
+    {
+      "requestedMealCount": 3,
+      "run": 5,
+      "seed": "curation-real-3-5",
+      "status": "ERROR",
+      "code": "MEAL_TARGET_NOT_REACHABLE_WITH_PORTION_RULES",
+      "error": "No encontramos una combinación válida para desayuno.",
+      "details": {
+        "structuresEvaluated": 32,
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 96,
+        "quantitySolutionsFound": 96,
+        "recommendedSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 265
+          },
+          {
+            "level": "RELAX_STEP",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 256
+          },
+          {
+            "level": "RELAX_MIN",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 265
+          }
+        ],
+        "elapsedMs": 1780
+      },
+      "elapsedMs": 1780.84
+    }
+  ],
+  "afterFailures": [],
+  "examples": [
+    {
+      "seed": "curation-real-3-1",
+      "type": "desayuno",
+      "target": {
+        "kcal": 711.31,
+        "proteina": 49.86,
+        "carbs": 83.1,
+        "grasas": 19.94
+      },
+      "actual": {
+        "kcal": 710.3,
+        "proteina": 48.8,
+        "carbs": 63.300000000000004,
+        "grasas": 29.1
+      },
+      "structure": "P1+C1+P2",
+      "relaxation": {
+        "level": "STRICT",
+        "portionRulesRelaxed": false
+      },
+      "solverMeta": {
+        "structuresEvaluated": 32,
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "curation-real-3-1:0:desayuno",
+        "variantPoolSize": 2,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 2,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 2,
+            "elapsedMs": 343
+          }
+        ],
+        "elapsedMs": 1084
+      },
+      "foods": [
+        {
+          "id": "6619bfeb147cd50b646776a6",
+          "name": "Avena instantanea",
+          "quantity": 110,
+          "unit": "Grs",
+          "kcal": 387.2,
+          "protein": 14.3,
+          "carbs": 62.7,
+          "fat": 8.8
+        },
+        {
+          "id": "6619bfeb147cd50b646776e8",
+          "name": "Claras de huevos",
+          "quantity": 3,
+          "unit": "Unid",
+          "kcal": 47.1,
+          "protein": 10.5,
+          "carbs": 0.6,
+          "fat": 0.3
+        },
+        {
+          "id": "6619bfeb147cd50b64677755",
+          "name": "Huevos",
+          "quantity": 4,
+          "unit": "Unid",
+          "kcal": 276,
+          "protein": 24,
+          "carbs": 0,
+          "fat": 20
+        }
+      ],
+      "culinaryWarnings": []
+    },
+    {
+      "seed": "curation-real-3-1",
+      "type": "almuerzo",
+      "target": {
+        "kcal": 783.66,
+        "proteina": 55.47,
+        "carbs": 102.34,
+        "grasas": 16.94
+      },
+      "actual": {
+        "kcal": 783.37,
+        "proteina": 57.63,
+        "carbs": 88.2,
+        "grasas": 22.23
+      },
+      "structure": "P1+C1+P2+V+F+G",
+      "relaxation": {
+        "level": "STRICT",
+        "portionRulesRelaxed": false
+      },
+      "solverMeta": {
+        "structuresEvaluated": 32,
+        "mealType": "lunch",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "curation-real-3-1:1:almuerzo",
+        "variantPoolSize": 8,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 15,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 15,
+            "elapsedMs": 328
+          }
+        ],
+        "elapsedMs": 901
+      },
+      "foods": [
+        {
+          "id": "6619bfeb147cd50b64677676",
+          "name": "Aceite de coco",
+          "quantity": 20,
+          "unit": "Grs",
+          "kcal": 179.82,
+          "protein": 0,
+          "carbs": 0,
+          "fat": 19.98
+        },
+        {
+          "id": "6619bfeb147cd50b64677698",
+          "name": "Anana",
+          "quantity": 80,
+          "unit": "Grs",
+          "kcal": 40.8,
+          "protein": 0.4,
+          "carbs": 8,
+          "fat": 0.8
+        },
+        {
+          "id": "6619bfeb147cd50b6467769c",
+          "name": "Arroz",
+          "quantity": 90,
+          "unit": "Grs",
+          "kcal": 304.65,
+          "protein": 7.2,
+          "carbs": 67.95,
+          "fat": 0.45
+        },
+        {
+          "id": "6619bfeb147cd50b646776a4",
+          "name": "Atun en lomitos al natural",
+          "quantity": 1,
+          "unit": "Pote",
+          "kcal": 120,
+          "protein": 30,
+          "carbs": 0,
+          "fat": 0
+        },
+        {
+          "id": "6619bfeb147cd50b646776b3",
+          "name": "Berenjena",
+          "quantity": 250,
+          "unit": "Grs",
+          "kcal": 59.6,
+          "protein": 2.53,
+          "carbs": 11.25,
+          "fat": 0.5
+        },
+        {
+          "id": "6619bfeb147cd50b646776e8",
+          "name": "Claras de huevos",
+          "quantity": 5,
+          "unit": "Unid",
+          "kcal": 78.5,
+          "protein": 17.5,
+          "carbs": 1,
+          "fat": 0.5
+        }
+      ],
+      "culinaryWarnings": []
+    },
+    {
+      "seed": "curation-real-4-1",
+      "type": "merienda",
+      "target": {
+        "kcal": 596.14,
+        "proteina": 37.4,
+        "carbs": 64.5,
+        "grasas": 20.95
+      },
+      "actual": {
+        "kcal": 596.04,
+        "proteina": 39.06,
+        "carbs": 82.16000000000001,
+        "grasas": 12.359999999999998
+      },
+      "structure": "P1+C1+C2+F+G",
+      "relaxation": {
+        "level": "STRICT",
+        "portionRulesRelaxed": false
+      },
+      "solverMeta": {
+        "structuresEvaluated": 32,
+        "mealType": "snack",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "curation-real-4-1:2:merienda",
+        "variantPoolSize": 8,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 9,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 9,
+            "elapsedMs": 301
+          }
+        ],
+        "elapsedMs": 1119
+      },
+      "foods": [
+        {
+          "id": "6619bfeb147cd50b64677696",
+          "name": "Almendras",
+          "quantity": 3,
+          "unit": "Unid",
+          "kcal": 21.45,
+          "protein": 0.78,
+          "carbs": 0.47,
+          "fat": 1.83
+        },
+        {
+          "id": "6619bfeb147cd50b64677698",
+          "name": "Anana",
+          "quantity": 220,
+          "unit": "Grs",
+          "kcal": 112.2,
+          "protein": 1.1,
+          "carbs": 22,
+          "fat": 2.2
+        },
+        {
+          "id": "6619bfeb147cd50b646776a6",
+          "name": "Avena instantanea",
+          "quantity": 95,
+          "unit": "Grs",
+          "kcal": 334.4,
+          "protein": 12.35,
+          "carbs": 54.15,
+          "fat": 7.6
+        },
+        {
+          "id": "6619bfeb147cd50b646776e8",
+          "name": "Claras de huevos",
+          "quantity": 7,
+          "unit": "Unid",
+          "kcal": 109.9,
+          "protein": 24.5,
+          "carbs": 1.4,
+          "fat": 0.7
+        },
+        {
+          "id": "6619bfeb147cd50b646776ed",
+          "name": "Copos de maiz sin azucar",
+          "quantity": 5,
+          "unit": "Grs",
+          "kcal": 18.09,
+          "protein": 0.33,
+          "carbs": 4.14,
+          "fat": 0.03
+        }
+      ],
+      "culinaryWarnings": []
+    },
+    {
+      "seed": "curation-real-3-2",
+      "type": "cena",
+      "target": {
+        "kcal": 778.09,
+        "proteina": 50.8,
+        "carbs": 88.8,
+        "grasas": 24.41
+      },
+      "actual": {
+        "kcal": 777.3199999999999,
+        "proteina": 67.25,
+        "carbs": 77.4,
+        "grasas": 22.08
+      },
+      "structure": "P1+C1+F+G",
+      "relaxation": {
+        "level": "STRICT",
+        "portionRulesRelaxed": false
+      },
+      "solverMeta": {
+        "structuresEvaluated": 32,
+        "mealType": "dinner",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "curation-real-3-2:2:cena",
+        "variantPoolSize": 8,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 10,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 10,
+            "elapsedMs": 292
+          }
+        ],
+        "elapsedMs": 902
+      },
+      "foods": [
+        {
+          "id": "6619bfeb147cd50b64677676",
+          "name": "Aceite de coco",
+          "quantity": 20,
+          "unit": "Grs",
+          "kcal": 179.82,
+          "protein": 0,
+          "carbs": 0,
+          "fat": 19.98
+        },
+        {
+          "id": "6619bfeb147cd50b64677698",
+          "name": "Anana",
+          "quantity": 170,
+          "unit": "Grs",
+          "kcal": 86.7,
+          "protein": 0.85,
+          "carbs": 17,
+          "fat": 1.7
+        },
+        {
+          "id": "6619bfeb147cd50b6467769c",
+          "name": "Arroz",
+          "quantity": 80,
+          "unit": "Grs",
+          "kcal": 270.8,
+          "protein": 6.4,
+          "carbs": 60.4,
+          "fat": 0.4
+        },
+        {
+          "id": "6619bfeb147cd50b646776a4",
+          "name": "Atun en lomitos al natural",
+          "quantity": 2,
+          "unit": "Pote",
+          "kcal": 240,
+          "protein": 60,
+          "carbs": 0,
+          "fat": 0
+        }
+      ],
+      "culinaryWarnings": []
+    },
+    {
+      "seed": "curation-real-5-1",
+      "type": "snack",
+      "target": {
+        "kcal": 469.51,
+        "proteina": 25.66,
+        "carbs": 19.2,
+        "grasas": 32.23
+      },
+      "actual": {
+        "kcal": 468.52,
+        "proteina": 27.27,
+        "carbs": 44.730000000000004,
+        "grasas": 20.06
+      },
+      "structure": "P1+C1+P2+C2+F+G",
+      "relaxation": {
+        "level": "STRICT",
+        "portionRulesRelaxed": false
+      },
+      "solverMeta": {
+        "structuresEvaluated": 32,
+        "mealType": "extraSnack",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "curation-real-5-1:4:snack",
+        "variantPoolSize": 8,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 16,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 16,
+            "elapsedMs": 299
+          }
+        ],
+        "elapsedMs": 1285
+      },
+      "foods": [
+        {
+          "id": "6619bfeb147cd50b64677696",
+          "name": "Almendras",
+          "quantity": 1,
+          "unit": "Unid",
+          "kcal": 7.15,
+          "protein": 0.26,
+          "carbs": 0.16,
+          "fat": 0.61
+        },
+        {
+          "id": "6619bfeb147cd50b64677698",
+          "name": "Anana",
+          "quantity": 190,
+          "unit": "Grs",
+          "kcal": 96.9,
+          "protein": 0.95,
+          "carbs": 19,
+          "fat": 1.9
+        },
+        {
+          "id": "6619bfeb147cd50b646776a6",
+          "name": "Avena instantanea",
+          "quantity": 30,
+          "unit": "Grs",
+          "kcal": 105.6,
+          "protein": 3.9,
+          "carbs": 17.1,
+          "fat": 2.4
+        },
+        {
+          "id": "6619bfeb147cd50b646776e8",
+          "name": "Claras de huevos",
+          "quantity": 1,
+          "unit": "Unid",
+          "kcal": 15.7,
+          "protein": 3.5,
+          "carbs": 0.2,
+          "fat": 0.1
+        },
+        {
+          "id": "6619bfeb147cd50b646776ed",
+          "name": "Copos de maiz sin azucar",
+          "quantity": 10,
+          "unit": "Grs",
+          "kcal": 36.17,
+          "protein": 0.66,
+          "carbs": 8.27,
+          "fat": 0.05
+        },
+        {
+          "id": "6619bfeb147cd50b64677755",
+          "name": "Huevos",
+          "quantity": 3,
+          "unit": "Unid",
+          "kcal": 207,
+          "protein": 18,
+          "carbs": 0,
+          "fat": 15
+        }
+      ],
+      "culinaryWarnings": []
+    },
+    {
+      "seed": "curation-real-6-1",
+      "type": "colacion",
+      "target": {
+        "kcal": 339.63,
+        "proteina": 21.71,
+        "carbs": 40.6,
+        "grasas": 10.04
+      },
+      "actual": {
+        "kcal": 338.68,
+        "proteina": 21.38,
+        "carbs": 49.89,
+        "grasas": 5.96
+      },
+      "structure": "P1+C1+C2+F+G",
+      "relaxation": {
+        "level": "STRICT",
+        "portionRulesRelaxed": false
+      },
+      "solverMeta": {
+        "structuresEvaluated": 32,
+        "mealType": "extraSnack",
+        "mode": "ALLOW_SUGGESTIONS",
+        "variantSeed": "curation-real-6-1:1:colacion",
+        "variantPoolSize": 8,
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 32,
+        "quantitySolutionsFound": 32,
+        "recommendedSolutionsFound": 22,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 22,
+            "elapsedMs": 300
+          }
+        ],
+        "elapsedMs": 2219
+      },
+      "foods": [
+        {
+          "id": "6619bfeb147cd50b64677696",
+          "name": "Almendras",
+          "quantity": 3,
+          "unit": "Unid",
+          "kcal": 21.45,
+          "protein": 0.78,
+          "carbs": 0.47,
+          "fat": 1.83
+        },
+        {
+          "id": "6619bfeb147cd50b64677698",
+          "name": "Anana",
+          "quantity": 80,
+          "unit": "Grs",
+          "kcal": 40.8,
+          "protein": 0.4,
+          "carbs": 8,
+          "fat": 0.8
+        },
+        {
+          "id": "6619bfeb147cd50b646776a6",
+          "name": "Avena instantanea",
+          "quantity": 35,
+          "unit": "Grs",
+          "kcal": 123.2,
+          "protein": 4.55,
+          "carbs": 19.95,
+          "fat": 2.8
+        },
+        {
+          "id": "6619bfeb147cd50b646776e8",
+          "name": "Claras de huevos",
+          "quantity": 4,
+          "unit": "Unid",
+          "kcal": 62.8,
+          "protein": 14,
+          "carbs": 0.8,
+          "fat": 0.4
+        },
+        {
+          "id": "6619bfeb147cd50b646776ed",
+          "name": "Copos de maiz sin azucar",
+          "quantity": 25,
+          "unit": "Grs",
+          "kcal": 90.43,
+          "protein": 1.65,
+          "carbs": 20.67,
+          "fat": 0.13
+        }
+      ],
+      "culinaryWarnings": []
+    }
+  ],
+  "metadataBasedCulinaryReview": [
+    {
+      "seed": "curation-real-3-1",
+      "mealType": "almuerzo",
+      "structure": "P1+C1+P2+V+F+G",
+      "foods": [
+        "Aceite de coco",
+        "Anana",
+        "Arroz",
+        "Atun en lomitos al natural",
+        "Berenjena",
+        "Claras de huevos"
+      ]
+    },
+    {
+      "seed": "curation-real-3-2",
+      "mealType": "almuerzo",
+      "structure": "P1+C1+P2+F+G",
+      "foods": [
+        "Aceite de coco",
+        "Anana",
+        "Arroz",
+        "Atun en lomitos al natural",
+        "Claras de huevos"
+      ]
+    },
+    {
+      "seed": "curation-real-3-2",
+      "mealType": "cena",
+      "structure": "P1+C1+F+G",
+      "foods": [
+        "Aceite de coco",
+        "Anana",
+        "Arroz",
+        "Atun en lomitos al natural"
+      ]
+    },
+    {
+      "seed": "curation-real-3-3",
+      "mealType": "almuerzo",
+      "structure": "P1+C1+F+G",
+      "foods": [
+        "Aceite de coco",
+        "Anana",
+        "Arroz",
+        "Atun en lomitos al natural"
+      ]
+    },
+    {
+      "seed": "curation-real-3-4",
+      "mealType": "almuerzo",
+      "structure": "P1+C1+F",
+      "foods": [
+        "Anana",
+        "Arroz",
+        "Atun en lomitos al natural"
+      ]
+    },
+    {
+      "seed": "curation-real-3-4",
+      "mealType": "cena",
+      "structure": "P1+C1+P2+V+F+G",
+      "foods": [
+        "Aceite de coco",
+        "Anana",
+        "Arroz",
+        "Atun en lomitos al natural",
+        "Berenjena",
+        "Claras de huevos"
+      ]
+    },
+    {
+      "seed": "curation-real-4-3",
+      "mealType": "cena",
+      "structure": "P1+C1+P2+F+G",
+      "foods": [
+        "Aceite de coco",
+        "Anana",
+        "Arroz",
+        "Atun en lomitos al natural",
+        "Claras de huevos"
+      ]
+    },
+    {
+      "seed": "curation-real-4-4",
+      "mealType": "almuerzo",
+      "structure": "P1+C1+P2+F+G",
+      "foods": [
+        "Aceite de coco",
+        "Anana",
+        "Arroz",
+        "Atun en lomitos al natural",
+        "Claras de huevos"
+      ]
+    },
+    {
+      "seed": "curation-real-4-4",
+      "mealType": "cena",
+      "structure": "P1+C1+F+G",
+      "foods": [
+        "Aceite de coco",
+        "Anana",
+        "Arroz",
+        "Atun en lomitos al natural"
+      ]
+    }
+  ]
+}

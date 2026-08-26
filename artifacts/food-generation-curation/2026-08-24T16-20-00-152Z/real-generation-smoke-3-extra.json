@@ -1,0 +1,381 @@
+{
+  "generatedAt": "2026-08-24T16:25:59.315Z",
+  "database": "base2",
+  "collection": "fooddatabase2",
+  "mode": "read-only preview; no menu or tracking persistence",
+  "dailyTarget": {
+    "kcal": 2140,
+    "proteina": 150,
+    "carbs": 250,
+    "grasas": 60
+  },
+  "safety": {
+    "totalBefore": 574,
+    "totalAfter": 574,
+    "generationFingerprintBefore": "fe3936a6ec3c873a7c3ef619e10b78aadb8739ec91cab72d679a037bf0b0a840",
+    "generationFingerprintAfter": "fe3936a6ec3c873a7c3ef619e10b78aadb8739ec91cab72d679a037bf0b0a840",
+    "generationUnchanged": true
+  },
+  "summary": {
+    "runs": 5,
+    "successful": 1,
+    "failed": 4,
+    "culinaryWarnings": 0,
+    "successfulByMealCount": {
+      "3": 1
+    },
+    "acceptanceReached": false
+  },
+  "runs": [
+    {
+      "requestedMealCount": 3,
+      "run": 4,
+      "seed": "curation-real-3-4",
+      "status": "ERROR",
+      "code": "MEAL_TARGET_NOT_REACHABLE_WITH_PORTION_RULES",
+      "error": "No encontramos una combinación válida para desayuno.",
+      "details": {
+        "structuresEvaluated": 32,
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 96,
+        "quantitySolutionsFound": 96,
+        "recommendedSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 250
+          },
+          {
+            "level": "RELAX_STEP",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 194
+          },
+          {
+            "level": "RELAX_MIN",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 220
+          }
+        ],
+        "elapsedMs": 1298
+      }
+    },
+    {
+      "requestedMealCount": 3,
+      "run": 5,
+      "seed": "curation-real-3-5",
+      "status": "ERROR",
+      "code": "MEAL_TARGET_NOT_REACHABLE_WITH_PORTION_RULES",
+      "error": "No encontramos una combinación válida para desayuno.",
+      "details": {
+        "structuresEvaluated": 32,
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 96,
+        "quantitySolutionsFound": 96,
+        "recommendedSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 298
+          },
+          {
+            "level": "RELAX_STEP",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 269
+          },
+          {
+            "level": "RELAX_MIN",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 288
+          }
+        ],
+        "elapsedMs": 1469
+      }
+    },
+    {
+      "requestedMealCount": 3,
+      "run": 6,
+      "seed": "curation-real-3-6",
+      "status": "OK",
+      "mealCount": 3,
+      "target": {
+        "kcal": 2140,
+        "proteina": 150,
+        "carbs": 250,
+        "grasas": 60
+      },
+      "totals": {
+        "kcal": 2138.1,
+        "proteina": 150.5,
+        "carbs": 296.5,
+        "grasas": 40.1
+      },
+      "difference": {
+        "kcal": -1.9,
+        "proteina": 0.5,
+        "carbs": 46.5,
+        "grasas": -19.9
+      },
+      "warnings": [
+        {
+          "code": "MENU_GLOBAL_MACRO_TARGET_NOT_REACHED",
+          "message": "Las porciones físicas disponibles cerraron calorías, pero no permitieron igualar todos los macros del día.",
+          "details": {
+            "nutrients": [
+              "carbs",
+              "grasas"
+            ],
+            "target": {
+              "kcal": 2140,
+              "proteina": 150,
+              "carbs": 250,
+              "grasas": 60
+            },
+            "actual": {
+              "kcal": 2138.1,
+              "proteina": 150.5,
+              "carbs": 296.5,
+              "grasas": 40.1
+            },
+            "difference": {
+              "kcal": -1.9,
+              "proteina": 0.5,
+              "carbs": 46.5,
+              "grasas": -19.9
+            }
+          }
+        }
+      ],
+      "meals": [
+        {
+          "type": "desayuno",
+          "target": {
+            "kcal": 635.56,
+            "proteina": 44.55,
+            "carbs": 74.25,
+            "grasas": 17.82
+          },
+          "actual": {
+            "kcal": 633.1,
+            "proteina": 56.5,
+            "carbs": 70.5,
+            "grasas": 13.9
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677728",
+              "name": "Galletitas de agua",
+              "quantity": 100,
+              "unit": "Grs",
+              "kcal": 441,
+              "protein": 11,
+              "carbs": 70,
+              "fat": 13
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "quantity": 50,
+              "unit": "Grs",
+              "kcal": 192.1,
+              "protein": 45.5,
+              "carbs": 0.5,
+              "fat": 0.9
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "almuerzo",
+          "target": {
+            "kcal": 713.9,
+            "proteina": 44.3,
+            "carbs": 85.04,
+            "grasas": 21.84
+          },
+          "actual": {
+            "kcal": 712.4,
+            "proteina": 60.8,
+            "carbs": 75,
+            "grasas": 18.8
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769f",
+              "name": "Arroz integral",
+              "quantity": 100,
+              "unit": "Grs",
+              "kcal": 350,
+              "protein": 8,
+              "carbs": 75,
+              "fat": 2
+            },
+            {
+              "id": "6619bfeb147cd50b646776cd",
+              "name": "Carne de cerdo magro",
+              "quantity": 240,
+              "unit": "Grs",
+              "kcal": 362.4,
+              "protein": 52.8,
+              "carbs": 0,
+              "fat": 16.8
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "cena",
+          "target": {
+            "kcal": 794.5,
+            "proteina": 32.7,
+            "carbs": 104.5,
+            "grasas": 27.3
+          },
+          "actual": {
+            "kcal": 792.6,
+            "proteina": 33.2,
+            "carbs": 151,
+            "grasas": 7.4
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "quantity": 200,
+              "unit": "Grs",
+              "kcal": 677,
+              "protein": 16,
+              "carbs": 151,
+              "fat": 1
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "quantity": 80,
+              "unit": "Grs",
+              "kcal": 115.6,
+              "protein": 17.2,
+              "carbs": 0,
+              "fat": 6.4
+            }
+          ],
+          "culinaryWarnings": []
+        }
+      ]
+    },
+    {
+      "requestedMealCount": 3,
+      "run": 7,
+      "seed": "curation-real-3-7",
+      "status": "ERROR",
+      "code": "MEAL_TARGET_NOT_REACHABLE_WITH_PORTION_RULES",
+      "error": "No encontramos una combinación válida para desayuno.",
+      "details": {
+        "structuresEvaluated": 32,
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 96,
+        "quantitySolutionsFound": 96,
+        "recommendedSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 265
+          },
+          {
+            "level": "RELAX_STEP",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 271
+          },
+          {
+            "level": "RELAX_MIN",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 294
+          }
+        ],
+        "elapsedMs": 1398
+      }
+    },
+    {
+      "requestedMealCount": 3,
+      "run": 8,
+      "seed": "curation-real-3-8",
+      "status": "ERROR",
+      "code": "MEAL_TARGET_NOT_REACHABLE_WITH_PORTION_RULES",
+      "error": "No encontramos una combinación válida para desayuno.",
+      "details": {
+        "structuresEvaluated": 32,
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 96,
+        "quantitySolutionsFound": 96,
+        "recommendedSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 263
+          },
+          {
+            "level": "RELAX_STEP",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 263
+          },
+          {
+            "level": "RELAX_MIN",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 267
+          }
+        ],
+        "elapsedMs": 1474
+      }
+    }
+  ]
+}

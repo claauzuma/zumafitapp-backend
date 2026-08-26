@@ -1,0 +1,575 @@
+id	alimentoId	name	category	subcategory	unit	kcal	protein	carbs	fat	mode	review	duplicate
+6619bfeb147cd50b64677676	1	Aceite de coco	Grasas	Aceites	Grs	8.991	0	0	0.999	GENERIC	false	false
+6619bfeb147cd50b64677677	2	Aceite de oliva	Grasas	Aceites	Grs	8.991	0	0	0.999	GENERIC	false	false
+6619bfeb147cd50b64677678	3	Aceitunas negras	Grasas	Grasa general	Grs	1.574	0.01	0.001	0.17	GENERIC	false	false
+6619bfeb147cd50b64677679	4	Aceitunas verdes	Grasas	Grasa general	Grs	1.988	0.012	0.035	0.2	GENERIC	false	false
+6619bfeb147cd50b6467767a	5	Ajo	Verduras	Verduras	Grs	1.493	0.064	0.298	0.005	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467767b	6	Alfajor blanco jorgito	Snacks	Alfajor	Unid	180.1	3.1	30	5.3	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467767d	8	Alfajor bon o bon	Snacks	Alfajores	Unid	201.8	3.7	22	11	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b6467767e	9	Alfajor de almendras	Snacks	Alfajor	Unid	173	3	20	9	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467767f	10	Alfajor de chocolate jorgito	Snacks	Alfajor	Unid	220.5	3.1	32	8.9	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677680	11	Alfajor fulbito	Snacks	Alfajor	Unid	121.6	1.4	20	4	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677681	12	Alfajor glaceado jorgito	Snacks	Alfajor	Unid	98.9	1.5	18.5	2.1	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677683	14	Alfajor guaymallen	Snacks	Alfajores	Unid	161.1	2	25	5.9	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b64677684	15	Alfajor havanna 70	Snacks	Alfajor	Unid	249.2	3.8	36	10	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677685	16	Alfajor jorgelin	Snacks	Alfajor	Unid	332	5	51	12	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677686	18	Alfajor jorgito	Snacks	Alfajores	Unid	216.5	3.1	31	8.9	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b64677688	19	Alfajor Oreo Trilogia	Snacks	Alfajores	Unid	265.8	2.7	30	15	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677689	20	Alfajor pepitos	Snacks	Alfajor	Unid	288.8	3.2	33	16	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467768a	21	Alfajor pepitos triple	Snacks	Alfajores	Unid	287.6	2.9	33	16	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467768b	22	Alfajor Shot	Snacks	Alfajores	Unid	315.8	4.7	36	17	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467768c	23	Alfajor shot triple	Snacks	Alfajores	Unid	315.8	4.7	36	17	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467768d	24	Alfajor tatin	Snacks	Alfajor	Unid	141.3	2.4	21	5.3	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467768e	25	Alfajor terrabusi clasico	Snacks	Alfajor	Unid	197.9	3.6	29	7.5	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467768f	26	Alfajor terrabusi doble	Snacks	Alfajores	Unid	206	3.5	30	8	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677690	27	Alfajor terrabusi grande	Snacks	Alfajor	Unid	266.1	4.6	41	9.3	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677691	28	Alfajor terrabusi triple	Snacks	Alfajores	Unid	266.1	4.6	41	9.3	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677692	29	Alfajor tofi	Snacks	Alfajor	Unid	180.8	2.8	28	6.4	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677693	30	Alfajor triple tatin	Snacks	Alfajor	Unid	252.9	4.4	37	9.7	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677694	31	Alfajor triple terrabusi	Snacks	Alfajor	Unid	266.1	4.6	41	9.3	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677695	32	Alfajor vauquita	Snacks	Alfajor	Unid	233	4	34	9	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677696	34	Almendras	Grasas	Frutos secos	Unid	7.15	0.26	0.155	0.61	GENERIC	false	true
+6619bfeb147cd50b64677698	35	Anana	Frutas	Frutas	Grs	0.51	0.005	0.1	0.01	GENERIC	false	false
+6619bfeb147cd50b64677699	36	Arandanos	Frutas	Frutas	Grs	0.572	0.007	0.136	0	GENERIC	false	false
+6619bfeb147cd50b6467769a	37	Arrocitas paquete amarillo	Snacks	Carbosnacks	Unid	28.45	6.3	0.475	0.15	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467769b	38	Arrocitas paquete verde	Snacks	Carbosnacks	Unid	24.625	0.65	5	0.225	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467769c	39	Arroz	Carbohidratos	Cereales y legumbres	Grs	3.385	0.08	0.755	0.005	GENERIC	false	false
+6619bfeb147cd50b6467769d	40	Arroz (Cocido)	Carbohidratos	Cereales y legumbres	Grs	1.295	0.027	0.29	0.003	GENERIC	false	false
+6619bfeb147cd50b6467769e	41	Arroz inflado	Carbohidratos	Cereales y legumbres	Grs	3.3	0	0.825	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467769f	42	Arroz integral	Carbohidratos	Cereales y legumbres	Grs	3.5	0.08	0.75	0.02	GENERIC	false	false
+6619bfeb147cd50b646776a0	43	Arroz integral (Cocido)	Carbohidratos	Cereales y legumbres	Grs	1.105	0.026	0.23	0.009	GENERIC	false	false
+6619bfeb147cd50b646776a1	44	Arvejas secas	Carbohidratos	Carbohidrato general	Grs	3.15	0.22	0.5	0.03	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776a2	45	Arvejas secas remojadas	Carbohidratos	Carbohidrato general	Grs	1.081	0.067	0.192	0.005	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776a3	46	Atun en lomitos al aceite	Grasas	Aceites	Pote	246	30	0	14	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776a4	47	Atun en lomitos al natural	Proteínas	Pescados y mariscos	Pote	120	30	0	0	GENERIC	false	false
+6619bfeb147cd50b646776a5	48	Avellanas	Grasas	Frutos secos	Grs	6.56	0.16	0.04	0.64	GENERIC	false	false
+6619bfeb147cd50b646776a6	49	Avena instantanea	Carbohidratos	Carbohidrato general	Grs	3.52	0.13	0.57	0.08	GENERIC	false	false
+6619bfeb147cd50b646776a7	50	Azucar	Carbohidratos	Azúcares y untables	Grs	4	0	1	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776a8	51	Banana	Frutas	Frutas	Grs	0.891	0.011	0.205	0.003	GENERIC	false	false
+6619bfeb147cd50b646776a9	52	Banana chica	Frutas	Frutas	Unid	90.17	1.1	20.7	0.33	GENERIC	false	false
+6619bfeb147cd50b646776aa	53	Banana grande	Frutas	Frutas	Unid	121.97	1.48	28	0.45	GENERIC	false	false
+6619bfeb147cd50b646776ab	54	Banana mediana	Frutas	Frutas	Unid	105.87	1.29	24.3	0.39	GENERIC	false	false
+6619bfeb147cd50b646776ac	55	Barra de cereal	Snacks	Snacks	Unid	83.9	0.9	14	2.7	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776ad	56	Barra de cereal frutilla Cereal Mix	Snacks	Carbosnacks	Unid	91.6	1.5	16	2.4	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776ae	57	Bastoncitos de merluza (Granja del sol)	Proteínas	Pescados y mariscos	Unid	53.2	2.6	6.2	2	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776af	58	Batatas	Carbohidratos	Tubérculos	Grs	0.861	0.016	0.197	0.001	GENERIC	false	false
+6619bfeb147cd50b646776b0		Batido proteico:				0	0	0	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776b1		Batido:				0	0	0	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776b2	61	Bay biscuit	Snacks	Carbosnacks	Unid	68.45	1.65	14	0.65	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776b3	62	Berenjena	Verduras	Verduras	Grs	0.2384	0.0101	0.045	0.002	GENERIC	false	false
+6619bfeb147cd50b646776b4	64	Bife angosto	Proteínas	Carne vacuna	Grs	1.76	0.215	0	0.1	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b646776b6	65	Bife de chorizo magro	Grasas	Grasa general	Grs	1.445	0.215	0	0.065	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776b7	66	Biscuits	Snacks	Carbosnacks	Unid	50.25	1.05	10.5	0.45	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776b8	67	Bizcochos agridulces 9 de oro	Snacks	Snacks	Unid	12.78	0.18	1.8	0.54	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776b9	68	Bizcochos dulces	Snacks	Carbosnacks	Unid	24.734	0.4316	2.988	1.2284	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776ba	69	Bizcochos light 9 de oro	Snacks	Carbosnacks	Unid	16.5	0.375	2.625	0.5	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776bb	70	Bizcochos salados	Snacks	Carbosnacks	Unid	25.7134	0.4482	2.656	1.4774	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776bc	71	Bocaditos rellenos de frutilla	Snacks	Carbosnacks	Grs	4.3659	0.1089	0.693	0.1287	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776bd	72	Bola de lomo	Proteínas	Carne vacuna	Grs	1.31	0.215	0	0.05	GENERIC	false	false
+6619bfeb147cd50b646776be	73	Bondiola (Lario)	Grasas	Grasa general	Grs	28.1	2.3	0	2.1	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776bf	74	Bondiola (Lario)	Grasas	Proteinasgrasas	Fetas	28.1	2.3	0	2.1	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776c0	75	Bondiola de cerdo	Grasas	Proteinasgrasas	Grs	2.5926	0.1914	0	0.203	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776c1	76	Bondiola feteada (Carrefour)	Grasas	Proteinasgrasas	Fetas	18.1	1.6	0	1.3	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776c2	77	brocoli	Verduras	Verduras	Grs	0.348	0.028	0.05	0.004	GENERIC	false	false
+6619bfeb147cd50b646776c3	78	Cadbury Dairy milk	Snacks	Snacks	Grs	5.28	0.085	0.56	0.3	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776c4	79	Calabacin	Verduras	Verduras	Grs	0.285	0.02	0.04	0.005	GENERIC	false	false
+6619bfeb147cd50b646776c6	81	Calabaza	Verduras	Verduras	Grs	0.298	0.01	0.06	0.002	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b646776c7	82	Capelletini giacomo jamon  y queso	Lácteos	Fideos	Grs	3.549	0.109	0.614	0.073	GENERIC	false	false
+6619bfeb147cd50b646776c8	83	Capelletini giacomo tridicci	Carbohidratos	Fideos	Grs	3.449	0.111	0.614	0.061	GENERIC	false	false
+6619bfeb147cd50b646776c9	84	Capuccino Carrefour	Bebidas	Cafes	Grs	3.728	0.144	0.68	0.048	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776ca	85	Capuccino Light La virginia	Bebidas	Cafes	Grs	4.147	0.154	0.66	0.099	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776cb	86	Capuccino Tradicional La virginia	Bebidas	Cafes	Grs	4.304	0.152	0.672	0.112	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776cc	87	Caramelos sugus	Snacks	Snacks	Unid	12.512	0.048	2.72	0.16	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776cd	88	Carne de cerdo magro	Proteínas	Cerdo	Grs	1.51	0.22	0	0.07	GENERIC	false	false
+6619bfeb147cd50b646776ce	89	Carne de res molida	Snacks	Snacks	Grs	1.7	0.2	0	0.1	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776cf	91	Carne picada magra	Proteínas	Carne vacuna	Grs	1.7	0.2	0	0.1	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b646776d1	92	Casancrem	Lácteos	Untables	Grs	2.283	0.06	0.045	0.207	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776d2	93	Casancrem light	Lácteos	Untables	Grs	1.286	0.087	0.077	0.07	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776d3	94	Castañas	Grasas	Frutos secos	Grs	1.769	0.026	0.36	0.025	GENERIC	false	false
+6619bfeb147cd50b646776d4	96	Castañas de caju	Grasas	Frutos secos	Grs	5.585	0.22	0.175	0.445	GENERIC	false	true
+6619bfeb147cd50b646776d6	99	Cebolla	Verduras	Verduras	Grs	0.425	0.009	0.095	0.001	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b646776d9	100	Cereal de arroz	Carbohidratos	Cereales	Grs	3.3	0	0.825	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776da	101	Cerealitas	Snacks	Galletitas	Unid	26.58	0.62	4	0.9	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776db	102	Cerezas	Frutas	Frutas	Grs	0.627	0.01	0.14	0.003	GENERIC	false	false
+6619bfeb147cd50b646776dc	103	Cerveza	Otros	Otros	Ml	0.43	0	0.04	0.03	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776dd	104	Chirimoya	Frutas	Frutas	Grs	0.858	0.01	0.2	0.002	GENERIC	false	false
+6619bfeb147cd50b646776de	105	Choclo entero	Carbohidratos	Carbohidrato general	Grs	0.605	0.025	0.07	0.025	GENERIC	false	false
+6619bfeb147cd50b646776df	106	Chocolate aguila semiamargo	Snacks	Snacks	Barra	103.1	1.3	13	5.1	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776e0	107	Chocolate blanco con dulce de leche (Milka)	Lácteos	Snacks	Grs	4.778	0.072	0.56	0.25	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776e1	108	Chocolate cofler aireado (Leche)	Lácteos	Snacks	Cuad	25.2	0.35	2.35	1.6	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776e2	109	Chocolate crunch nestle	Snacks	Snacks	Grs	5.444	0.072	0.56	0.324	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776e3	111	Chorizo	Grasas	Proteinasgrasas	Grs	3.22	0.13	0	0.3	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b646776e5	112	Chupetin pico dulce arcor	Carbohidratos	Azúcares y untables	Unid	56	0	14	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776e6	113	Churrasco magro	Proteínas	Carne vacuna	Grs	1.445	0.215	0	0.08	GENERIC	false	false
+6619bfeb147cd50b646776e7	114	Ciruela	Frutas	Frutas	Grs	0.45	0.006	0.102	0.002	GENERIC	false	false
+6619bfeb147cd50b646776e8	115	Claras de huevos	Proteínas	Huevos	Unid	15.7	3.5	0.2	0.1	GENERIC	false	false
+6619bfeb147cd50b646776e9	116	Coca cola	Carbohidratos	Bebidas	Grs	0.44	0	0.11	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776ea	117	Coliflor	Verduras	Verduras	Grs	0.229	0.02	0.035	0.001	GENERIC	false	false
+6619bfeb147cd50b646776eb	118	Copos de maiz azucarados	Carbohidratos	Cereales y legumbres	Grs	3.82	0.062	0.875	0.008	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776ec	119	Copos de maiz granix	Carbohidratos	Cereales y legumbres	Grs	3.624	0.067	0.83	0.004	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776ed	120	Copos de maiz sin azucar	Carbohidratos	Cereales y legumbres	Grs	3.617	0.066	0.827	0.005	GENERIC	false	false
+6619bfeb147cd50b646776ee	121	Crackers Smams (Sin tac)	Snacks	Carbosnacks	Unid	23.28	0.02	4	0.8	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776ef	122	Cremon comun	Lácteos	Proteinasgrasas	Grs	2.88	0.18	0	0.24	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776f0	123	Cremon doble crema	Lácteos	Proteinasgrasas	Grs	3.53	0.14	0	0.33	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776f1	125	Cremon light	Lácteos	Quesos	Grs	2.422	0.21	0.013	0.17	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b646776f3	126	Criollitas	Snacks	Galletitas	Unid	16.5	0.4	2.6	0.5	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776f4	127	Criollitas grandes	Snacks	Galletitas	Unid	29.3	0.7	4.6	0.9	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776f5	128	Criollitas sin sal	Snacks	Galletitas	Unid	29.47	0.8	4.7	0.83	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776f6	129	Cuadrada (Ternera)	Proteínas	Proteína general	Grs	1.31	0.215	0	0.05	GENERIC	false	false
+6619bfeb147cd50b646776f8	131	Cuadril	Proteínas	Carne vacuna	Grs	1.445	0.215	0	0.065	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b646776f9	132	Damasco	Frutas	Frutas	Grs	0.496	0.014	0.11	0	GENERIC	false	false
+6619bfeb147cd50b646776fa	133	Danette dulce de leche	Lácteos	Snacks	Unid	157.8	3.4	23	5.8	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776fb	134	Dextrosa	Carbohidratos	Carbohidrato general	Grs	3.6	0	0.9	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776fc	135	Dulce de batata	Carbohidratos	Tubérculos	Grs	2.6	0	0.65	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776fd	136	Dulce de leche	Lácteos	Lácteos	Grs	3.175	0.075	0.55	0.075	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776fe	137	Dulce de leche (Armonia)	Lácteos	Dulce de leche	Grs	3.015	0.025	0.65	0.035	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646776ff		Dulce de leche (Coto)				0	0	0	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677700	139	Dulce de leche (Ser)	Lácteos	Dulce de leche	Grs	3.02	0.075	0.68	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677701	140	Dulce de leche clasico (Ilolay)	Lácteos	Dulce de leche	Grs	3.065	0.07	0.55	0.065	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677702	141	Dulce de leche coto	Lácteos	Dulce de leche	Grs	3.065	0.07	0.55	0.065	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677703	142	Dulce de leche estilo colonial (La serenisima)	Lácteos	Dulce de leche	Grs	3.175	0.075	0.55	0.075	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677704	143	Dulce de leche la serenisima	Lácteos	Dulce de leche	Grs	3.175	0.075	0.55	0.075	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677705	144	Dulce de leche light	Lácteos	Dulce de leche	Grs	2.865	0.055	0.65	0.005	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677706	145	Dulce de leche repostero	Lácteos	Dulce de leche	Grs	3.175	0.075	0.55	0.075	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677707	146	Dulce de leche repostero (Ilolay)	Lácteos	Dulce de leche	Grs	3.24	0.08	0.55	0.08	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677708	147	Dulce de membrillo	Carbohidratos	Azúcares y untables	Grs	2.808	0	0.702	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677709	148	Durazno	Frutas	Frutas	Grs	0.395	0.009	0.083	0.003	GENERIC	false	false
+6619bfeb147cd50b6467770a	149	Durazno chico	Frutas	Frutas	Unid	51.41	0.11	12	0.33	GENERIC	false	false
+6619bfeb147cd50b6467770b	150	Durazno grande	Frutas	Frutas	Unid	68.56	0.15	16	0.44	GENERIC	false	false
+6619bfeb147cd50b6467770c	151	Durazno mediano	Frutas	Frutas	Unid	59.94	0.13	14	0.38	GENERIC	false	false
+6619bfeb147cd50b6467770d	152	Empanada de carne el noble	Proteínas	Carne vacuna	Unid	184	6	22	8	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467770e	153	Empanada de jamon y queso el noblre	Lácteos	Lácteos	Unid	210	8	22	10	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467770f	154	Empanadas de carne :	Proteínas	Carne vacuna	Unid	0	0	0	0	EXPLICIT_ONLY	true	false
+6619bfeb147cd50b64677710	155	Empanadas de jamon y queso :	Lácteos	Lácteos	Unid	0	0	0	0	EXPLICIT_ONLY	true	false
+6619bfeb147cd50b64677711	156	Empanadas de pollo :	Proteínas	Pollo	Unid	0	0	0	0	EXPLICIT_ONLY	true	false
+6619bfeb147cd50b64677712		Empanadas:				0	0	0	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677713		Ensalada:				0	0	0	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677714	159	Esparragos	Verduras	Verduras	Grs	0.217	0.022	0.03	0.001	GENERIC	false	false
+6619bfeb147cd50b64677715	160	espinaca	Verduras	Verduras	Grs	0.232	0.029	0.02	0.004	GENERIC	false	false
+6619bfeb147cd50b64677716	161	Ferrero rocher	Snacks	Snacks	Grs	74.65	1	5.67	5.33	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677717	162	Fideos	Carbohidratos	Cereales y legumbres	Grs	3.382	0.113	0.71	0.01	GENERIC	false	false
+6619bfeb147cd50b64677718	163	Fideos (Cocidos)	Carbohidratos	Cereales y legumbres	Grs	1.573	0.058	0.315	0.009	GENERIC	false	false
+6619bfeb147cd50b64677719	164	Fideos sin gluten	Carbohidratos	Cereales y legumbres	Grs	3.6825	0.05625	0.825	0.0175	GENERIC	false	false
+6619bfeb147cd50b6467771a	165	Filet de merluza	Proteínas	Pescados y mariscos	Unid	1.29	0.21	0	0.05	GENERIC	false	false
+6619bfeb147cd50b6467771b	166	Flan con caramelo Danette	Snacks	Snacks	Unid	135.4	3.2	23	3.4	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467771c	167	Flan Sancorito	Snacks	Snacks	Unid	130.9	3.1	24	2.5	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467771d	168	Flan Serenito	Snacks	Snacks	Unid	137.6	3.2	24	3.2	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467771e	169	Frambuesa	Frutas	Frutas	Grs	0.511	0.012	0.1	0.007	GENERIC	false	false
+6619bfeb147cd50b6467771f	170	Frijoles	Carbohidratos	Carbohidrato general	Grs	0.32	0.01	0.07	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677720	171	Froot loops	Carbohidratos	Cereales	Grs	3.7676	0.0528	0.8	0.0396	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677721	172	Frutigran granix	Snacks	Galletitas	Unid	65.25	1.15	10.1	2.25	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677722	173	Frutillas	Frutas	Frutas	Grs	0.326	0.007	0.07	0.002	GENERIC	false	false
+6619bfeb147cd50b64677723	174	Galletas de arroz	Snacks	Galletitas	Unid	38.45	0.87	8	0.33	GENERIC	false	false
+6619bfeb147cd50b64677724	175	Galletas de arroz carrefour	Snacks	Galletitas	Unid	38.196	0.858	7.8	0.396	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677725	176	Galletas marineras carrefour	Snacks	Galletitas	Unid	32.75	0.825	5	1.05	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677726	177	Galletitas bagley con maiz	Snacks	Galletitas	Unid	23.222	0.493	3.4	0.85	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677727	178	Galletitas cerro azul sabor limon	Snacks	Snacks	Unid	20.78	0.18	3.8	0.54	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677728	179	Galletitas de agua	Snacks	Galletitas	Grs	4.41	0.11	0.7	0.13	GENERIC	false	false
+6619bfeb147cd50b64677729	180	Galletitas de agua arcor	Snacks	Galletitas	Unid	25.1	0.65	4.05	0.7	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467772a	181	Galletitas de agua carrefour	Snacks	Galletitas	Unid	20.335	0.498	3.652	0.415	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467772b	182	Galletitas de agua clasicas	Snacks	Galletitas	Unid	22.1776	0.5644	3.486	0.664	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467772c	183	Galletitas de agua mediatarde	Snacks	Galletitas	Unid	16.6	0.4125	2.5	0.55	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467772d	184	Galletitas de agua sandwich	Snacks	Galletitas	Unid	29.3	0.7	4.6	0.9	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467772e	185	Galletitas de agua terrabusi	Snacks	Galletitas	Unid	26.18	0.68	4.2	0.74	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467772f	186	Galletitas de agua terrabusi light	Snacks	Galletitas	Unid	25.74	0.64	4.4	0.62	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677730	187	Galletitas de agua traviata	Snacks	Galletitas	Unid	27.3	0.8	4	0.9	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677731	188	Galletitas de avena carrefour	Snacks	Galletitas	Unid	58.509	0.924	8.58	2.277	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677732	189	Galletitas de coco sin gluten Santa Maria	Snacks	Singluten	Grs	4.598	0.037	0.73	0.17	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677734	191	Galletitas de salvado (Bagley)	Snacks	Galletitas	Unid	19.103	0.45	2.6	0.767	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b64677735	192	galletitas de salvado granix	Snacks	Carbosnacks	Unid	29.375	0.9	4.25	0.975	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677736	193	Galletitas de salvado granix sin sal	Snacks	Galletitas	Unid	28.575	0.875	4.3	0.875	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677737	194	Galletitas dulces Aglu sin gluten	Snacks	Singluten	Grs	3.8862	0.0594	0.63	0.1254	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677738	195	Galletitas granix sin sal	Snacks	Galletitas	Unid	26.975	0.875	3.9	0.875	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677739	196	Galletitas marmoladas sin gluten Santa Maria	Snacks	Singluten	Grs	4.508	0.037	0.73	0.16	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467773a	197	Galletitas mini oreo	Snacks	Galletitas	Grs	4.86	0.06	0.66	0.22	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467773b	198	Galletitas salvado bagley	Snacks	Galletitas	Unid	23.23333333	0.5833333333	3.5	0.7666666667	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467773c	199	Gambas	Proteínas	Pescados y mariscos	Grs	0.73	0.15	0.01	0.01	GENERIC	false	false
+6619bfeb147cd50b6467773d	201	Garbanzos secos	Carbohidratos	Cereales y legumbres	Grs	3.34	0.15	0.55	0.06	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b6467773f	203	Garbanzos secos remojados	Carbohidratos	Cereales y legumbres	Grs	1.129	0.065	0.17	0.021	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b64677741	204	Germen de trigo	Carbohidratos	Carbohidrato general	Grs	3.593	0.23	0.45	0.097	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677742	205	Gomitas mogul	Snacks	Snack general	Unid	7.28	0.07	1.75	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677743	206	Gomitas moras mogul	Snacks	Snack general	Unid	20.3	0.275	4.8	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677744	207	Granada	Frutas	Frutas	Grs	0.627	0.01	0.14	0.003	GENERIC	false	false
+6619bfeb147cd50b64677745	208	Granola	Carbohidratos	Carbohidrato general	Grs	3.8775	0.0675	0.75	0.0675	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677747	211	Guacamole	Grasas	Palta y derivados	Grs	1.7	0.02	0.09	0.14	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b64677749	212	Habanitos terrabusi	Snacks	Snacks	Grs	4.613	0.077	0.633	0.197	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467774a	213	Hamburguesa Clasica (Paty)	Grasas	Proteinasgrasas	Unid	195	15	0	15	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467774b	214	Hamburguesa de soja (Vegetalex)	Proteínas	Soja	Unid	103.9	11	4.4	4.7	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b6467774c	215	Hamburguesa de soja vegetalex	Proteínas	Soja	Unid	102.3	11	4	4.7	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b6467774d	216	Hamburguesas (Swift)	Grasas	Proteinasgrasas	Unid	139	10	0	11	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467774e	217	Hamburguesas finitas (Paty)	Grasas	Proteinasgrasas	Unid	122.4	9	0	9.6	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467774f	218	Hamburguesas light (Swift)	Grasas	Proteinasgrasas	Unid	146	13	1	10	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677750	219	Harina de maiz	Carbohidratos	Cereales y legumbres	Grs	3.682	0.083	0.77	0.03	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677751	220	Harina integral	Carbohidratos	Cereales y legumbres	Grs	2.96	0.1	0.64	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677752	221	Harina refinada	Carbohidratos	Cereales y legumbres	Grs	3.304	0.09	0.7	0.016	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677753	222	Higado	Proteínas	Carne vacuna	Grs	1.34	0.206	0.039	0.04	GENERIC	false	false
+6619bfeb147cd50b64677754	223	Higo	Frutas	Frutas	Grs	0.728	0.012	0.17	0	GENERIC	false	false
+6619bfeb147cd50b64677755	224	Huevos	Grasas	Proteinasgrasas	Unid	69	6	0	5	GENERIC	false	false
+6619bfeb147cd50b64677756	225	Jalea de membrillo la campagnola	Carbohidratos	Azúcares y untables	Grs	1.7	0	0.425	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677757	226	Jamon cagnoli	Fiambres	Fiambres	Fetas	23.5	3.4	0	1.1	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677758	228	Jamon cocido	Proteínas	Proteína general	Grs	1.037	0.18	0.005	0.033	GENERIC	false	true
+6619bfeb147cd50b6467775a	229	Jamon cocido cagnoli	Fiambres	Fiambres	Fetas	23.05	3.4	0	1.05	GENERIC	false	false
+6619bfeb147cd50b6467775b	230	Jamon cocido feteado	Fiambres	Fiambres	Fetas	18.2	3.2	0	0.6	GENERIC	false	false
+6619bfeb147cd50b6467775c	231	Jamon cocido lario	Fiambres	Fiambres	Fetas	19.95	3.3	0	0.75	GENERIC	false	false
+6619bfeb147cd50b6467775d	232	Jamon cocido paladini	Fiambres	Fiambres	Fetas	33.65	5.6	0	1.25	GENERIC	false	false
+6619bfeb147cd50b6467775e	233	Jamon crudo	Proteínas	Proteína general	Gramos	2.13	0.235	0.0275	0.12	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677760	235	Jamon serrano	Proteínas	Proteína general	Grs	2.526	0.29	0.004	0.15	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b64677761	236	Jamon tapalque	Fiambres	Fiambres	Grs	0.825	0.15	0	0.025	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677762	237	Jardinera con choclo	Carbohidratos	Carbohidrato general	Gramos	0.564	0.038	0.085	0.008	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677763	238	Ketchup	Snacks	Carbosnacks	Gramos	1.232	0	0.308	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677764	239	Kiwi	Frutas	Frutas	Grs	0.613	0.01	0.132	0.005	GENERIC	false	false
+6619bfeb147cd50b64677765	240	Kiwi (mediano)	Frutas	Frutas	Unid	42.4	0.79	9	0.36	GENERIC	false	false
+6619bfeb147cd50b64677766	241	Langostinos	Proteínas	Pescados y mariscos	Grs	0.677	0.14	0	0.013	GENERIC	false	false
+6619bfeb147cd50b64677767	242	Leche chocolatada Cindor	Lácteos	Carbosnacks	Grs	0.686	0.03	0.11	0.014	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677768	243	Leche chocolatada Milkaut	Lácteos	Carbosnacks	Grs	0.743	0.033	0.11	0.019	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677769	244	Leche de almendras	Lácteos	Lácteos	Grs	0.2375	0.004	0.034	0.0095	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467776a	245	Leche de almendras sin azucar	Lácteos	Lácteos	Grs	0.109	0.0035	0.0035	0.009	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467776b	246	Leche de coco	Lácteos	Lácteos	Grs	1.65	0.005	0.025	0.17	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467776c	247	Leche descremada	Lácteos	Lácteos	Grs	0.391	0.03	0.052	0.007	GENERIC	false	false
+6619bfeb147cd50b6467776d	248	Leche descremada (Apostoles)	Lácteos	Lacteos	Grs	0.366	0.03	0.048	0.006	GENERIC	false	true
+6619bfeb147cd50b6467776e	249	Leche descremada alta en proteínas	Lácteos	Lacteos	Gramos	0.368	0.046	0.046	0	GENERIC	false	false
+6619bfeb147cd50b6467776f	250	Leche descremada Apostoles	Lácteos	Lacteos	Grs	0.366	0.03	0.048	0.006	GENERIC	false	true
+6619bfeb147cd50b64677770	251	Leche descremada en polvo	Lácteos	Lacteos	Grs	3.48	0.35	0.52	0	GENERIC	false	false
+6619bfeb147cd50b64677771	252	Leche descremada la serenisima	Lácteos	Lacteos	Grs	0.187	0.015	0.025	0.003	GENERIC	false	false
+6619bfeb147cd50b64677772	253	Leche descremada sin lactosa	Lácteos	Lacteos	Grs	0.402	0.03	0.048	0.01	GENERIC	false	false
+6619bfeb147cd50b64677773	254	Leche descremada tregar	Lácteos	Lacteos	Grs	0.455	0.03	0.05	0.015	GENERIC	false	false
+6619bfeb147cd50b64677774	255	Leche deslactosada descremada (La serenisima)	Lácteos	Lacteos	Grs	0.459	0.034	0.047	0.015	GENERIC	false	false
+6619bfeb147cd50b64677775	256	Leche en polvo entera	Lácteos	Lacteos	Grs	5.08	0.248	0.392	0.28	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677776	257	Leche en polvo zero lactosa	Lácteos	Lacteos	Grs	4.9742	0.2464	0.4081	0.2618	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677777	258	Leche entera	Lácteos	Lacteos	Grs	0.605	0.03	0.065	0.025	GENERIC	false	false
+6619bfeb147cd50b64677778	259	Leche entera carrefour	Lácteos	Lacteos	Grs	0.57	0.03	0.045	0.03	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677779	260	Leche entera Ilolay	Lácteos	Lacteos	Grs	0.586	0.031	0.048	0.03	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467777a	261	Leche entera tregar	Lácteos	Lacteos	Grs	0.56	0.035	0.06	0.02	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467777b	262	Leche parcialmente descremada (Veronica)	Lácteos	Lacteos	Grs	0.447	0.03	0.048	0.015	GENERIC	false	false
+6619bfeb147cd50b6467777c	263	lechuga	Verduras	Verduras	Grs	0.154	0.011	0.014	0.006	GENERIC	false	false
+6619bfeb147cd50b6467777d	264	Lentejas en remojo	Carbohidratos	Cereales y legumbres	Grs	1.004	0.063	0.17	0.008	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467777e	267	Lentejas secas	Carbohidratos	Cereales y legumbres	Grs	3.04	0.22	0.54	0	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b64677781	268	Lentejas secas (Elio)	Carbohidratos	Cereales y legumbres	Grs	2.532	0.183	0.45	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677782		Lomitos de atun al natural (Coto)				0	0	0	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677783	270	Lomo de cerdo magro	Proteínas	Cerdo	Grs	1.2	0.21	0	0.04	GENERIC	false	false
+6619bfeb147cd50b64677784	271	Lomo embuchado	Proteínas	Carne vacuna	Grs	1.99	0.38	0.005	0.05	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677785	272	Lubina	Proteínas	Pescados y mariscos	Grs	0.837	0.18	0	0.013	GENERIC	false	false
+6619bfeb147cd50b64677786	273	Maiz	Carbohidratos	Cereales y legumbres	Grs	3.189	0.096	0.6	0.045	GENERIC	false	false
+6619bfeb147cd50b64677787	275	Maiz inflado	Carbohidratos	Cereales y legumbres	Grs	3.71	0.06	0.8	0.03	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b64677789	276	Mandarina	Frutas	Frutas	Grs	0.531	0.008	0.118	0.003	GENERIC	false	false
+6619bfeb147cd50b6467778a	277	Mandarina chica	Frutas	Frutas	Unid	40.51	0.61	9	0.23	GENERIC	false	false
+6619bfeb147cd50b6467778b	278	Mandarina grande	Frutas	Frutas	Unid	63.21	0.97	14	0.37	GENERIC	false	false
+6619bfeb147cd50b6467778c	279	Mandarina mediana	Frutas	Frutas	Unid	46.67	0.71	10.35	0.27	GENERIC	false	false
+6619bfeb147cd50b6467778e	281	Mango	Frutas	Frutas	Grs	0.6	0	0.15	0	GENERIC	false	true
+6619bfeb147cd50b6467778f	282	Mani	Grasas	Frutos secos	Grs	5.968	0.28	0.042	0.52	GENERIC	false	false
+6619bfeb147cd50b64677790	284	Manteca	Grasas	Untables grasos	Grs	7.42	0.01	0	0.82	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b64677792	285	Mantecol	Snacks	Snacks	Grs	5.315	0.145	0.475	0.315	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677793	286	Mantequilla de mani	Grasas	Frutos secos	Grs	5.9	0.25	0.1	0.5	GENERIC	false	false
+6619bfeb147cd50b64677794	287	Manzana	Frutas	Frutas	Grs	0.525	0.005	0.115	0.005	GENERIC	false	false
+6619bfeb147cd50b64677795	288	Manzana chica	Frutas	Frutas	Unid	77.41	0.39	18.4	0.25	GENERIC	false	false
+6619bfeb147cd50b64677796	289	Manzana grande	Frutas	Frutas	Unid	117.74	0.58	28	0.38	GENERIC	false	false
+6619bfeb147cd50b64677797	290	Manzana mediana	Frutas	Frutas	Unid	95.07	0.47	22.6	0.31	GENERIC	false	false
+6619bfeb147cd50b64677798	291	Mariscos	Proteínas	Pescados y mariscos	Grs	1.23	0.12	0.03	0.07	GENERIC	false	false
+6619bfeb147cd50b64677799	292	Masa prepizza	Carbohidratos	Carbohidrato general	Grs	2.7519	0.0961	0.575	0.0075	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467779a	293	Maxialfajor jorgelin	Snacks	Alfajor	Unid	334.8	4.7	47.5	14	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467779b	294	Medallon de merluza	Proteínas	Pescados y mariscos	Grs	1.95	0.1	0.23	0.07	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467779c	295	Medallon de pollo (Granja del sol)	Proteínas	Medallones	Unid	220.5	10.5	21	10.5	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467779d	296	Medallon de pollo (Granja tres arroyos)	Grasas	Medallones	Unid	185.6	8.4	11	12	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467779e	297	Medallones de merluza	Proteínas	Pescados y mariscos	Grs	0.807	0.158	0.01	0.015	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467779f	298	Medallones de pollo	Proteínas	Pollo	Grs	1.008	0.172	0.035	0.02	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777a0	299	Melon	Frutas	Frutas	Grs	0.352	0.008	0.08	0	GENERIC	false	false
+6619bfeb147cd50b646777a1	300	Mendicrim	Lácteos	Untables	Grs	2.172	0.05	0.043	0.2	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777a2	301	Mendicrim light	Lácteos	Untables	Grs	1.34	0.08	0.075	0.08	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777a3	304	Merluza	Proteínas	Pescados y mariscos	Grs	1.245	0.21	0	0.045	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b646777a6	305	Mermelada	Carbohidratos	Mermeladas	Grs	2.8	0	0.7	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777a7	306	Mermelada arcor	Carbohidratos	Mermeladas	Grs	2.552	0	0.638	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777a8	307	Mermelada arcor light	Carbohidratos	Mermeladas	Grs	1.347	0	0.33	0.003	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777a9	308	Mermelada carrefour light	Carbohidratos	Mermeladas	Grs	1.4	0	0.35	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777aa	309	Mermelada de arandano BC la campagnola	Carbohidratos	Mermeladas	Grs	1.56	0	0.39	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777ab	310	Mermelada de ciruela light arcor	Carbohidratos	Mermeladas	Grs	1.4	0	0.35	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777ac	311	Mermelada de ciruela light carrefour	Carbohidratos	Mermeladas	Grs	1.44	0	0.36	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777ad	312	Mermelada de durazno orieta	Carbohidratos	Mermeladas	Grs	2.6	0	0.65	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777ae	313	Mermelada de frutilla arcor	Carbohidratos	Mermeladas	Grs	2.6	0	0.65	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777af	314	Mermelada de frutilla bc la campagnola	Carbohidratos	Mermeladas	Grs	1.46	0	0.365	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777b0	315	Mermelada de frutilla light arcor	Carbohidratos	Mermeladas	Grs	1.4	0	0.35	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777b1	316	Mermelada de frutos rojos BC la campagnola	Carbohidratos	Mermeladas	Grs	1.32	0	0.33	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777b2	317	Mermelada de naranja BC la campagnola	Carbohidratos	Mermeladas	Grs	1.46	0	0.365	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777b3	318	Mermelada de naranja la campagnola	Carbohidratos	Mermeladas	Grs	1.46	0	0.365	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777b4	319	Mermelada de naranja light arcor	Carbohidratos	Mermeladas	Grs	1.4	0	0.35	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777b5	321	Mermelada light	Carbohidratos	Mermeladas	Grs	1.36	0	0.34	0	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b646777b7	322	Mermelada light Emeth de ciruela	Carbohidratos	Mermeladas	Grs	1.08	0	0.27	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777b8	323	Miel	Carbohidratos	Azúcares y untables	Grs	3.22	0.005	0.8	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777b9	324	Miel cruda	Carbohidratos	Miel	Grs	3.22	0.005	0.8	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777ba	325	Miel liquida aleluya	Carbohidratos	Miel	Grs	3.2	0	0.8	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777bb	326	Miel liquira carrefour	Carbohidratos	Miel	Grs	3	0.03	0.72	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777bc	327	Miel untable aleluya	Carbohidratos	Miel	Grs	3.28	0	0.82	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777bd		Milanesa de pollo:				0	0	0	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777be	329	Milanesa de soja (Vegetalex)	Proteínas	Soja	Unid	185	9.4	31	2.6	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777bf		Milanesa de soja:				0	0	0	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777c0		Milanesa de ternera:				0	0	0	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777c1	332	Milka (Te Quiero)	Snacks	Snacks	Cuad	20.459	0.257	2.286	1.143	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777c2	333	Minitostaditas cuatro quesos twistos	Lácteos	Salados	Grs	4.552	0.12	0.64	0.168	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777c3	334	Minitostaditas jamon twistos	Snacks	Salados	Grs	3.3	0.048	0.372	0.18	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777c4	335	Morcilla	Grasas	Proteinasgrasas	Grs	3.752	0.14	0.015	0.348	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777c5	336	Mortadela	Grasas	Proteinasgrasas	Grs	2.63	0.14	0.09	0.19	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777c6	337	Mortadela (Cagnoli)	Fiambres	Fiambres	Fetas	33.363	1.617	0.561	2.739	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777c7	338	Mortadela (Paladini)	Fiambres	Fiambres	Grs	2.63	0.14	0.09	0.19	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777c8	339	Mortadela Piccola (Calchaqui)	Fiambres	Fiambres	Fetas	17.5	1	0	1.5	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777c9	340	Mozzarella	Grasas	Quesos	Grs	3.375	0.27	0	0.255	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777ca	341	Nachos tradicionales sin gluten	Otros	Singluten	Grs	17.76	0.24	2.4	0.8	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777cb	342	Naranja	Frutas	Frutas	Grs	0.473	0.009	0.107	0.001	GENERIC	false	false
+6619bfeb147cd50b646777cc	343	Naranja chica	Frutas	Frutas	Unid	0	0	0	0	GENERIC	true	false
+6619bfeb147cd50b646777cd	344	Naranja grande	Frutas	Frutas	Unid	0	0	0	0	GENERIC	true	false
+6619bfeb147cd50b646777ce	345	Naranja mediana	Frutas	Frutas	Unid	0	0	0	0	GENERIC	true	false
+6619bfeb147cd50b646777cf	346	Natural Break	Snacks	Snacks	Unid	190.8	6.2	10	14	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777d0	347	Nescafé Dolca Caffe Latte	Bebidas	Cafes	Grs	4.448	0.144	0.68	0.128	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777d1	349	Nueces peladas	Grasas	Frutos secos	Grs	6.568	0.15	0.025	0.652	GENERIC	false	true
+6619bfeb147cd50b646777d3	350	Nugaton de chocolate	Snacks	Snacks	Grs	142.2	2.1	15	8.2	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777d4	351	Nuggets de pollo fritas (Granja del sol)	Grasas	Proteinasgrasas	Unid	62.416	3.154	3.486	3.984	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777d5	352	Nutella	Otros	Delicias	Grs	5.342	0.063	0.575	0.31	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777d6	353	Ñoquis con papa	Carbohidratos	Cereales y legumbres	Grs	2.185	0.059	0.44	0.021	GENERIC	false	false
+6619bfeb147cd50b646777d7	354	Ñoquis con papa carrefour	Carbohidratos	Pastas	Grs	2.185	0.059	0.44	0.021	GENERIC	false	false
+6619bfeb147cd50b646777d8	355	ñoquis de papa	Carbohidratos	Cereales y legumbres	Grs	2.185	0.059	0.44	0.021	GENERIC	false	false
+6619bfeb147cd50b646777d9		Omelette:				0	0	0	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777da	357	Operas paquete chico	Snacks	Snacks	Unid	289.9	2.9	38.3	13.9	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777db	358	Paleta de ternera	Proteínas	Carne vacuna	Grs	1.355	0.215	0	0.055	GENERIC	false	false
+6619bfeb147cd50b646777dc	359	Palitos salados	Snacks	Snacks	Grs	4.868	0.072	0.56	0.26	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777dd	360	Palomita (Carne magra)	Proteínas	Carne vacuna	Grs	1.175	0.215	0	0.035	GENERIC	false	false
+6619bfeb147cd50b646777de	361	Palta	Grasas	Palta y derivados	Grs	1.598	0.02	0.042	0.15	GENERIC	false	false
+6619bfeb147cd50b646777df	362	Pan	Carbohidratos	Panes	Grs	2.641	0.076	0.51	0.033	GENERIC	false	false
+6619bfeb147cd50b646777e0	363	Pan artesano bimbo	Carbohidratos	Panes	Reb	86.1116	3.33	16.1	0.9324	GENERIC	false	false
+6619bfeb147cd50b646777e1	364	Pan baguette	Carbohidratos	Panes	Grs	2.742	0.088	0.53	0.03	GENERIC	false	false
+6619bfeb147cd50b646777e2	365	Pan blanco	Carbohidratos	Panes	Grs	2.641	0.076	0.51	0.033	GENERIC	false	false
+6619bfeb147cd50b646777e3	366	Pan con salvado carrefour	Carbohidratos	Panes	Reb	69.1	2.5	13.2	0.7	GENERIC	false	false
+6619bfeb147cd50b646777e4	367	Pan con salvado fargo plus	Carbohidratos	Panes	Reb	59.2	2.55	10	1	GENERIC	false	false
+6619bfeb147cd50b646777e5	368	Pan con salvado Noly	Carbohidratos	Panes	Reb	57.1	1.9	11.25	0.5	GENERIC	false	false
+6619bfeb147cd50b646777e6	369	Pan de centeno	Carbohidratos	Panes	Grs	2.597	0.085	0.49	0.033	GENERIC	false	false
+6619bfeb147cd50b646777e7	370	Pan de molde Bio sin gluten	Carbohidratos	Singluten	Grs	2.794	0.016	0.57	0.05	GENERIC	false	false
+6619bfeb147cd50b646777e8	371	Pan de salvado (Fargo)	Carbohidratos	Panes	Reb	62.4	3.35	10	1	GENERIC	false	false
+6619bfeb147cd50b646777e9	372	Pan de salvado doble fargo	Carbohidratos	Panes	Reb	59.8	2.35	10.8	0.8	GENERIC	false	false
+6619bfeb147cd50b646777ea	373	Pan doble integral fargo	Carbohidratos	Panes	Reb	84.1	3.3	14.8	1.3	GENERIC	false	false
+6619bfeb147cd50b646777eb	374	Pan frances	Carbohidratos	Panes	Grs	2.762	0.08	0.57	0.018	GENERIC	false	false
+6619bfeb147cd50b646777ec	376	Pan integral	Carbohidratos	Panes	Grs	2.593	0.091	0.465	0.041	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b646777ee	377	Pan lactal	Carbohidratos	Panes	Reb	61.75	2.65	12	0.35	GENERIC	false	false
+6619bfeb147cd50b646777ef	378	Pan lactal bimbo	Carbohidratos	Panes	Reb	63.45	2.45	11.5	0.85	GENERIC	false	false
+6619bfeb147cd50b646777f0	379	Pan lactal de salvado carrefour	Carbohidratos	Panes	Reb	66.3	2.5	12.5	0.7	GENERIC	false	false
+6619bfeb147cd50b646777f1	380	Pan lactal noly	Carbohidratos	Panes	Reb	65.25	2.35	12.5	0.65	GENERIC	false	false
+6619bfeb147cd50b646777f2	381	Pan negro	Carbohidratos	Panes	Grs	2.593	0.091	0.465	0.041	GENERIC	false	false
+6619bfeb147cd50b646777f3	382	Pan para hamburguesas	Carbohidratos	Panes	Unid	139	5	24.8	2.2	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777f4	383	Pan para hamburguesas fargo	Carbohidratos	Panes	Unid	135.1	4.6	26.25	1.3	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777f5	384	Pan para panchos	Carbohidratos	Panes	Unid	87.486	2.838	17.4	0.726	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777f7	386	Pan rallado	Carbohidratos	Panes	Grs	3.455	0.08	0.75	0.015	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b646777f8	387	Pan tipo artesano bimbo semillas del campo	Carbohidratos	Panes	Reban	87.6456	3.663	14.652	1.5984	GENERIC	false	false
+6619bfeb147cd50b646777f9	388	Panceta	Grasas	Grasa general	Grs	4.8	0.12	0	0.48	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777fa	389	Panqueques proteicos A	Carbohidratos	Panes	Unid	240	21.5	25	6	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777fb		Panzotti Ricota y queso (Coto)				0	0	0	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777fc	391	Papas	Carbohidratos	Tubérculos	Grs	0.963	0.017	0.19	0.015	GENERIC	false	false
+6619bfeb147cd50b646777fd	392	Papas fritas (Combo mediano)	Snacks	Frituras	Unid	292	4	33	16	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777fe	393	Papas fritas (Snacks)	Snacks	Snacks	Grs	5.304	0.036	0.57	0.32	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646777ff	394	Papas noisette (Mc Cain)	Carbohidratos	Tubérculos	Grs	1.64385	0.02457	0.2574	0.05733	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677800	395	Papas tradicionales (Mc Cain)	Carbohidratos	Tubérculos	Grs	0.96993	0.0234	0.1638	0.02457	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677801	396	Papaya	Carbohidratos	Tubérculos	Grs	0.4	0	0.1	0	GENERIC	false	false
+6619bfeb147cd50b64677802	397	Pasas de uva	Carbohidratos	Carbohidrato general	Grs	2.838	0.0231	0.6864	0	GENERIC	false	false
+6619bfeb147cd50b64677803	398	Pasta de mani	Grasas	Frutos secos	Grs	5.83	0.23	0.17	0.47	GENERIC	false	false
+6619bfeb147cd50b64677804	399	Pasta de mani Sin tacc	Grasas	Frutos secos	Grs	5.85	0.26	0.1	0.49	GENERIC	false	false
+6619bfeb147cd50b64677805	400	Paty	Otros	Otros	Unid	191	14	0	15	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677806	401	Patynesa (Paty)	Grasas	Grasa general	Unid	277	16	15	17	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677807	402	Peceto	Proteínas	Proteína general	Grs	1.31	0.215	0	0.05	GENERIC	false	false
+6619bfeb147cd50b64677808	403	Pechuga de pavo	Proteínas	Proteína general	Grs	1.105	0.22	0	0.025	GENERIC	false	false
+6619bfeb147cd50b64677809	404	Pechuga de pollo	Proteínas	Pollo	Grs	1.105	0.22	0	0.025	GENERIC	false	false
+6619bfeb147cd50b6467780a	405	Pechuga de pollo con piel	Proteínas	Pollo	Grs	1.38	0.21	0	0.06	GENERIC	false	false
+6619bfeb147cd50b6467780b	407	Pepinos	Verduras	Verduras	Grs	0.138	0.005	0.025	0.002	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b6467780d	408	Pera	Frutas	Frutas	Grs	0.585	0.004	0.14	0.001	GENERIC	false	false
+6619bfeb147cd50b6467780e	409	Pera chica	Frutas	Frutas	Unid	84.01	0.53	20	0.21	GENERIC	false	false
+6619bfeb147cd50b6467780f	410	Pera grande	Frutas	Frutas	Unid	131.8	0.83	31.4	0.32	GENERIC	false	false
+6619bfeb147cd50b64677810	411	Pera mediana	Frutas	Frutas	Unid	101.61	0.64	24.2	0.25	GENERIC	false	false
+6619bfeb147cd50b64677811	412	Pescado blanco	Proteínas	Proteína general	Grs	1.3	0.19	0	0.06	GENERIC	false	false
+6619bfeb147cd50b64677812	413	Pionono (Carrefour)	Snacks	Snacks	Grs	3.322	0.108	0.583	0.062	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677813	415	Pistachos	Grasas	Grasa general	Grs	6.15	0.25	0.14	0.51	GENERIC	false	true
+6619bfeb147cd50b64677815	416	Pizza sibarita (1/4)	Otros	Otros	Unid	284	14	30	12	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677817	418	Plato de verduras	Verduras	Verduras	Unid	0	0	0	0	EXPLICIT_ONLY	true	true
+6619bfeb147cd50b64677818	419	Polenta	Carbohidratos	Carbohidrato general	Grs	3.504	0.085	0.755	0.016	GENERIC	false	false
+6619bfeb147cd50b64677819	420	Polenta (Coto)	Otros	Polenta	Grs	3.604	0.085	0.78	0.016	GENERIC	false	false
+6619bfeb147cd50b6467781a	421	Polenta (Presto pronta)	Otros	Polenta	Grs	3.4	0.07	0.78	0	GENERIC	false	false
+6619bfeb147cd50b6467781b	422	Polenta (Quaker)	Otros	Polenta	Grs	3.518	0.067	0.79	0.01	GENERIC	false	false
+6619bfeb147cd50b6467781c	423	Polenta carrefour	Otros	Otros	Grs	3.32	0.11	0.72	0	GENERIC	false	false
+6619bfeb147cd50b6467781d	424	Pomelo	Frutas	Frutas	Grs	0.352	0.003	0.085	0	GENERIC	false	false
+6619bfeb147cd50b6467781e	425	Porcion de prepizza	Carbohidratos	Carbohidrato general	Porc	85.8	3.8	16.3	0.6	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467781f	426	Porcion de prepizza	Carbohidratos	Carbohidrato general	Porcion	85.8	3.8	16.3	0.6	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677820	427	Porotos secos	Carbohidratos	Carbohidrato general	Grs	2.668	0.25	0.417	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677821	428	Porotos secos remojados	Carbohidratos	Carbohidrato general	Grs	0.905	0.065	0.15	0.005	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677822	429	Premezcla sin tacc Santa María	Otros	Otros	Grs	3.892	0.036	0.82	0.052	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677823	430	Prepizza (Carrefour)	Carbohidratos	Carbohidrato general	Porc	123.1	3.6	24.25	1.3	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677824	431	Provoleta	Grasas	Quesos	Grs	3.46	0.26	0.02	0.26	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677825	432	Pure de papas (General)	Carbohidratos	Pures	Grs	3.381	0.074	0.76	0.005	GENERIC	false	false
+6619bfeb147cd50b64677826	433	Pure de papas morixe	Carbohidratos	Pures	Grs	3.381	0.074	0.76	0.005	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677827	434	Puré de tomate	Verduras	Verduras	Gramos	0.28	0.016	0.054	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677828	435	Pure de zapallo knorr	Verduras	Pures	Grs	3.2	0.08	0.72	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677829	436	Pure knorr	Carbohidratos	Pures	Grs	3.332	0.084	0.74	0.004	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467782a	437	Queso blanco garcia	Lácteos	Untables	Grs	1.2441	0.0726	0.0825	0.0693	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467782b	438	Queso blanco light tregar	Lácteos	Untables	Grs	1.0296	0.1353	0.033	0.0396	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467782c	439	Queso cheddar	Lácteos	Quesos	Grs	3.874	0.27	0.001	0.31	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467782d	440	Queso cheddar tonadita en fetas	Lácteos	Quesos	Fetas	50	2.9	0.6	4	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467782e	441	Queso crema	Lácteos	Untables	Grs	2.46	0.06	0.06	0.22	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467782f	442	Queso crema carrefour	Lácteos	Untables	Grs	2.254	0.066	0.025	0.21	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677830	443	Queso crema carrefour light	Lácteos	Untables	Grs	1.5708	0.0858	0.0396	0.1188	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677831	444	Queso crema crematto milkaut	Lácteos	Untables	Grs	2.939	0.047	0.087	0.267	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677832	445	Queso crema crematto milkaut light	Lácteos	Untables	Grs	2.178	0.0528	0.1353	0.1584	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677833	446	Queso crema cremon light	Lácteos	Untables	Grs	1.4407	0.0957	0.064	0.0891	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677834	447	Queso crema la paulina	Lácteos	Untables	Grs	2.472	0.043	0.08	0.22	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677835	448	Queso crema la paulina light	Lácteos	Untables	Grs	1.097	0.055	0.1	0.053	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467783b	449	Queso crema light	Lácteos	Untables	Grs	1.286	0.087	0.077	0.07	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467783c	450	Queso crema philadelphia	Lácteos	Untables	Grs	2.934	0.051	0.03	0.29	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467783d	451	Queso crema philadelphia light	Lácteos	Untables	Grs	2.504	0.061	0.07	0.22	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467783e	452	Queso crema san ignacio	Lácteos	Untables	Grs	2.2572	0.0627	0.0561	0.198	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467783f	453	Queso crema san ignacio light	Lácteos	Untables	Grs	1.3035	0.0759	0.0792	0.0759	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677840	454	Queso cremon cremoso	Lácteos	Quesos	Grs	2.88	0.18	0	0.24	GENERIC	false	false
+6619bfeb147cd50b64677841	455	Queso cremon doble crema	Lácteos	Quesos	Grs	3.57	0.14	0.01	0.33	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677842	456	Queso cremoso	Lácteos	Quesos	Grs	3.135	0.2	0.01	0.255	GENERIC	false	false
+6619bfeb147cd50b64677843	457	Queso cremoso (cremac)	Lácteos	Quesos	Grs	2.9502	0.1848	0.033	0.231	GENERIC	false	true
+6619bfeb147cd50b64677845	459	Queso cremoso cremac	Lácteos	Quesos	Grs	2.9502	0.1848	0.033	0.231	GENERIC	false	true
+6619bfeb147cd50b64677846	460	Queso cremoso light	Lácteos	Quesos	Grs	2.37	0.21	0	0.17	GENERIC	false	false
+6619bfeb147cd50b64677847	461	Queso cremoso port salut	Lácteos	Quesos	Grs	3.09	0.2	0.01	0.25	GENERIC	false	false
+6619bfeb147cd50b64677848	462	Queso cremoso punta del agua	Lácteos	Quesos	Grs	2.765	0.167	0	0.233	GENERIC	false	false
+6619bfeb147cd50b64677849	463	Queso cremoso punta del agua light	Lácteos	Quesos	Grs	2.559	0.202	0.017	0.187	GENERIC	false	false
+6619bfeb147cd50b6467784a	464	Queso cremoso saint paulin	Lácteos	Quesos	Grs	2.22	0.28	0.005	0.12	GENERIC	false	false
+6619bfeb147cd50b6467784b	466	Queso cremoso temblay	Lácteos	Quesos	Grs	3.168	0.198	0	0.264	GENERIC	false	true
+6619bfeb147cd50b6467784d	467	Queso danbo carrefour	Lácteos	Quesos	Fetas	69.4	5.2	0	5.4	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467784e	468	Queso danbo carrefour light	Lácteos	Quesos	Fetas	60.8	6.2	0	4	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677850	471	Queso danbo feteado	Lácteos	Quesos	Gramos	3.4353	0.2574	0	0.2673	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b64677852	472	Queso danbo feteado light	Lácteos	Quesos	Grs	2.982	0.3	0	0.198	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677853	473	Queso danbo light	Lácteos	Quesos	Grs	3.0096	0.3069	0	0.198	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677854	474	Queso finlandia clasico	Lácteos	Untables	Grs	2.8446	0.0693	0.033	0.2706	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677855	475	Queso finlandia light	Lácteos	Untables	Grs	1.952	0.09	0.038	0.16	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677856	476	Queso la paulina	Lácteos	Quesos	Grs	3.102	0.19	0.023	0.25	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677857	477	Queso la paulina light	Lácteos	Quesos	Grs	2.903	0.26	0	0.207	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677858	478	Queso mozzarella	Lácteos	Quesos	Grs	3	0.26	0.04	0.2	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677859	480	Queso pategras	Lácteos	Quesos	Grs	3.7554	0.2706	0	0.297	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b6467785b	481	Queso port salut (La paulina)	Lácteos	Quesos	Grs	3.054	0.187	0.023	0.246	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467785c	482	Queso port salut light (La paulina)	Lácteos	Quesos	Grs	2.086	0.26	0.023	0.106	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467785d	483	Queso sardo	Lácteos	Quesos	Grs	3.8808	0.2574	0	0.3168	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467785e	484	Queso untable cremon light	Lácteos	Untables	Grs	1.4223	0.0957	0.0594	0.0891	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467785f	485	Queso untable garcia	Lácteos	Untables	Grs	1.2441	0.0726	0.0825	0.0693	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677860	487	Quinoa	Carbohidratos	Carbohidrato general	Grs	3.734	0.133	0.67	0.058	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b64677862	488	Rapiditas clasicas (Bimbo)	Carbohidratos	Panes	Unid	71.53	2.25	11.92	1.65	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677863	489	Rapiditas integrales (Bimbo)	Carbohidratos	Panes	Unid	66.25	2.4	10	1.85	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677864	490	Rapiditas light (Bimbo)	Carbohidratos	Panes	Unid	69	2.55	12	1.2	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677865	491	Ravioles (Carrefour)	Carbohidratos	Pastas	Grs	2.698	0.092	0.47	0.05	GENERIC	false	false
+6619bfeb147cd50b64677866	492	Remolacha	Verduras	Verduras	Grs	0.44	0.01	0.1	0	GENERIC	false	false
+6619bfeb147cd50b64677867	494	Repollo	Verduras	Verduras	Grs	0.114	0.006	0	0.01	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b64677869	495	Rhodesia	Snacks	Carbosnacks	Unid	1.152888889	0.01044444444	0.1377777778	0.06222222222	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467786a	496	Ricota	Otros	Quesos	Grs	1.5488	0.1132	0.04	0.104	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467786b	497	Ricota magra	Otros	Quesos	Grs	1.08	0.12	0.06	0.04	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467786c	498	Salame	Grasas	Proteinasgrasas	Grs	3.265	0.1975	0	0.275	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467786d	499	Salame (Cagnoli)	Fiambres	Fiambres	Fetas	70.8	3.3	0	6.4	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467786e	500	Salame tandilero tipo milan (Cagnoli)	Fiambres	Fiambres	Grs	3.263	0.197	0	0.275	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467786f	501	Salame tipo milan (Bocatti)	Fiambres	Fiambres	Grs	4.123	0.187	0	0.375	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677870	502	Salame tipo Milan (Paladini)	Fiambres	Fiambres	Grs	3.765	0.21	0	0.325	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677871	503	Salamin picado fino (Paladini)	Fiambres	Fiambres	Grs	4	0.19	0	0.36	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677872	504	Salamin picado grueso (Paladini)	Fiambres	Fiambres	Grs	3.628	0.217	0.015	0.3	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677873	505	Salchichas de soja (Vegetalex)	Proteínas	Salchichas	Unid	26.4	4	2.6	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677874	506	Salchichas Granja Iris	Proteínas	Salchichas	Unid	40.3	4.5	3.1	1.1	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677875	507	Salchichas La Blanca	Grasas	Salchichas	Unid	72.2	2.9	3	5.4	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677876	508	Salchichas Paladini	Grasas	Salchichas	Unid	95.5	4.9	3	7.1	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677877	509	Salchichas patyvienna	Grasas	Salchichas	Unid	81.2	4.9	1.9	6	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677878	510	Salchichas Swift	Grasas	Salchichas	Unid	85.6	3.4	3.6	6.4	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677879	511	Salchichas Vienissima	Grasas	Salchichas	Unid	75.5	4.6	1.9	5.5	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467787d	513	Salmón	Proteínas	Proteína general	Grs	2.15	0.2	0	0.15	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b6467787e	514	Salsa	Otros	Otros	Grs	0.28	0.01	0.06	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467787f	515	Sandia	Frutas	Frutas	Grs	0.306	0.006	0.066	0.002	GENERIC	false	false
+6619bfeb147cd50b64677880		Sanguche:				0	0	0	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677881	517	Sardinas	Proteínas	Proteína general	Grs	1.395	0.18	0	0.075	GENERIC	false	false
+6619bfeb147cd50b64677882	518	Scons sin gluten Santa Maria	Otros	Singluten	Grs	4.468	0.027	0.73	0.16	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677883	519	Seitan	Proteínas	Proteína general	Grs	1.22	0.24	0.02	0.02	GENERIC	false	false
+6619bfeb147cd50b64677884	520	Semillas de calabaza	Verduras	Verduras	Grs	5.84	0.35	0.03	0.48	GENERIC	false	false
+6619bfeb147cd50b64677885	522	Semillas de chia	Grasas	Grasa general	Grs	4.86	0.16	0.38	0.3	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b64677887	523	Semillas de girasol	Grasas	Grasa general	Grs	5.807	0.233	0.06	0.515	GENERIC	false	false
+6619bfeb147cd50b64677888	524	Semillas de lino	Grasas	Grasa general	Grs	5.39	0.23	0.15	0.43	GENERIC	false	false
+6619bfeb147cd50b6467788a	526	Semillas de sesamo	Grasas	Grasa general	Grs	5.9928	0.1716	0.2574	0.4752	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b6467788b	527	Skarchitos granix	Carbohidratos	Cereales	Grs	3.716	0.05	0.87	0.004	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467788c	528	Soja texturizada	Proteínas	Soja	Grs	3.237	0.51	0.27	0.013	GENERIC	false	false
+6619bfeb147cd50b6467788d		Sopa:				0	0	0	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467788e	530	Speed 250 Mll	Otros	Energizantes	Unid	112	0	28	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467788f	531	Sprite (Gaseosa)	Carbohidratos	Bebidas	Grs	0.2	0	0.05	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677890	532	Sushi	Carbohidratos	Carbohidrato general	Grs	1.396	0.04	0.3	0.004	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677891	533	Tallarines al huevo (Coto)	Proteínas	Fideos	Grs	3.593	0.11	0.75	0.017	GENERIC	false	false
+6619bfeb147cd50b64677892	534	Tapa de asado	Grasas	Proteinasgrasas	Grs	2.11	0.19	0	0.15	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677893	535	Tapa pascualina la salteña	Carbohidratos	Tapas	Tapa	312.6	6.7	46.7	11	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677894	536	Tapas de empanadas (General)	Otros	Tapas	Unid	106.4	1.8	14	4.8	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677895	537	Tapas de empanadas la salteña	Carbohidratos	Tapas	Tapa	86.2	1.8	13	3	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677896	538	Tarta de atun :	Proteínas	Pescados y mariscos	Unid	0	0	0	0	EXPLICIT_ONLY	true	false
+6619bfeb147cd50b64677897	539	Tarta de jamon y queso :	Lácteos	Lácteos	Unid	0	0	0	0	EXPLICIT_ONLY	true	false
+6619bfeb147cd50b64677898		Tarta:				0	0	0	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b64677899	541	Ternera magra	Proteínas	Proteína general	Grs	1.31	0.215	0	0.05	GENERIC	false	false
+6619bfeb147cd50b6467789a	542	Tira de asado	Grasas	Proteinasgrasas	Grs	4.75	0.22	0	0.43	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467789b	543	tofu	Proteínas	Proteína general	Grs	1.15	0.11	0.02	0.07	GENERIC	false	false
+6619bfeb147cd50b6467789c	544	Tomate	Verduras	Verduras	Grs	0.19	0.009	0.034	0.002	GENERIC	false	false
+6619bfeb147cd50b6467789d	545	Tosdadas light riera	Carbohidratos	Tostadas	Unid	28.32	0.88	6.2	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467789e	546	Tostadas aireadas clasicas ser	Carbohidratos	Tostadas	Grs	3.766	0.062	0.83	0.022	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b6467789f	547	Tostadas carrefour light	Carbohidratos	Tostadas	Unid	36.313	1.15	7.26	0.297	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778a0	548	Tostadas clasicas	Carbohidratos	Tostadas	Grs	4.124	0.12	0.74	0.076	GENERIC	false	false
+6619bfeb147cd50b646778a1	549	Tostadas clasicas carrefour	Carbohidratos	Tostadas	Unid	35.04	1	6.5	0.56	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778a2	550	Tostadas clasicas criollitas	Carbohidratos	Tostadas	Unid	40.194	1.155	7.26	0.726	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778a3	551	Tostadas de arroz	Carbohidratos	Tostadas	Grs	3.614	0.08	0.81	0.006	GENERIC	false	false
+6619bfeb147cd50b646778a5	553	Tostadas de arroz aireadas carrefour	Carbohidratos	Tostadas	Unid	20.8	0.4	4.8	0	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b646778a6	554	Tostadas de arroz apostoles	Carbohidratos	Tostadas	Unid	35.5977	0.5328	7.992	0.1665	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778a7	555	Tostadas de arroz carilo	Carbohidratos	Tostadas	Unid	27	0.5	6.25	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778a9	557	Tostadas de arroz carrefour (Sin gluten)	Carbohidratos	Tostadas	Unid	30.4	0.6	7	0	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b646778aa	558	Tostadas de arroz cerealitas	Carbohidratos	Tostadas	Unid	29	0.65	6.6	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778ab	559	Tostadas de arroz riera	Carbohidratos	Tostadas	Unid	30.4	0.6	7	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778ac	560	Tostadas de arroz Risky Dit	Carbohidratos	Tostadas	Unid	27.775	0.525	6.25	0.075	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778ad	561	Tostadas de mesa	Otros	Tostadas	Unid	39.303	1.155	7.26	0.627	GENERIC	false	false
+6619bfeb147cd50b646778ae	563	Tostadas de mesa riera	Otros	Tostadas	Unid	35.211	1.089	6.6	0.495	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b646778b0	564	Tostadas de salvado criollitas	Carbohidratos	Tostadas	Unid	33.867	1.15	6.5	0.363	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778b1	566	Tostadas dulces carrefour	Carbohidratos	Tostadas	Unid	39.8	1	7.6	0.6	EXPLICIT_ONLY	false	true
+6619bfeb147cd50b646778b3	567	Tostadas dulces criollitas	Carbohidratos	Tostadas	Unid	40.2	1.2	7.5	0.6	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778b4	568	Tostadas dulces riera	Carbohidratos	Tostadas	Unid	35.11	0.99	7	0.35	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778b5	569	Tostadas gruesas clasicas carrefour	Carbohidratos	Tostadas	Unid	18.768	0.56	3.52	0.272	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778b6	570	Tostadas integrales riera	Carbohidratos	Tostadas	Unid	32.59	0.99	6.1	0.47	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778b7	571	Tostadas light criollitas	Carbohidratos	Tostadas	Unid	38.83	1.15	7.59	0.43	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778b8	572	Tostadas light riera	Otros	Tostadas	Unid	28.4	1	6.1	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778b9	573	Tostadas sin sal agregada carrefour	Carbohidratos	Tostadas	Unid	29.66	0.875	5.55	0.44	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778ba	574	Tostadas sin sal agregada criollitas	Carbohidratos	Tostadas	Grs	3.947	0.13	0.76	0.043	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778bb	575	Tostaditas "Tosti"	Otros	Tostadas	Unid	23.82	0.7	4.4	0.38	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778bc	576	Tostaditas de arroz molino ala	Carbohidratos	Tostadas	Unid	8.0808	0.2262	1.794	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778bf	577	Tostaditas de arroz Molinos ala	Carbohidratos	Tostadas	Unid	8.0808	0.2262	1.794	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778c0	578	Tostaditas de arroz sin sal	Carbohidratos	Tostadas	Unid	3.6696	0.0264	0.891	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778c1	579	Tostaditas de arroz sin sal	Carbohidratos	Tostadas	Grs	3.6696	0.0264	0.891	0	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778c2	580	Triple Hamburguesa con queso	Lácteos	Hamburguesas	Unid	568	38	32	32	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778c3	581	Turron arcor	Snacks	Carbosnacks	Unid	96.8	1.7	18	2	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778c4	582	Turron arcor con fibra	Snacks	Carbosnacks	Unid	80.8	1.7	14	2	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778c5	583	Turron con fibra (Arcor)	Snacks	Carbosnacks	Unid	80.8	1.7	14	2	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778c6	584	Uvas	Frutas	Frutas	Grs	0.694	0.007	0.162	0.002	GENERIC	false	false
+6619bfeb147cd50b646778c7	585	Vainillas (pozo)	Snacks	Carbosnacks	Unid	45.825	1.1	8.5	0.825	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778c8	586	veggies quinoa y espinaca	Verduras	Verduras	Unid	151.3	7	27	1.7	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778c9	587	Verduras	Verduras	Verduras	Grs	0.316	0.015	0.055	0.004	GENERIC	false	false
+6619bfeb147cd50b646778ca	588	Vino	Otros	Otros	Ml	0.83	0	0.095	0.05	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778cb	589	Whey protein Isolate	Proteínas	Proteína general	Grs	3.842	0.91	0.01	0.018	GENERIC	false	false
+6619bfeb147cd50b646778cc	591	Whey protein SN	Proteínas	Proteína general	Grs	4.208	0.83	0.087	0.06	GENERIC	false	true
+6619bfeb147cd50b646778ce	592	Yogurisimo bebible	Carbohidratos	Yogures	Grs	0.586	0.028	0.105	0.006	GENERIC	false	false
+6619bfeb147cd50b646778cf	593	Yogurisimo firme la serenisima (190 grs)	Carbohidratos	Yogures	Pote	150.6	7.1	22	3.8	GENERIC	false	false
+6619bfeb147cd50b646778d0	594	Yogurt activia bebible	Carbohidratos	Yogures	Grs	0.619	0.029	0.092	0.015	GENERIC	false	false
+6619bfeb147cd50b646778d1	595	Yogurt bebible (Ser)	Carbohidratos	Yogures	Grs	0.276	0.031	0.038	0	GENERIC	false	false
+6619bfeb147cd50b646778d2	596	Yogurt bebible vida light	Otros	Yogures	Grs	0.304	0.029	0.047	0	GENERIC	false	false
+6619bfeb147cd50b646778d3	597	Yogurt descremado bebible Ilolay	Carbohidratos	Yogures	Grs	0.348	0.037	0.05	0	GENERIC	false	false
+6619bfeb147cd50b646778d4	598	Yogurt descremado bebible vida	Carbohidratos	Yogures	Grs	0.304	0.029	0.047	0	GENERIC	false	false
+6619bfeb147cd50b646778d5	599	Yogurt descremado gran compra	Otros	Yogures	Grs	0.312	0.036	0.042	0	GENERIC	false	false
+6619bfeb147cd50b646778d6	600	Yogurt entero bebible Ilolay	Carbohidratos	Yogures	Grs	0.621	0.03	0.105	0.009	GENERIC	false	false
+6619bfeb147cd50b646778d7	601	Yogurt entero bebible Yogs	Carbohidratos	Yogures	Grs	0.3625	0.015	0.07	0.0025	GENERIC	false	false
+6619bfeb147cd50b646778d8	602	Yogurt entero gran compra	Carbohidratos	Yogures	Grs	0.5385	0.025	0.095	0.0065	GENERIC	false	false
+6619bfeb147cd50b646778d9	603	Yogurt light gran compra	Carbohidratos	Yogures	Grs	0.308	0.032	0.045	0	GENERIC	false	false
+6619bfeb147cd50b646778da	604	Yogurt light la serenisima (Bebible)	Otros	Yogures	Grs	0.314	0.0365	0.042	0	GENERIC	false	false
+6619bfeb147cd50b646778db	605	Zanahorias	Verduras	Verduras	Grs	0.334	0.009	0.07	0.002	GENERIC	false	false
+6619bfeb147cd50b646778dc	606	Zanahoriias	Verduras	Verduras	Grs	0.334	0.009	0.07	0.002	EXPLICIT_ONLY	false	false
+6619bfeb147cd50b646778dd	607	Zapallo	Verduras	Verduras	Grs	0.265	0.011	0.053	0.001	GENERIC	false	false
+6619bfeb147cd50b646778de	608	Zucaritas	Snacks	Carbosnacks	Grs	3.876	0.036	0.933	0	EXPLICIT_ONLY	false	false
+6a2eb93330b2bab0d4573fe8	59	Batido proteico:	Otros	Otros	g	0	0	0	0	EXPLICIT_ONLY	true	false
+6a2eb93330b2bab0d4573fe9	60	Batido:	Otros	Otros	g	0	0	0	0	EXPLICIT_ONLY	true	false
+6a2eb93330b2bab0d4573fea	138	Dulce de leche (Coto)	Lácteos	Dulce de leche	g	0	0	0	0	EXPLICIT_ONLY	true	false
+6a2eb93330b2bab0d4573feb	157	Empanadas:	Otros	Otros	g	0	0	0	0	EXPLICIT_ONLY	true	false
+6a2eb93330b2bab0d4573fec	158	Ensalada:	Otros	Otros	g	0	0	0	0	EXPLICIT_ONLY	true	false
+6a2eb93330b2bab0d4573fed	269	Lomitos de atun al natural (Coto)	Proteínas	Pescados y mariscos	g	0	0	0	0	EXPLICIT_ONLY	true	false
+6a2eb93330b2bab0d4573fee	328	Milanesa de pollo:	Proteínas	Pollo	g	0	0	0	0	EXPLICIT_ONLY	true	false
+6a2eb93330b2bab0d4573fef	330	Milanesa de soja:	Proteínas	Soja	g	0	0	0	0	EXPLICIT_ONLY	true	false
+6a2eb93330b2bab0d4573ff0	331	Milanesa de ternera:	Proteínas	Proteína general	g	0	0	0	0	EXPLICIT_ONLY	true	false
+6a2eb93330b2bab0d4573ff1	356	Omelette:	Otros	Otros	g	0	0	0	0	EXPLICIT_ONLY	true	false
+6a2eb93430b2bab0d4573ff2	390	Panzotti Ricota y queso (Coto)	Lácteos	Fideos	g	0	0	0	0	EXPLICIT_ONLY	true	false
+6a2eb93430b2bab0d4573ff3	516	Sanguche:	Otros	Otros	g	0	0	0	0	EXPLICIT_ONLY	true	false
+6a2eb93430b2bab0d4573ff4	529	Sopa:	Otros	Otros	g	0	0	0	0	EXPLICIT_ONLY	true	false
+6a2eb93430b2bab0d4573ff5	540	Tarta:	Otros	Otros	g	0	0	0	0	EXPLICIT_ONLY	true	false
+6a2eb93430b2bab0d4573ff6	609	Pata muslo de pollo sin piel	Proteínas	Pollo	Grs	1.3	0.19	0	0.05	GENERIC	false	false

@@ -7,14 +7,23 @@ import {
   FOOD_COMBINATION_MODES,
   generateFoodCombinationCandidates,
 } from "./foodCombinationCandidates.js";
+import {
+  MEAL_NUTRITION_CLASSIFICATIONS,
+  MEAL_NUTRITION_POLICY,
+  MEAL_NUTRITION_THRESHOLDS,
+  compareMealNutritionAssessments,
+  evaluateMealNutritionResult,
+} from "./mealNutritionPolicy.js";
+import {
+  assessMealCompositionDiversity,
+  compareMealCompositionDiversity,
+  normalizeMealComposition,
+  normalizeMealDiversityContext,
+} from "./mealCompositionDiversity.js";
 
-const CALORIE_ZONE_TOLERANCE = 1;
-const PROTEIN_REACHED_TOLERANCE = 0.5;
 const DEFAULT_CANDIDATE_LIMIT = 20;
 const MAX_CANDIDATE_LIMIT = 40;
 const DEFAULT_MAX_FOODS = 6;
-const RECOMMENDED_CALORIE_DEFICIT = 10;
-const RECOMMENDED_PROTEIN_DEFICIT = 2.5;
 
 const RELAXATION_LEVELS = Object.freeze({
   STRICT: "STRICT",
@@ -61,6 +70,16 @@ function token(value = "") {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
+}
+
+function deterministicVariantIndex(seed = "", length = 0) {
+  if (!seed || length <= 1) return 0;
+  let hash = 2166136261;
+  for (const character of String(seed)) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) % length;
 }
 
 export function normalizeMealAlternativeMealType(value) {
@@ -201,57 +220,19 @@ function publicFixedFood(sourceFood = {}, quantity = 0, candidate = {}) {
   };
 }
 
-function secondaryMacroError(totals, target) {
-  const carbScale = target.carbs > 0 ? target.carbs : 25;
-  const fatScale = target.grasas > 0 ? target.grasas : 10;
-  return ((totals.carbs - target.carbs) / carbScale) ** 2 +
-    ((totals.grasas - target.grasas) / fatScale) ** 2;
-}
-
 function nutritionalRank(solution, target) {
-  const totals = solution.totals;
-  const calorieDeficit = Math.max(0, target.kcal - totals.kcal);
-  const inCalorieZone = calorieDeficit <= CALORIE_ZONE_TOLERANCE + 1e-9;
-  const proteinDeficit = target.proteina > 0 ? Math.max(0, target.proteina - totals.proteina) : 0;
-  const proteinDistance = target.proteina > 0 ? Math.abs(target.proteina - totals.proteina) : 0;
-  const proteinReached = target.proteina <= 0 || proteinDeficit <= PROTEIN_REACHED_TOLERANCE + 1e-9;
-  const proteinPriority = target.proteina <= 0
-    ? 0
-    : proteinReached
-      ? Math.max(0, proteinDistance - 1)
-      : proteinDeficit;
-  return {
-    inCalorieZone,
-    calorieDeficit,
-    proteinReached,
-    proteinPriority,
-    proteinDistance,
-    secondaryError: secondaryMacroError(totals, target),
-    hasMacroLimitations: Array.isArray(solution.optimization?.macroLimitations) &&
-      solution.optimization.macroLimitations.length > 0,
-  };
+  return evaluateMealNutritionResult(solution.totals, target);
 }
 
 function compareSolutions(left, right, target) {
-  const a = left.ranking;
-  const b = right.ranking;
-  if (a.inCalorieZone !== b.inCalorieZone) return a.inCalorieZone ? -1 : 1;
-  if (!a.inCalorieZone && Math.abs(a.calorieDeficit - b.calorieDeficit) > 1e-9) {
-    return a.calorieDeficit - b.calorieDeficit;
-  }
-  if (target.proteina > 0) {
-    if (a.proteinReached !== b.proteinReached) return a.proteinReached ? -1 : 1;
-    if (Math.abs(a.proteinPriority - b.proteinPriority) > 1e-9) return a.proteinPriority - b.proteinPriority;
-  }
-  if (Math.abs(a.secondaryError - b.secondaryError) > 1e-9) return a.secondaryError - b.secondaryError;
+  left.ranking ||= nutritionalRank(left, target);
+  right.ranking ||= nutritionalRank(right, target);
+  const nutritionDifference = compareMealNutritionAssessments(left.ranking, right.ranking);
+  if (nutritionDifference) return nutritionDifference;
   if (left.foods.length !== right.foods.length) return left.foods.length - right.foods.length;
   if (left.preferredCombinationMatch !== right.preferredCombinationMatch) {
     return left.preferredCombinationMatch ? -1 : 1;
   }
-  if (target.proteina > 0 && Math.abs(a.proteinDistance - b.proteinDistance) > 1e-9) {
-    return a.proteinDistance - b.proteinDistance;
-  }
-  if (Math.abs(a.calorieDeficit - b.calorieDeficit) > 1e-9) return a.calorieDeficit - b.calorieDeficit;
   return left.structure.localeCompare(right.structure) || left.signature.localeCompare(right.signature);
 }
 
@@ -337,42 +318,135 @@ function catalogForRelaxation(catalog = [], level = RELAXATION_LEVELS.STRICT) {
 }
 
 function isRecommendedForRound(solution, target) {
-  if (!solution) return false;
-  const calorieDeficit = target.kcal - solution.totals.kcal;
-  const caloriesRecommended = calorieDeficit >= -1e-6 &&
-    calorieDeficit <= RECOMMENDED_CALORIE_DEFICIT + 1e-9;
-  const proteinRecommended = target.proteina <= 0 ||
-    solution.totals.proteina >= target.proteina - RECOMMENDED_PROTEIN_DEFICIT - 1e-9;
-  return caloriesRecommended && proteinRecommended;
+  return Boolean(solution && nutritionalRank(solution, target).recommended);
 }
 
 function publicSolution(solution, mode, relaxation) {
-  const unreachable = !solution.ranking.inCalorieZone ||
-    !solution.ranking.proteinReached ||
-    solution.ranking.hasMacroLimitations;
-  const status = mode === FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS && unreachable
-    ? "TARGET_NOT_REACHABLE_WITH_SELECTED_FOODS"
-    : unreachable
-      ? "BEST_EFFORT"
-      : "TARGET_REACHED";
-  const penalty =
-    solution.ranking.calorieDeficit * 1000 +
-    solution.ranking.proteinPriority * 100 +
-    solution.ranking.secondaryError * 10 +
-    solution.foods.length;
+  void mode;
+  const nutrition = solution.ranking || nutritionalRank(solution, solution.target);
+  const closeCalories = nutrition.absoluteDifference.kcal <=
+    MEAL_NUTRITION_THRESHOLDS.calorieAcceptable + 1e-9;
+  const penalty = closeCalories
+    ? nutrition.proteinZoneRank * 10000 +
+      nutrition.absoluteDifference.kcal * 100 +
+      nutrition.proteinDistance * 10 +
+      nutrition.secondaryEnergyError
+    : 100000 +
+      nutrition.absoluteDifference.kcal * 1000 +
+      nutrition.proteinZoneRank * 100 +
+      nutrition.proteinDistance * 10 +
+      nutrition.secondaryEnergyError;
+  const technicalWarnings = (Array.isArray(solution.warnings) ? solution.warnings : [])
+    .map((warning, index) => typeof warning === "string"
+      ? { code: `MEAL_TECHNICAL_WARNING_${index + 1}`, category: "technical", message: warning }
+      : warning
+    )
+    .filter((warning) => String(warning?.message || "").trim());
+  const warnings = [nutrition.warning, ...technicalWarnings]
+    .filter(Boolean)
+    .filter((warning, index, values) => values.findIndex((entry) =>
+      String(entry?.code || entry?.message) === String(warning?.code || warning?.message)
+    ) === index);
   return {
-    status,
+    status: nutrition.status,
+    classification: nutrition.status,
     foods: solution.foods,
     totals: solution.totals,
     target: solution.target,
-    difference: solution.difference,
+    difference: nutrition.difference,
     structure: solution.structure,
     score: round(Math.max(0, 100000 - penalty), 6),
-    warnings: solution.warnings,
-    optimization: solution.optimization,
+    warnings,
+    optimization: {
+      ...(solution.optimization || {}),
+      policy: MEAL_NUTRITION_POLICY,
+      nutritionAssessment: nutrition,
+    },
     variant: solution.variant || null,
-    recommended: true,
+    recommended: nutrition.recommended,
+    usable: true,
+    nutrition,
+    composition: normalizeMealComposition(solution.foods),
     relaxation,
+  };
+}
+
+function diversityQualityPool(solutions = [], baseline = null) {
+  if (!baseline) return [];
+  const recommended = solutions.filter((solution) => solution.recommended === true);
+  const nearBestEffort = solutions.filter((solution) => (
+    solution.recommended !== true &&
+    solution.nutrition?.zones?.calories !== "OUTSIDE" &&
+    Number(solution.nutrition?.proteinZoneRank) <= 1
+  ));
+  const lowOverlap = (values) => values.filter((solution) => (
+    solution.diversity.exactMatches === 0 && solution.diversity.highOverlapMatches === 0
+  ));
+  const nonExact = (values) => values.filter((solution) => solution.diversity.exactMatches === 0);
+  // La diversidad sólo desempata dentro de la misma calidad nutricional.
+  // Una composición RECOMMENDED parcialmente repetida sigue siendo mejor que
+  // una BEST_EFFORT distinta; la variedad nunca degrada la clasificación.
+  if (recommended.length) {
+    return lowOverlap(recommended).length ? lowOverlap(recommended)
+      : nonExact(recommended).length ? nonExact(recommended)
+        : recommended;
+  }
+  return lowOverlap(nearBestEffort).length ? lowOverlap(nearBestEffort)
+    : nonExact(nearBestEffort).length ? nonExact(nearBestEffort)
+      : nearBestEffort.length ? nearBestEffort
+        : solutions;
+}
+
+function selectCompositionDiverseSolution(publicSolutions = [], diversityValue = {}, variantSeed = "") {
+  const diversityContext = normalizeMealDiversityContext(diversityValue);
+  const uniqueSolutions = publicSolutions.filter((solution, index, values) => (
+    values.findIndex((candidate) => candidate.composition.fingerprint === solution.composition.fingerprint) === index
+  ));
+  const assessed = uniqueSolutions.map((solution, nutritionIndex) => ({
+    ...solution,
+    diversity: {
+      ...assessMealCompositionDiversity(solution.composition, diversityContext),
+      nutritionIndex,
+    },
+  }));
+  const hasContext = diversityContext.previousMeals.length > 0 || diversityContext.usedFoodIds.size > 0;
+  if (!hasContext) {
+    const variantPool = assessed.slice(0, 8);
+    return {
+      selected: variantPool[deterministicVariantIndex(variantSeed, variantPool.length)] || assessed[0],
+      alternatives: assessed,
+      variantPool,
+      context: diversityContext,
+      repeatInevitable: false,
+      highOverlapInevitable: false,
+    };
+  }
+
+  const pool = diversityQualityPool(assessed, assessed[0])
+    .sort((left, right) =>
+      compareMealCompositionDiversity(left.diversity, right.diversity) ||
+      left.diversity.nutritionIndex - right.diversity.nutritionIndex
+    );
+  const selected = pool[0] || assessed[0];
+  const comparable = assessed.filter((solution) => (
+    selected.recommended === true
+      ? solution.recommended === true
+      : solution.recommended !== true && (
+      solution.nutrition?.zones?.calories !== "OUTSIDE" &&
+      Number(solution.nutrition?.proteinZoneRank) <= 1
+    )
+  ));
+  return {
+    selected,
+    alternatives: assessed,
+    variantPool: pool.slice(0, 8),
+    context: diversityContext,
+    repeatInevitable: selected.diversity.exactMatches > 0 &&
+      !comparable.some((solution) => solution.diversity.exactMatches === 0),
+    highOverlapInevitable: selected.diversity.highOverlapMatches > 0 &&
+      !comparable.some((solution) => (
+        solution.diversity.exactMatches === 0 && solution.diversity.highOverlapMatches === 0
+      )),
   };
 }
 
@@ -436,6 +510,7 @@ async function solveCandidate({ candidate, catalog, target, quantityService }) {
     const requestedId = String(candidate.foodIds[index]);
     const fixedQuantity = fixedQuantities.get(requestedId);
     if (Number.isFinite(fixedQuantity) && fixedQuantity > 0) {
+      if (!quantitySatisfiesEffectiveRule(sourceFood, fixedQuantity)) return null;
       fixedFoods.push({
         ...quantitySolverFood(sourceFood),
         foodId: requestedId,
@@ -448,7 +523,40 @@ async function solveCandidate({ candidate, catalog, target, quantityService }) {
       });
     }
   }
-  if (!pendingFoods.length) return null;
+  if (!pendingFoods.length) {
+    const foods = candidateFoods.map((food, index) => {
+      const requestedId = String(candidate.foodIds[index]);
+      const output = publicFixedFood(food, fixedQuantities.get(requestedId), candidate);
+      output.foodId = requestedId;
+      return output;
+    });
+    if (foods.some((food) => !(food.quantity > 0) || !(food.kcal >= 0))) return null;
+    const totals = nutrition(foods.reduce((sum, food) => ({
+      kcal: sum.kcal + food.kcal,
+      proteina: sum.proteina + food.proteina,
+      carbs: sum.carbs + food.carbs,
+      grasas: sum.grasas + food.grasas,
+    }), { kcal: 0, proteina: 0, carbs: 0, grasas: 0 }));
+    const solved = {
+      foods,
+      totals,
+      target,
+      difference: difference(totals, target),
+      structure: candidate.structure,
+      signature: candidate.foodIds.join("|"),
+      preferredCombinationMatch: candidate.preferredCombinationMatch === true,
+      warnings: [],
+      optimization: {
+        profile: "meal_generation_locked",
+        policy: MEAL_NUTRITION_POLICY,
+        allSelectedFoodsUsed: true,
+        lockedFoods: foods.length,
+      },
+      variant: { requested: false, applied: false },
+    };
+    solved.ranking = nutritionalRank(solved, target);
+    return solved;
+  }
 
   const result = await quantityService.generarCantidades({
     mode: "kcalProteina",
@@ -459,12 +567,15 @@ async function solveCandidate({ candidate, catalog, target, quantityService }) {
     options: {
       redondear: true,
       usarMinMax: false,
-      generarVariante: candidate.generateVariant === true,
+      // Recalcular siempre devuelve la mejor distribucion segun la policy
+      // central. "Generar otra opcion" varia alimentos en el pool exterior.
+      generarVariante: false,
       variantSeed: candidate.variantSeed,
     },
   }, {
     authorization: TRACKING_QUANTITY_INTERNAL_CONTEXT,
     trackingQuantityMode: "calorie_fill",
+    mealNutritionPolicy: MEAL_NUTRITION_POLICY,
     // Sólo este flujo convierte min/max/step del Admin en restricciones duras.
     // Tracking conserva su comportamiento histórico porque no envía este flag.
     enforceQuantityConstraints: true,
@@ -509,7 +620,12 @@ async function solveCandidate({ candidate, catalog, target, quantityService }) {
   }
 
   const totals = nutrition(result.totals);
-  if (!Object.values(totals).every(Number.isFinite) || totals.kcal > target.kcal + 1e-6) return null;
+  // En generación las calorías son un objetivo de ranking, no una restricción
+  // física. Los mínimos o los candados pueden obligar a superar la zona de
+  // ±10 kcal; esa solución sigue siendo utilizable como BEST_EFFORT. Las
+  // restricciones duras (alimento válido, min/max/step y locks) se validan por
+  // separado antes de llegar acá.
+  if (!Object.values(totals).every(Number.isFinite)) return null;
   const solved = {
     foods,
     totals,
@@ -526,10 +642,19 @@ async function solveCandidate({ candidate, catalog, target, quantityService }) {
   return solved;
 }
 
-async function solveCandidatesWithRelaxation({ candidates, catalog, target, quantityService, meta = {} }) {
+async function solveCandidatesWithRelaxation({
+  candidates,
+  catalog,
+  target,
+  quantityService,
+  meta = {},
+  variantSeed = "",
+  diversityContext = {},
+}) {
   const startedAt = Date.now();
   const rounds = [];
-  let winningRound = null;
+  const physicalRecords = [];
+  let selectedRecords = null;
   for (const level of [
     RELAXATION_LEVELS.STRICT,
     RELAXATION_LEVELS.RELAX_STEP,
@@ -537,17 +662,21 @@ async function solveCandidatesWithRelaxation({ candidates, catalog, target, quan
   ]) {
     const roundResult = await solveRound({ level, candidates, catalog, target, quantityService });
     rounds.push(roundResult.diagnostic);
+    physicalRecords.push(...roundResult.solutions.map((solution) => ({ level, solution })));
     if (roundResult.recommendedSolutions.length) {
-      winningRound = roundResult;
+      selectedRecords = roundResult.recommendedSolutions.map((solution) => ({ level, solution }));
       break;
     }
   }
 
-  if (!winningRound) {
+  if (!physicalRecords.length) {
     return {
-      status: "NO_SOLUTION",
+      status: MEAL_NUTRITION_CLASSIFICATIONS.NO_SOLUTION,
+      classification: MEAL_NUTRITION_CLASSIFICATIONS.NO_SOLUTION,
       code: "MEAL_TARGET_NOT_REACHABLE_WITH_PORTION_RULES",
       recommended: false,
+      usable: false,
+      nutrition: null,
       alternative: null,
       alternatives: [],
       relaxation: {
@@ -559,33 +688,94 @@ async function solveCandidatesWithRelaxation({ candidates, catalog, target, quan
         ...meta,
         combinationCandidatesEvaluated: candidates.length,
         totalCandidateExecutions: rounds.reduce((total, round) => total + round.candidatesProcessed, 0),
-        quantitySolutionsFound: rounds.reduce((total, round) => total + round.quantitySolutionsFound, 0),
+        quantitySolutionsFound: 0,
         recommendedSolutionsFound: 0,
+        bestEffortSolutionsFound: 0,
         rounds,
         elapsedMs: Date.now() - startedAt,
       },
     };
   }
 
-  const relaxation = {
-    level: winningRound.level,
-    portionRulesRelaxed: winningRound.level !== RELAXATION_LEVELS.STRICT,
-  };
-  const publicSolutions = winningRound.recommendedSolutions.map((solution) =>
-    publicSolution(solution, meta.mode || FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS, relaxation)
-  );
+  const relaxationOrder = new Map([
+    [RELAXATION_LEVELS.STRICT, 0],
+    [RELAXATION_LEVELS.RELAX_STEP, 1],
+    [RELAXATION_LEVELS.RELAX_MIN, 2],
+  ]);
+  const normalizedDiversity = normalizeMealDiversityContext(diversityContext);
+  const hasDiversityContext = normalizedDiversity.previousMeals.length > 0 || normalizedDiversity.usedFoodIds.size > 0;
+  const records = (hasDiversityContext ? physicalRecords : (selectedRecords || physicalRecords))
+    .sort((left, right) =>
+      compareSolutions(left.solution, right.solution, target) ||
+      (relaxationOrder.get(left.level) || 0) - (relaxationOrder.get(right.level) || 0)
+    )
+    .filter((record, index, values) => {
+      const keyFor = (entry) => `${entry.solution.signature}:${entry.solution.foods
+        .map((food) => `${food.foodId}:${food.quantity}`)
+        .join("|")}`;
+      return values.findIndex((entry) => keyFor(entry) === keyFor(record)) === index;
+    });
+  const publicSolutions = records.map(({ solution, level }) => publicSolution(
+    solution,
+    meta.mode || FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS,
+    {
+      level,
+      portionRulesRelaxed: level !== RELAXATION_LEVELS.STRICT,
+      ...(!selectedRecords ? { exhausted: true } : {}),
+    }
+  ));
+  const selection = selectCompositionDiverseSolution(publicSolutions, normalizedDiversity, variantSeed);
+  const baseSelected = selection.selected;
+  const diversityWarning = selection.repeatInevitable ? {
+    code: "MEAL_COMPOSITION_REPEAT_UNAVOIDABLE",
+    category: "diversity",
+    severity: "info",
+    title: "Composicion repetida",
+    summary: "No habia otra composicion nutricionalmente razonable con estos alimentos y restricciones.",
+    message: "Se repite la composicion porque no habia otra alternativa nutricionalmente razonable y fisicamente valida.",
+  } : selection.highOverlapInevitable ? {
+    code: "MEAL_COMPOSITION_HIGH_OVERLAP_UNAVOIDABLE",
+    category: "diversity",
+    severity: "info",
+    title: "Composicion parcialmente similar",
+    summary: "Esta opcion comparte varios alimentos porque no habia otra alternativa nutricionalmente comparable.",
+    message: "Se eligio la menor superposicion disponible sin degradar de forma importante el objetivo nutricional.",
+  } : null;
+  const selected = diversityWarning ? {
+    ...baseSelected,
+    warnings: [...(baseSelected.warnings || []), diversityWarning],
+    diversity: {
+      ...baseSelected.diversity,
+      repeatInevitable: selection.repeatInevitable,
+      highOverlapInevitable: selection.highOverlapInevitable,
+    },
+  } : baseSelected;
+  const remainingSolutions = selection.alternatives.filter((solution) => solution !== baseSelected);
   return {
     status: "SUCCESS",
-    recommended: true,
-    relaxation,
-    alternative: publicSolutions[0],
-    alternatives: publicSolutions.slice(1),
+    classification: selected.classification,
+    recommended: selected.recommended,
+    usable: true,
+    nutrition: selected.nutrition,
+    relaxation: selected.relaxation,
+    alternative: selected,
+    alternatives: remainingSolutions,
     meta: {
       ...meta,
+      variantSeed: variantSeed || null,
+      variantPoolSize: selection.variantPool.length,
+      uniqueCompositionSolutions: selection.alternatives.length,
+      diversityContextMeals: selection.context.previousMeals.length,
+      selectedCompositionFingerprint: selected.composition?.fingerprint || null,
+      selectedCompositionRoleFingerprint: selected.composition?.roleFingerprint || null,
+      selectedDiversity: selected.diversity || null,
+      repeatInevitable: selection.repeatInevitable,
+      highOverlapInevitable: selection.highOverlapInevitable,
       combinationCandidatesEvaluated: candidates.length,
       totalCandidateExecutions: rounds.reduce((total, round) => total + round.candidatesProcessed, 0),
-      quantitySolutionsFound: winningRound.solutions.length,
-      recommendedSolutionsFound: publicSolutions.length,
+      quantitySolutionsFound: rounds.reduce((total, round) => total + round.quantitySolutionsFound, 0),
+      recommendedSolutionsFound: publicSolutions.filter((solution) => solution.recommended).length,
+      bestEffortSolutionsFound: publicSolutions.filter((solution) => !solution.recommended).length,
       rounds,
       elapsedMs: Date.now() - startedAt,
     },
@@ -619,9 +809,9 @@ async function solveRound({ level, candidates, catalog, target, quantityService 
 }
 
 /**
- * Orquesta estructuras y cantidades sin persistir ningun cambio. El solver es
- * exactamente ServicioAlimentos.generarCantidades con la policy calorie_fill
- * que usa Tracking; esta capa solo compara los resultados entre estructuras.
+ * Orquesta estructuras y cantidades sin persistir ningun cambio. Reutiliza el
+ * mismo solver de ServicioAlimentos con una policy interna exclusiva de
+ * generacion; Tracking no entrega esa policy y conserva su ranking historico.
  */
 export async function generateMealAlternative(input = {}, dependencies = {}) {
   const startedAt = Date.now();
@@ -638,6 +828,7 @@ export async function generateMealAlternative(input = {}, dependencies = {}) {
     throw generationError("MEAL_FOOD_LIMIT_REACHED", `La comida permite hasta ${maxFoods} alimentos.`, "requiredFoodIds");
   }
   const limit = safeLimit(input.limit, DEFAULT_CANDIDATE_LIMIT, MAX_CANDIDATE_LIMIT);
+  const diversityContext = normalizeMealDiversityContext(input.diversityContext);
   const model = dependencies.model || new ModelMongoDBAlimentos();
   const combinationGenerator = dependencies.generateFoodCombinationCandidates || generateFoodCombinationCandidates;
   const combinations = await combinationGenerator({
@@ -647,6 +838,7 @@ export async function generateMealAlternative(input = {}, dependencies = {}) {
     excludedFoodIds,
     mode,
     preferredCombinations: input.preferredCombinations,
+    diversityContext,
     limit,
   }, {
     model,
@@ -662,13 +854,16 @@ export async function generateMealAlternative(input = {}, dependencies = {}) {
       exhausted: false,
     };
     return {
-      status: "NO_SOLUTION",
+      status: MEAL_NUTRITION_CLASSIFICATIONS.NO_SOLUTION,
+      classification: MEAL_NUTRITION_CLASSIFICATIONS.NO_SOLUTION,
       code: mode === FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS
         ? "TARGET_NOT_REACHABLE_WITH_SELECTED_FOODS"
         : "NO_COMPATIBLE_FOOD_COMBINATION",
       alternative: null,
       alternatives: [],
       recommended: false,
+      usable: false,
+      nutrition: null,
       relaxation,
       meta: {
         combinationCandidatesEvaluated: 0,
@@ -691,6 +886,8 @@ export async function generateMealAlternative(input = {}, dependencies = {}) {
       mealType,
       mode,
     },
+    variantSeed: input.variantSeed,
+    diversityContext,
   });
   result.meta.elapsedMs = Date.now() - startedAt;
   return result;
@@ -717,9 +914,6 @@ export async function recalculateMealAlternativeQuantities(input = {}, dependenc
       throw generationError("INVALID_FIXED_QUANTITY", "Revisa las cantidades fijadas antes de recalcular.", "fixedFoods");
     }
     fixedQuantities.set(id, quantity);
-  }
-  if (fixedQuantities.size >= selectedFoodIds.length) {
-    throw generationError("NO_AUTOMATIC_FOODS", "Marca al menos un alimento como Auto para recalcularlo.", "fixedFoods");
   }
   const currentQuantities = new Map(
     (Array.isArray(input.currentFoods) ? input.currentFoods : [])
@@ -755,32 +949,9 @@ export async function recalculateMealAlternativeQuantities(input = {}, dependenc
       fixedFoods: fixedQuantities.size,
     },
   });
-  // Una variante es opcional. Si no existe una redistribucion suficientemente
-  // buena, resolvemos otra vez la misma seleccion sin variante y devolvemos la
-  // mejor cantidad valida; nunca ampliamos la estructura de alimentos.
-  const requestedVariantWasNotApplied = input.generateVariant === true && (
-    result.status === "NO_SOLUTION" ||
-    result.alternative?.variant?.requested === true && result.alternative.variant.applied !== true
-  );
-  if (requestedVariantWasNotApplied) {
-    candidate.generateVariant = false;
-    const fallback = await solveCandidatesWithRelaxation({
-      candidates: [candidate],
-      catalog,
-      target,
-      quantityService,
-      meta: {
-        structuresEvaluated: 1,
-        mealType,
-        mode: FOOD_COMBINATION_MODES.ONLY_SELECTED_FOODS,
-        recalculation: true,
-        fixedFoods: fixedQuantities.size,
-        variantFallback: true,
-      },
-    });
-    fallback.meta.elapsedMs = Date.now() - startedAt;
-    return fallback;
-  }
+  // Recalcular siempre devuelve la mejor distribución de este mismo conjunto.
+  // Una solicitud legacy de variante no dispara una segunda ejecución idéntica:
+  // "Generar otra opción" varía alimentos en el endpoint de generación.
   result.meta.elapsedMs = Date.now() - startedAt;
   return result;
 }

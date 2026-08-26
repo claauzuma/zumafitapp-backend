@@ -1,0 +1,928 @@
+{
+  "generatedAt": "2026-08-26T01:45:16.900Z",
+  "definition": {
+    "exact": "mismo conjunto de foodId, ignorando cantidad, unidad y orden",
+    "highOverlap": "al menos dos alimentos y Jaccard >= 0.60 o containment >= 0.80"
+  },
+  "before": {
+    "all": {
+      "cases": 30,
+      "generatedMeals": 109,
+      "exactRepeats": 5,
+      "highOverlaps": 11
+    },
+    "dailyMatrix": {
+      "cases": 12,
+      "generatedMeals": 54,
+      "exactRepeats": 5,
+      "highOverlaps": 11
+    },
+    "cases": [
+      {
+        "id": "daily-3-low-balanced",
+        "group": "daily-matrix",
+        "generatedMeals": 3,
+        "uniqueCompositions": 3,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-3-medium-custom",
+        "group": "daily-matrix",
+        "generatedMeals": 3,
+        "uniqueCompositions": 2,
+        "exactRepeats": 1,
+        "highOverlaps": 1,
+        "pairs": [
+          {
+            "leftType": "almuerzo",
+            "rightType": "cena",
+            "leftFoods": [
+              "Aceite de coco 20 Grs",
+              "Anana 80 Grs",
+              "Arroz 130 Grs",
+              "Atun en lomitos al natural 1 Pote",
+              "Claras de huevos 4 Unid"
+            ],
+            "rightFoods": [
+              "Aceite de coco 20 Grs",
+              "Anana 100 Grs",
+              "Arroz 100 Grs",
+              "Atun en lomitos al natural 1 Pote",
+              "Claras de huevos 3 Unid"
+            ],
+            "exact": true,
+            "highOverlap": true,
+            "intersection": 5,
+            "intersectionIds": [
+              "6619bfeb147cd50b64677676",
+              "6619bfeb147cd50b64677698",
+              "6619bfeb147cd50b6467769c",
+              "6619bfeb147cd50b646776a4",
+              "6619bfeb147cd50b646776e8"
+            ],
+            "unionSize": 5,
+            "jaccard": 1,
+            "containment": 1
+          }
+        ]
+      },
+      {
+        "id": "daily-3-high-protein",
+        "group": "daily-matrix",
+        "generatedMeals": 3,
+        "uniqueCompositions": 3,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-4-low-custom",
+        "group": "daily-matrix",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-4-medium-balanced",
+        "group": "daily-matrix",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-4-high-balanced",
+        "group": "daily-matrix",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 1,
+        "pairs": [
+          {
+            "leftType": "desayuno",
+            "rightType": "merienda",
+            "leftFoods": [
+              "Avena instantanea 115 Grs",
+              "Claras de huevos 5 Unid",
+              "Huevos 1 Unid"
+            ],
+            "rightFoods": [
+              "Almendras 1 Unid",
+              "Anana 150 Grs",
+              "Avena instantanea 30 Grs",
+              "Claras de huevos 3 Unid",
+              "Copos de maiz sin azucar 30 Grs",
+              "Huevos 3 Unid"
+            ],
+            "exact": false,
+            "highOverlap": true,
+            "intersection": 3,
+            "intersectionIds": [
+              "6619bfeb147cd50b646776a6",
+              "6619bfeb147cd50b646776e8",
+              "6619bfeb147cd50b64677755"
+            ],
+            "unionSize": 6,
+            "jaccard": 0.5,
+            "containment": 1
+          }
+        ]
+      },
+      {
+        "id": "daily-5-low-balanced",
+        "group": "daily-matrix",
+        "generatedMeals": 5,
+        "uniqueCompositions": 5,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-5-medium-custom",
+        "group": "daily-matrix",
+        "generatedMeals": 5,
+        "uniqueCompositions": 4,
+        "exactRepeats": 1,
+        "highOverlaps": 1,
+        "pairs": [
+          {
+            "leftType": "desayuno",
+            "rightType": "snack",
+            "leftFoods": [
+              "Avena instantanea 65 Grs",
+              "Claras de huevos 3 Unid",
+              "Huevos 1 Unid"
+            ],
+            "rightFoods": [
+              "Avena instantanea 60 Grs",
+              "Claras de huevos 4 Unid",
+              "Huevos 1 Unid"
+            ],
+            "exact": true,
+            "highOverlap": true,
+            "intersection": 3,
+            "intersectionIds": [
+              "6619bfeb147cd50b646776a6",
+              "6619bfeb147cd50b646776e8",
+              "6619bfeb147cd50b64677755"
+            ],
+            "unionSize": 3,
+            "jaccard": 1,
+            "containment": 1
+          }
+        ]
+      },
+      {
+        "id": "daily-5-high-balanced",
+        "group": "daily-matrix",
+        "generatedMeals": 5,
+        "uniqueCompositions": 4,
+        "exactRepeats": 1,
+        "highOverlaps": 1,
+        "pairs": [
+          {
+            "leftType": "desayuno",
+            "rightType": "snack",
+            "leftFoods": [
+              "Almendras 1 Unid",
+              "Anana 80 Grs",
+              "Avena instantanea 30 Grs",
+              "Claras de huevos 4 Unid",
+              "Copos de maiz sin azucar 35 Grs",
+              "Huevos 3 Unid"
+            ],
+            "rightFoods": [
+              "Almendras 3 Unid",
+              "Anana 140 Grs",
+              "Avena instantanea 55 Grs",
+              "Claras de huevos 1 Unid",
+              "Copos de maiz sin azucar 5 Grs",
+              "Huevos 4 Unid"
+            ],
+            "exact": true,
+            "highOverlap": true,
+            "intersection": 6,
+            "intersectionIds": [
+              "6619bfeb147cd50b64677696",
+              "6619bfeb147cd50b64677698",
+              "6619bfeb147cd50b646776a6",
+              "6619bfeb147cd50b646776e8",
+              "6619bfeb147cd50b646776ed",
+              "6619bfeb147cd50b64677755"
+            ],
+            "unionSize": 6,
+            "jaccard": 1,
+            "containment": 1
+          }
+        ]
+      },
+      {
+        "id": "daily-6-low-custom",
+        "group": "daily-matrix",
+        "generatedMeals": 6,
+        "uniqueCompositions": 5,
+        "exactRepeats": 1,
+        "highOverlaps": 3,
+        "pairs": [
+          {
+            "leftType": "desayuno",
+            "rightType": "colacion",
+            "leftFoods": [
+              "Avena instantanea 75 Grs",
+              "Claras de huevos 3 Unid",
+              "Copos de maiz sin azucar 5 Grs"
+            ],
+            "rightFoods": [
+              "Almendras 2 Unid",
+              "Anana 80 Grs",
+              "Avena instantanea 40 Grs",
+              "Claras de huevos 3 Unid",
+              "Copos de maiz sin azucar 5 Grs",
+              "Huevos 1 Unid"
+            ],
+            "exact": false,
+            "highOverlap": true,
+            "intersection": 3,
+            "intersectionIds": [
+              "6619bfeb147cd50b646776a6",
+              "6619bfeb147cd50b646776e8",
+              "6619bfeb147cd50b646776ed"
+            ],
+            "unionSize": 6,
+            "jaccard": 0.5,
+            "containment": 1
+          },
+          {
+            "leftType": "desayuno",
+            "rightType": "snack",
+            "leftFoods": [
+              "Avena instantanea 75 Grs",
+              "Claras de huevos 3 Unid",
+              "Copos de maiz sin azucar 5 Grs"
+            ],
+            "rightFoods": [
+              "Almendras 1 Unid",
+              "Anana 100 Grs",
+              "Avena instantanea 40 Grs",
+              "Claras de huevos 3 Unid",
+              "Copos de maiz sin azucar 5 Grs",
+              "Huevos 1 Unid"
+            ],
+            "exact": false,
+            "highOverlap": true,
+            "intersection": 3,
+            "intersectionIds": [
+              "6619bfeb147cd50b646776a6",
+              "6619bfeb147cd50b646776e8",
+              "6619bfeb147cd50b646776ed"
+            ],
+            "unionSize": 6,
+            "jaccard": 0.5,
+            "containment": 1
+          },
+          {
+            "leftType": "colacion",
+            "rightType": "snack",
+            "leftFoods": [
+              "Almendras 2 Unid",
+              "Anana 80 Grs",
+              "Avena instantanea 40 Grs",
+              "Claras de huevos 3 Unid",
+              "Copos de maiz sin azucar 5 Grs",
+              "Huevos 1 Unid"
+            ],
+            "rightFoods": [
+              "Almendras 1 Unid",
+              "Anana 100 Grs",
+              "Avena instantanea 40 Grs",
+              "Claras de huevos 3 Unid",
+              "Copos de maiz sin azucar 5 Grs",
+              "Huevos 1 Unid"
+            ],
+            "exact": true,
+            "highOverlap": true,
+            "intersection": 6,
+            "intersectionIds": [
+              "6619bfeb147cd50b64677696",
+              "6619bfeb147cd50b64677698",
+              "6619bfeb147cd50b646776a6",
+              "6619bfeb147cd50b646776e8",
+              "6619bfeb147cd50b646776ed",
+              "6619bfeb147cd50b64677755"
+            ],
+            "unionSize": 6,
+            "jaccard": 1,
+            "containment": 1
+          }
+        ]
+      },
+      {
+        "id": "daily-6-medium-balanced",
+        "group": "daily-matrix",
+        "generatedMeals": 6,
+        "uniqueCompositions": 6,
+        "exactRepeats": 0,
+        "highOverlaps": 1,
+        "pairs": [
+          {
+            "leftType": "merienda",
+            "rightType": "snack",
+            "leftFoods": [
+              "Almendras 3 Unid",
+              "Anana 80 Grs",
+              "Avena instantanea 65 Grs",
+              "Claras de huevos 5 Unid",
+              "Copos de maiz sin azucar 5 Grs",
+              "Huevos 1 Unid"
+            ],
+            "rightFoods": [
+              "Almendras 1 Unid",
+              "Anana 140 Grs",
+              "Avena instantanea 30 Grs",
+              "Claras de huevos 6 Unid",
+              "Copos de maiz sin azucar 40 Grs"
+            ],
+            "exact": false,
+            "highOverlap": true,
+            "intersection": 5,
+            "intersectionIds": [
+              "6619bfeb147cd50b64677696",
+              "6619bfeb147cd50b64677698",
+              "6619bfeb147cd50b646776a6",
+              "6619bfeb147cd50b646776e8",
+              "6619bfeb147cd50b646776ed"
+            ],
+            "unionSize": 6,
+            "jaccard": 0.833333,
+            "containment": 1
+          }
+        ]
+      },
+      {
+        "id": "daily-6-high-balanced",
+        "group": "daily-matrix",
+        "generatedMeals": 6,
+        "uniqueCompositions": 5,
+        "exactRepeats": 1,
+        "highOverlaps": 3,
+        "pairs": [
+          {
+            "leftType": "colacion",
+            "rightType": "merienda",
+            "leftFoods": [
+              "Avena instantanea 100 Grs",
+              "Claras de huevos 5 Unid",
+              "Huevos 1 Unid"
+            ],
+            "rightFoods": [
+              "Avena instantanea 75 Grs",
+              "Huevos 3 Unid"
+            ],
+            "exact": false,
+            "highOverlap": true,
+            "intersection": 2,
+            "intersectionIds": [
+              "6619bfeb147cd50b646776a6",
+              "6619bfeb147cd50b64677755"
+            ],
+            "unionSize": 3,
+            "jaccard": 0.666667,
+            "containment": 1
+          },
+          {
+            "leftType": "colacion",
+            "rightType": "snack",
+            "leftFoods": [
+              "Avena instantanea 100 Grs",
+              "Claras de huevos 5 Unid",
+              "Huevos 1 Unid"
+            ],
+            "rightFoods": [
+              "Avena instantanea 95 Grs",
+              "Claras de huevos 4 Unid",
+              "Huevos 2 Unid"
+            ],
+            "exact": true,
+            "highOverlap": true,
+            "intersection": 3,
+            "intersectionIds": [
+              "6619bfeb147cd50b646776a6",
+              "6619bfeb147cd50b646776e8",
+              "6619bfeb147cd50b64677755"
+            ],
+            "unionSize": 3,
+            "jaccard": 1,
+            "containment": 1
+          },
+          {
+            "leftType": "merienda",
+            "rightType": "snack",
+            "leftFoods": [
+              "Avena instantanea 75 Grs",
+              "Huevos 3 Unid"
+            ],
+            "rightFoods": [
+              "Avena instantanea 95 Grs",
+              "Claras de huevos 4 Unid",
+              "Huevos 2 Unid"
+            ],
+            "exact": false,
+            "highOverlap": true,
+            "intersection": 2,
+            "intersectionIds": [
+              "6619bfeb147cd50b646776a6",
+              "6619bfeb147cd50b64677755"
+            ],
+            "unionSize": 3,
+            "jaccard": 0.666667,
+            "containment": 1
+          }
+        ]
+      },
+      {
+        "id": "partial-empty",
+        "group": "partial-days",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "partial-one-zero",
+        "group": "partial-days",
+        "generatedMeals": 3,
+        "uniqueCompositions": 3,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "partial-two-existing",
+        "group": "partial-days",
+        "generatedMeals": 2,
+        "uniqueCompositions": 2,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "partial-created-from-target",
+        "group": "partial-days",
+        "generatedMeals": 3,
+        "uniqueCompositions": 3,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "partial-target-only",
+        "group": "partial-days",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "partial-missing-fields",
+        "group": "partial-days",
+        "generatedMeals": 3,
+        "uniqueCompositions": 3,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "partial-aggregate-zero",
+        "group": "partial-days",
+        "generatedMeals": 3,
+        "uniqueCompositions": 3,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-selected-only-real",
+        "group": "food-modes",
+        "generatedMeals": 3,
+        "uniqueCompositions": 3,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-assisted-explicit-only-real",
+        "group": "food-modes",
+        "generatedMeals": 0,
+        "uniqueCompositions": 0,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "regenerate-middle",
+        "group": "regeneration",
+        "generatedMeals": 2,
+        "uniqueCompositions": 2,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "regenerate-last",
+        "group": "regeneration",
+        "generatedMeals": 1,
+        "uniqueCompositions": 1,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "regenerate-full",
+        "group": "regeneration",
+        "generatedMeals": 3,
+        "uniqueCompositions": 3,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "other-option-seed-1",
+        "group": "diversity",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "other-option-seed-2",
+        "group": "diversity",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "other-option-seed-3",
+        "group": "diversity",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "other-option-seed-4",
+        "group": "diversity",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "other-option-seed-5",
+        "group": "diversity",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "other-option-seed-6",
+        "group": "diversity",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      }
+    ]
+  },
+  "after": {
+    "all": {
+      "cases": 30,
+      "generatedMeals": 109,
+      "exactRepeats": 0,
+      "highOverlaps": 1
+    },
+    "dailyMatrix": {
+      "cases": 12,
+      "generatedMeals": 54,
+      "exactRepeats": 0,
+      "highOverlaps": 1
+    },
+    "cases": [
+      {
+        "id": "daily-3-low-balanced",
+        "group": "daily-matrix",
+        "generatedMeals": 3,
+        "uniqueCompositions": 3,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-3-medium-custom",
+        "group": "daily-matrix",
+        "generatedMeals": 3,
+        "uniqueCompositions": 3,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-3-high-protein",
+        "group": "daily-matrix",
+        "generatedMeals": 3,
+        "uniqueCompositions": 3,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-4-low-custom",
+        "group": "daily-matrix",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-4-medium-balanced",
+        "group": "daily-matrix",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-4-high-balanced",
+        "group": "daily-matrix",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-5-low-balanced",
+        "group": "daily-matrix",
+        "generatedMeals": 5,
+        "uniqueCompositions": 5,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-5-medium-custom",
+        "group": "daily-matrix",
+        "generatedMeals": 5,
+        "uniqueCompositions": 5,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-5-high-balanced",
+        "group": "daily-matrix",
+        "generatedMeals": 5,
+        "uniqueCompositions": 5,
+        "exactRepeats": 0,
+        "highOverlaps": 1,
+        "pairs": [
+          {
+            "leftType": "desayuno",
+            "rightType": "snack",
+            "leftFoods": [
+              "Almendras 1 Unid",
+              "Anana 80 Grs",
+              "Avena instantanea 30 Grs",
+              "Claras de huevos 4 Unid",
+              "Copos de maiz sin azucar 35 Grs",
+              "Huevos 3 Unid"
+            ],
+            "rightFoods": [
+              "Avena instantanea 90 Grs",
+              "Huevos 4 Unid"
+            ],
+            "exact": false,
+            "highOverlap": true,
+            "intersection": 2,
+            "intersectionIds": [
+              "6619bfeb147cd50b646776a6",
+              "6619bfeb147cd50b64677755"
+            ],
+            "unionSize": 6,
+            "jaccard": 0.333333,
+            "containment": 1
+          }
+        ]
+      },
+      {
+        "id": "daily-6-low-custom",
+        "group": "daily-matrix",
+        "generatedMeals": 6,
+        "uniqueCompositions": 6,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-6-medium-balanced",
+        "group": "daily-matrix",
+        "generatedMeals": 6,
+        "uniqueCompositions": 6,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-6-high-balanced",
+        "group": "daily-matrix",
+        "generatedMeals": 6,
+        "uniqueCompositions": 6,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "partial-empty",
+        "group": "partial-days",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "partial-one-zero",
+        "group": "partial-days",
+        "generatedMeals": 3,
+        "uniqueCompositions": 3,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "partial-two-existing",
+        "group": "partial-days",
+        "generatedMeals": 2,
+        "uniqueCompositions": 2,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "partial-created-from-target",
+        "group": "partial-days",
+        "generatedMeals": 3,
+        "uniqueCompositions": 3,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "partial-target-only",
+        "group": "partial-days",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "partial-missing-fields",
+        "group": "partial-days",
+        "generatedMeals": 3,
+        "uniqueCompositions": 3,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "partial-aggregate-zero",
+        "group": "partial-days",
+        "generatedMeals": 3,
+        "uniqueCompositions": 3,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-selected-only-real",
+        "group": "food-modes",
+        "generatedMeals": 3,
+        "uniqueCompositions": 3,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "daily-assisted-explicit-only-real",
+        "group": "food-modes",
+        "generatedMeals": 0,
+        "uniqueCompositions": 0,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "regenerate-middle",
+        "group": "regeneration",
+        "generatedMeals": 2,
+        "uniqueCompositions": 2,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "regenerate-last",
+        "group": "regeneration",
+        "generatedMeals": 1,
+        "uniqueCompositions": 1,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "regenerate-full",
+        "group": "regeneration",
+        "generatedMeals": 3,
+        "uniqueCompositions": 3,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "other-option-seed-1",
+        "group": "diversity",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "other-option-seed-2",
+        "group": "diversity",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "other-option-seed-3",
+        "group": "diversity",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "other-option-seed-4",
+        "group": "diversity",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "other-option-seed-5",
+        "group": "diversity",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      },
+      {
+        "id": "other-option-seed-6",
+        "group": "diversity",
+        "generatedMeals": 4,
+        "uniqueCompositions": 4,
+        "exactRepeats": 0,
+        "highOverlaps": 0,
+        "pairs": []
+      }
+    ]
+  },
+  "delta": {
+    "dailyMatrixExactRepeats": -5,
+    "dailyMatrixHighOverlaps": -10
+  }
+}

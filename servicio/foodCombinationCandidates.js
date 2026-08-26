@@ -5,6 +5,11 @@ import {
   GENERATION_ROLES,
   normalizeFoodGenerationForRead,
 } from "./foodGenerationMetadata.js";
+import {
+  assessMealCompositionDiversity,
+  compareMealCompositionDiversity,
+  normalizeMealDiversityContext,
+} from "./mealCompositionDiversity.js";
 
 export const FOOD_COMBINATION_MODES = Object.freeze({
   ONLY_SELECTED_FOODS: "ONLY_SELECTED_FOODS",
@@ -111,8 +116,13 @@ function eligibleRoles(food, structure, mealType, { suggestion = false } = {}) {
   if (food?.activo === false) return [];
   const generation = normalizeFoodGenerationForRead(food?.generation);
   if (generation.mode === "DISABLED") return [];
-  if (suggestion && generation.mode !== "GENERIC") return [];
-  if (generation.mealTypes[mealType] !== true) return [];
+  if (suggestion) {
+    if (generation.mode !== "GENERIC") return [];
+    if (generation.mealTypes[mealType] !== true) return [];
+  }
+  // Un alimento requerido fue elegido explícitamente para este slot. GENERIC
+  // y EXPLICIT_ONLY pueden usar sus roles aunque la aptitud general del
+  // momento sea false; esa aptitud sólo filtra sugerencias espontáneas.
   return structure.filter((role) => generation.roles[role] === true);
 }
 
@@ -190,7 +200,7 @@ function toCandidate(assignments, structure, requiredCount, preferred) {
   const reasons = requiredCount > 0 ? ["required_foods_satisfied"] : ["generic_pool_structure"];
   if (optionalCount === 0) reasons.push("simple_structure");
   if (match) reasons.push("preferred_combination_match");
-  return {
+  const candidate = {
     foodIds,
     roleAssignments: assignments,
     structure: structure.join("+"),
@@ -198,6 +208,19 @@ function toCandidate(assignments, structure, requiredCount, preferred) {
     reasons,
     preferredCombinationMatch: match,
   };
+  return candidate;
+}
+
+function attachCandidateDiversity(candidate, diversityContext) {
+  if (candidate.diversity) return candidate;
+  candidate.diversity = assessMealCompositionDiversity(candidate, diversityContext, {
+    includeComparisons: false,
+  });
+  if (candidate.diversity.repeatedFoodCount) candidate.reasons.push("daily_food_overlap");
+  if (!candidate.diversity.highOverlapMatches && !candidate.diversity.exactMatches) {
+    candidate.reasons.push("daily_composition_diverse");
+  }
+  return candidate;
 }
 
 function sortCandidates(left, right) {
@@ -205,6 +228,71 @@ function sortCandidates(left, right) {
     left.foodIds.length - right.foodIds.length ||
     left.structure.localeCompare(right.structure) ||
     (candidateKey(left) < candidateKey(right) ? -1 : candidateKey(left) > candidateKey(right) ? 1 : 0);
+}
+
+function candidateOptionalRoles(candidate) {
+  const roles = new Set(String(candidate?.structure || "").split("+").filter(Boolean));
+  return OPTIONAL_COMBINATION_ROLES.filter((role) => roles.has(role));
+}
+
+/**
+ * Conserva el ranking existente como orden base, pero evita que muchas
+ * variantes alimentarias de una misma estructura consuman todo el batch.
+ *
+ * La frontera no asigna cupos fijos: toma, cuando existe, un representante
+ * mejor rankeado por cada rol opcional y por cada grado de complejidad. El
+ * presupuesto restante vuelve a completarse con el ranking global original.
+ */
+function selectStructurallyDiverseCandidates(rankedCandidates, limit, mode, diversityContext) {
+  if (mode !== FOOD_COMBINATION_MODES.ALLOW_SUGGESTIONS || rankedCandidates.length <= limit) {
+    return {
+      candidates: rankedCandidates.slice(0, limit),
+      structuralRepresentativesSelected: 0,
+      dailyDiversityRepresentativesSelected: 0,
+    };
+  }
+
+  const selected = [];
+  const selectedKeys = new Set();
+  const add = (candidate) => {
+    if (!candidate || selected.length >= limit) return false;
+    const key = candidateKey(candidate);
+    if (selectedKeys.has(key)) return false;
+    selected.push(candidate);
+    selectedKeys.add(key);
+    return true;
+  };
+
+  // El mejor candidato global (habitualmente P1+C1) conserva la primera
+  // oportunidad. Luego se representa cada dimensión opcional disponible.
+  add(rankedCandidates[0]);
+  for (const role of OPTIONAL_COMBINATION_ROLES) {
+    add(rankedCandidates.find((candidate) => candidateOptionalRoles(candidate).includes(role)));
+  }
+
+  // Además de estructuras base + 1 opcional, preservamos una muestra del
+  // frente de complejidad (+2, +3, ...), siempre elegida por el score actual.
+  const complexities = [...new Set(rankedCandidates.map((candidate) => candidateOptionalRoles(candidate).length))]
+    .filter((count) => count >= 2)
+    .sort((left, right) => left - right);
+  for (const optionalCount of complexities) {
+    add(rankedCandidates.find((candidate) => candidateOptionalRoles(candidate).length === optionalCount));
+  }
+
+  const structuralRepresentativesSelected = selected.length;
+  let dailyDiversityRepresentativesSelected = 0;
+  if (diversityContext.previousMeals.length || diversityContext.usedFoodIds.size) {
+    const diversityBudget = Math.min(8, Math.max(2, Math.floor(limit / 4)));
+    const diversityRanked = [...rankedCandidates].sort((left, right) =>
+      compareMealCompositionDiversity(left.diversity, right.diversity) || sortCandidates(left, right)
+    );
+    for (const candidate of diversityRanked) {
+      if (dailyDiversityRepresentativesSelected >= diversityBudget) break;
+      if (add(candidate)) dailyDiversityRepresentativesSelected += 1;
+    }
+  }
+  for (const candidate of rankedCandidates) add(candidate);
+  return { candidates: selected, structuralRepresentativesSelected, dailyDiversityRepresentativesSelected };
 }
 
 export async function generateFoodCombinationCandidates(input = {}, dependencies = {}) {
@@ -225,6 +313,7 @@ export async function generateFoodCombinationCandidates(input = {}, dependencies
   const poolLimit = safeLimit(dependencies.poolLimitPerRole, DEFAULT_POOL_LIMIT_PER_ROLE, 50);
   const beamWidth = Math.max(16, Math.min(96, limit * 2));
   const preferred = normalizePreferredCombinations(input.preferredCombinations);
+  const diversityContext = normalizeMealDiversityContext(input.diversityContext);
   const preferredIds = new Set(preferred.flat());
   const model = dependencies.model || new ModelMongoDBAlimentos();
   const requiredFoods = await loadRequiredFoods(requiredIds, model);
@@ -274,13 +363,28 @@ export async function generateFoodCombinationCandidates(input = {}, dependencies
     }
   }
 
-  const candidates = [...deduplicated.values()].sort(sortCandidates).slice(0, limit);
+  const rankedCandidates = [...deduplicated.values()].sort(sortCandidates);
+  const hasDiversityContext = diversityContext.previousMeals.length > 0 || diversityContext.usedFoodIds.size > 0;
+  if (hasDiversityContext) rankedCandidates.forEach((candidate) => attachCandidateDiversity(candidate, diversityContext));
+  const selection = selectStructurallyDiverseCandidates(rankedCandidates, limit, mode, diversityContext);
+  const candidates = selection.candidates.map((candidate) => attachCandidateDiversity(candidate, diversityContext));
   return {
     candidates,
     meta: {
       mealType,
       mode,
       candidateCount: candidates.length,
+      candidatesGeneratedBeforeLimit: rankedCandidates.length,
+      structuresGeneratedBeforeLimit: new Set(rankedCandidates.map((candidate) => candidate.structure)).size,
+      structuresSelected: new Set(candidates.map((candidate) => candidate.structure)).size,
+      selectionPolicy: mode === FOOD_COMBINATION_MODES.ALLOW_SUGGESTIONS
+        ? diversityContext.previousMeals.length || diversityContext.usedFoodIds.size
+          ? "ranked_structural_frontier_daily_diversity_v1"
+          : "ranked_structural_frontier_v1"
+        : "global_ranking_v1",
+      structuralRepresentativesSelected: selection.structuralRepresentativesSelected,
+      dailyDiversityRepresentativesSelected: selection.dailyDiversityRepresentativesSelected,
+      diversityContextMeals: diversityContext.previousMeals.length,
       structuresEvaluated: structures.length,
     },
   };

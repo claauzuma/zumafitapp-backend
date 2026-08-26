@@ -1,0 +1,6253 @@
+{
+  "generatedAt": "2026-08-24T16:44:35.145Z",
+  "database": "base2",
+  "collection": "fooddatabase2",
+  "mode": "read-only preview; no menu or tracking persistence",
+  "dailyTarget": {
+    "kcal": 2140,
+    "proteina": 150,
+    "carbs": 250,
+    "grasas": 60
+  },
+  "safety": {
+    "totalBefore": 574,
+    "totalAfter": 574,
+    "generationFingerprintBefore": "fe3936a6ec3c873a7c3ef619e10b78aadb8739ec91cab72d679a037bf0b0a840",
+    "generationFingerprintAfter": "fe3936a6ec3c873a7c3ef619e10b78aadb8739ec91cab72d679a037bf0b0a840",
+    "generationUnchanged": true
+  },
+  "summary": {
+    "runs": 20,
+    "successful": 16,
+    "failed": 4,
+    "culinaryWarnings": 0,
+    "successfulByMealCount": {
+      "3": 1,
+      "4": 5,
+      "5": 5,
+      "6": 5
+    },
+    "acceptanceReached": false
+  },
+  "runs": [
+    {
+      "requestedMealCount": 3,
+      "run": 1,
+      "seed": "curation-real-3-1",
+      "status": "ERROR",
+      "code": "MEAL_TARGET_NOT_REACHABLE_WITH_PORTION_RULES",
+      "error": "No encontramos una combinación válida para desayuno.",
+      "details": {
+        "structuresEvaluated": 32,
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 96,
+        "quantitySolutionsFound": 96,
+        "recommendedSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 431
+          },
+          {
+            "level": "RELAX_STEP",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 273
+          },
+          {
+            "level": "RELAX_MIN",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 282
+          }
+        ],
+        "elapsedMs": 2189
+      },
+      "elapsedMs": 2192.56
+    },
+    {
+      "requestedMealCount": 3,
+      "run": 2,
+      "seed": "curation-real-3-2",
+      "status": "OK",
+      "mealCount": 3,
+      "target": {
+        "kcal": 2140,
+        "proteina": 150,
+        "carbs": 250,
+        "grasas": 60
+      },
+      "totals": {
+        "kcal": 2138.5,
+        "proteina": 153.9,
+        "carbs": 300.85,
+        "grasas": 35.5
+      },
+      "difference": {
+        "kcal": -1.5,
+        "proteina": 3.9,
+        "carbs": 50.85,
+        "grasas": -24.5
+      },
+      "elapsedMs": 4768.68,
+      "warnings": [
+        {
+          "code": "MENU_GLOBAL_MACRO_TARGET_NOT_REACHED",
+          "message": "Las porciones físicas disponibles cerraron calorías, pero no permitieron igualar todos los macros del día.",
+          "details": {
+            "nutrients": [
+              "proteina",
+              "carbs",
+              "grasas"
+            ],
+            "target": {
+              "kcal": 2140,
+              "proteina": 150,
+              "carbs": 250,
+              "grasas": 60
+            },
+            "actual": {
+              "kcal": 2138.5,
+              "proteina": 153.9,
+              "carbs": 300.85,
+              "grasas": 35.5
+            },
+            "difference": {
+              "kcal": -1.5,
+              "proteina": 3.9,
+              "carbs": 50.85,
+              "grasas": -24.5
+            }
+          }
+        }
+      ],
+      "meals": [
+        {
+          "type": "desayuno",
+          "target": {
+            "kcal": 654.04,
+            "proteina": 45.84,
+            "carbs": 76.41,
+            "grasas": 18.34
+          },
+          "actual": {
+            "kcal": 651.4,
+            "proteina": 52.5,
+            "carbs": 74.35,
+            "grasas": 16
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "breakfast",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-3-2:0:desayuno",
+            "variantPoolSize": 1,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 1,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 1,
+                "elapsedMs": 369
+              }
+            ],
+            "elapsedMs": 1518
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677728",
+              "name": "Galletitas de agua",
+              "quantity": 100,
+              "unit": "Grs",
+              "kcal": 441,
+              "protein": 11,
+              "carbs": 70,
+              "fat": 13
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "quantity": 50,
+              "unit": "Grs",
+              "kcal": 210.4,
+              "protein": 41.5,
+              "carbs": 4.35,
+              "fat": 3
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "almuerzo",
+          "target": {
+            "kcal": 709.75,
+            "proteina": 46.49,
+            "carbs": 83.75,
+            "grasas": 20.98
+          },
+          "actual": {
+            "kcal": 709.7,
+            "proteina": 49.900000000000006,
+            "carbs": 105.7,
+            "grasas": 9.7
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "lunch",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-3-2:1:almuerzo",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 17,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 17,
+                "elapsedMs": 278
+              }
+            ],
+            "elapsedMs": 1432
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "quantity": 140,
+              "unit": "Grs",
+              "kcal": 473.9,
+              "protein": 11.2,
+              "carbs": 105.7,
+              "fat": 0.7
+            },
+            {
+              "id": "6619bfeb147cd50b646776bd",
+              "name": "Bola de lomo",
+              "quantity": 180,
+              "unit": "Grs",
+              "kcal": 235.8,
+              "protein": 38.7,
+              "carbs": 0,
+              "fat": 9
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "cena",
+          "target": {
+            "kcal": 778.9,
+            "proteina": 47.6,
+            "carbs": 69.95,
+            "grasas": 34.3
+          },
+          "actual": {
+            "kcal": 777.4000000000001,
+            "proteina": 51.5,
+            "carbs": 120.8,
+            "grasas": 9.8
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "dinner",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-3-2:2:cena",
+            "variantPoolSize": 5,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 6,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 6,
+                "elapsedMs": 271
+              }
+            ],
+            "elapsedMs": 1814
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "quantity": 160,
+              "unit": "Grs",
+              "kcal": 541.6,
+              "protein": 12.8,
+              "carbs": 120.8,
+              "fat": 0.8
+            },
+            {
+              "id": "6619bfeb147cd50b646776f6",
+              "name": "Cuadrada (Ternera)",
+              "quantity": 180,
+              "unit": "Grs",
+              "kcal": 235.8,
+              "protein": 38.7,
+              "carbs": 0,
+              "fat": 9
+            }
+          ],
+          "culinaryWarnings": []
+        }
+      ]
+    },
+    {
+      "requestedMealCount": 3,
+      "run": 3,
+      "seed": "curation-real-3-3",
+      "status": "ERROR",
+      "code": "MEAL_TARGET_NOT_REACHABLE_WITH_PORTION_RULES",
+      "error": "No encontramos una combinación válida para desayuno.",
+      "details": {
+        "structuresEvaluated": 32,
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 96,
+        "quantitySolutionsFound": 96,
+        "recommendedSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 277
+          },
+          {
+            "level": "RELAX_STEP",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 267
+          },
+          {
+            "level": "RELAX_MIN",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 281
+          }
+        ],
+        "elapsedMs": 2363
+      },
+      "elapsedMs": 2363.88
+    },
+    {
+      "requestedMealCount": 3,
+      "run": 4,
+      "seed": "curation-real-3-4",
+      "status": "ERROR",
+      "code": "MEAL_TARGET_NOT_REACHABLE_WITH_PORTION_RULES",
+      "error": "No encontramos una combinación válida para desayuno.",
+      "details": {
+        "structuresEvaluated": 32,
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 96,
+        "quantitySolutionsFound": 96,
+        "recommendedSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 270
+          },
+          {
+            "level": "RELAX_STEP",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 258
+          },
+          {
+            "level": "RELAX_MIN",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 248
+          }
+        ],
+        "elapsedMs": 2049
+      },
+      "elapsedMs": 2050.1
+    },
+    {
+      "requestedMealCount": 3,
+      "run": 5,
+      "seed": "curation-real-3-5",
+      "status": "ERROR",
+      "code": "MEAL_TARGET_NOT_REACHABLE_WITH_PORTION_RULES",
+      "error": "No encontramos una combinación válida para desayuno.",
+      "details": {
+        "structuresEvaluated": 32,
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "combinationCandidatesEvaluated": 32,
+        "totalCandidateExecutions": 96,
+        "quantitySolutionsFound": 96,
+        "recommendedSolutionsFound": 0,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 265
+          },
+          {
+            "level": "RELAX_STEP",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 256
+          },
+          {
+            "level": "RELAX_MIN",
+            "candidatesProcessed": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 265
+          }
+        ],
+        "elapsedMs": 1780
+      },
+      "elapsedMs": 1780.84
+    },
+    {
+      "requestedMealCount": 4,
+      "run": 1,
+      "seed": "curation-real-4-1",
+      "status": "OK",
+      "mealCount": 4,
+      "target": {
+        "kcal": 2140,
+        "proteina": 150,
+        "carbs": 250,
+        "grasas": 60
+      },
+      "totals": {
+        "kcal": 2139.71,
+        "proteina": 174.92,
+        "carbs": 274.53,
+        "grasas": 40.24
+      },
+      "difference": {
+        "kcal": -0.29,
+        "proteina": 24.92,
+        "carbs": 24.53,
+        "grasas": -19.76
+      },
+      "elapsedMs": 5297.55,
+      "warnings": [
+        {
+          "code": "MENU_GLOBAL_MACRO_TARGET_NOT_REACHED",
+          "message": "Las porciones físicas disponibles cerraron calorías, pero no permitieron igualar todos los macros del día.",
+          "details": {
+            "nutrients": [
+              "proteina",
+              "carbs",
+              "grasas"
+            ],
+            "target": {
+              "kcal": 2140,
+              "proteina": 150,
+              "carbs": 250,
+              "grasas": 60
+            },
+            "actual": {
+              "kcal": 2139.71,
+              "proteina": 174.92,
+              "carbs": 274.53,
+              "grasas": 40.24
+            },
+            "difference": {
+              "kcal": -0.29,
+              "proteina": 24.92,
+              "carbs": 24.53,
+              "grasas": -19.76
+            }
+          }
+        }
+      ],
+      "meals": [
+        {
+          "type": "desayuno",
+          "target": {
+            "kcal": 566.22,
+            "proteina": 39.69,
+            "carbs": 66.15,
+            "grasas": 15.88
+          },
+          "actual": {
+            "kcal": 565.22,
+            "proteina": 43.1,
+            "carbs": 66.48,
+            "grasas": 14.1
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "breakfast",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-1:0:desayuno",
+            "variantPoolSize": 2,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 4,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 4,
+                "elapsedMs": 280
+              }
+            ],
+            "elapsedMs": 1494
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677728",
+              "name": "Galletitas de agua",
+              "quantity": 90,
+              "unit": "Grs",
+              "kcal": 396.9,
+              "protein": 9.9,
+              "carbs": 63,
+              "fat": 11.7
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "quantity": 40,
+              "unit": "Grs",
+              "kcal": 168.32,
+              "protein": 33.2,
+              "carbs": 3.48,
+              "fat": 2.4
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "almuerzo",
+          "target": {
+            "kcal": 464.64,
+            "proteina": 31.54,
+            "carbs": 54.15,
+            "grasas": 13.54
+          },
+          "actual": {
+            "kcal": 464.1,
+            "proteina": 36,
+            "carbs": 77.1,
+            "grasas": 1.3
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "lunch",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-1:1:almuerzo",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 26,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 26,
+                "elapsedMs": 253
+              }
+            ],
+            "elapsedMs": 1220
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "quantity": 100,
+              "unit": "Grs",
+              "kcal": 338.5,
+              "protein": 8,
+              "carbs": 75.5,
+              "fat": 0.5
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 8,
+              "unit": "Unid",
+              "kcal": 125.6,
+              "protein": 28,
+              "carbs": 1.6,
+              "fat": 0.8
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "merienda",
+          "target": {
+            "kcal": 596.21,
+            "proteina": 38.06,
+            "carbs": 57.13,
+            "grasas": 23.94
+          },
+          "actual": {
+            "kcal": 595.29,
+            "proteina": 56.550000000000004,
+            "carbs": 68.85000000000001,
+            "grasas": 10.41
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "snack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-1:2:merienda",
+            "variantPoolSize": 3,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 4,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 4,
+                "elapsedMs": 286
+              }
+            ],
+            "elapsedMs": 1313
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "quantity": 120,
+              "unit": "Grs",
+              "kcal": 422.4,
+              "protein": 15.6,
+              "carbs": 68.4,
+              "fat": 9.6
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "quantity": 45,
+              "unit": "Grs",
+              "kcal": 172.89,
+              "protein": 40.95,
+              "carbs": 0.45,
+              "fat": 0.81
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "cena",
+          "target": {
+            "kcal": 515.39,
+            "proteina": 14.35,
+            "carbs": 37.57,
+            "grasas": 34.19
+          },
+          "actual": {
+            "kcal": 515.1,
+            "proteina": 39.269999999999996,
+            "carbs": 62.1,
+            "grasas": 14.43
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "dinner",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-1:3:cena",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 28,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 28,
+                "elapsedMs": 269
+              }
+            ],
+            "elapsedMs": 1268
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a0",
+              "name": "Arroz integral (Cocido)",
+              "quantity": 270,
+              "unit": "Grs",
+              "kcal": 298.35,
+              "protein": 7.02,
+              "carbs": 62.1,
+              "fat": 2.43
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "quantity": 150,
+              "unit": "Grs",
+              "kcal": 216.75,
+              "protein": 32.25,
+              "carbs": 0,
+              "fat": 12
+            }
+          ],
+          "culinaryWarnings": []
+        }
+      ]
+    },
+    {
+      "requestedMealCount": 4,
+      "run": 2,
+      "seed": "curation-real-4-2",
+      "status": "OK",
+      "mealCount": 4,
+      "target": {
+        "kcal": 2140,
+        "proteina": 150,
+        "carbs": 250,
+        "grasas": 60
+      },
+      "totals": {
+        "kcal": 2139.72,
+        "proteina": 164.17,
+        "carbs": 240.8,
+        "grasas": 60.61
+      },
+      "difference": {
+        "kcal": -0.28,
+        "proteina": 14.17,
+        "carbs": -9.2,
+        "grasas": 0.61
+      },
+      "elapsedMs": 5336.44,
+      "warnings": [
+        {
+          "code": "MENU_GLOBAL_MACRO_TARGET_NOT_REACHED",
+          "message": "Las porciones físicas disponibles cerraron calorías, pero no permitieron igualar todos los macros del día.",
+          "details": {
+            "nutrients": [
+              "proteina",
+              "carbs",
+              "grasas"
+            ],
+            "target": {
+              "kcal": 2140,
+              "proteina": 150,
+              "carbs": 250,
+              "grasas": 60
+            },
+            "actual": {
+              "kcal": 2139.72,
+              "proteina": 164.17,
+              "carbs": 240.8,
+              "grasas": 60.61
+            },
+            "difference": {
+              "kcal": -0.28,
+              "proteina": 14.17,
+              "carbs": -9.2,
+              "grasas": 0.61
+            }
+          }
+        }
+      ],
+      "meals": [
+        {
+          "type": "desayuno",
+          "target": {
+            "kcal": 536.39,
+            "proteina": 37.6,
+            "carbs": 62.66,
+            "grasas": 15.04
+          },
+          "actual": {
+            "kcal": 534.21,
+            "proteina": 37.75,
+            "carbs": 66.8,
+            "grasas": 12.89
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "breakfast",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-2:0:desayuno",
+            "variantPoolSize": 2,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 4,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 4,
+                "elapsedMs": 281
+              }
+            ],
+            "elapsedMs": 1464
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677728",
+              "name": "Galletitas de agua",
+              "quantity": 95,
+              "unit": "Grs",
+              "kcal": 418.95,
+              "protein": 10.45,
+              "carbs": 66.5,
+              "fat": 12.35
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "quantity": 30,
+              "unit": "Grs",
+              "kcal": 115.26,
+              "protein": 27.3,
+              "carbs": 0.3,
+              "fat": 0.54
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "almuerzo",
+          "target": {
+            "kcal": 540.51,
+            "proteina": 37.78,
+            "carbs": 61.67,
+            "grasas": 15.86
+          },
+          "actual": {
+            "kcal": 540.3,
+            "proteina": 51.39,
+            "carbs": 55.2,
+            "grasas": 12.66
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "lunch",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-2:1:almuerzo",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 19,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 19,
+                "elapsedMs": 248
+              }
+            ],
+            "elapsedMs": 1325
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a0",
+              "name": "Arroz integral (Cocido)",
+              "quantity": 240,
+              "unit": "Grs",
+              "kcal": 265.2,
+              "protein": 6.24,
+              "carbs": 55.2,
+              "fat": 2.16
+            },
+            {
+              "id": "6619bfeb147cd50b646776bd",
+              "name": "Bola de lomo",
+              "quantity": 210,
+              "unit": "Grs",
+              "kcal": 275.1,
+              "protein": 45.15,
+              "carbs": 0,
+              "fat": 10.5
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "merienda",
+          "target": {
+            "kcal": 544.77,
+            "proteina": 31.12,
+            "carbs": 65.44,
+            "grasas": 17.61
+          },
+          "actual": {
+            "kcal": 544.61,
+            "proteina": 29.05,
+            "carbs": 63.7,
+            "grasas": 19.29
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "snack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-2:2:merienda",
+            "variantPoolSize": 5,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 11,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 11,
+                "elapsedMs": 260
+              }
+            ],
+            "elapsedMs": 1196
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "quantity": 3,
+              "unit": "Unid",
+              "kcal": 207,
+              "protein": 18,
+              "carbs": 0,
+              "fat": 15
+            },
+            {
+              "id": "6619bfeb147cd50b646777e6",
+              "name": "Pan de centeno",
+              "quantity": 130,
+              "unit": "Grs",
+              "kcal": 337.61,
+              "protein": 11.05,
+              "carbs": 63.7,
+              "fat": 4.29
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "cena",
+          "target": {
+            "kcal": 520.88,
+            "proteina": 31.81,
+            "carbs": 64.3,
+            "grasas": 15.16
+          },
+          "actual": {
+            "kcal": 520.6,
+            "proteina": 45.980000000000004,
+            "carbs": 55.1,
+            "grasas": 15.77
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "dinner",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-2:3:cena",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 26,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 26,
+                "elapsedMs": 350
+              }
+            ],
+            "elapsedMs": 1351
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769d",
+              "name": "Arroz (Cocido)",
+              "quantity": 190,
+              "unit": "Grs",
+              "kcal": 246.05,
+              "protein": 5.13,
+              "carbs": 55.1,
+              "fat": 0.57
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "quantity": 190,
+              "unit": "Grs",
+              "kcal": 274.55,
+              "protein": 40.85,
+              "carbs": 0,
+              "fat": 15.2
+            }
+          ],
+          "culinaryWarnings": []
+        }
+      ]
+    },
+    {
+      "requestedMealCount": 4,
+      "run": 3,
+      "seed": "curation-real-4-3",
+      "status": "OK",
+      "mealCount": 4,
+      "target": {
+        "kcal": 2140,
+        "proteina": 150,
+        "carbs": 250,
+        "grasas": 60
+      },
+      "totals": {
+        "kcal": 2139.2,
+        "proteina": 186.03,
+        "carbs": 286.85,
+        "grasas": 27.52
+      },
+      "difference": {
+        "kcal": -0.8,
+        "proteina": 36.03,
+        "carbs": 36.85,
+        "grasas": -32.48
+      },
+      "elapsedMs": 5813.99,
+      "warnings": [
+        {
+          "code": "MENU_PROTEIN_BELOW_FEASIBLE_RANGE",
+          "message": "Quedan 9.6 g de proteína para 1 comidas; el mínimo deseado sería 10 g.",
+          "details": {
+            "remainingProtein": 9.629999999999995,
+            "remainingSlots": 1,
+            "minimumRequired": 10
+          }
+        },
+        {
+          "code": "MENU_GLOBAL_MACRO_TARGET_NOT_REACHED",
+          "message": "Las porciones físicas disponibles cerraron calorías, pero no permitieron igualar todos los macros del día.",
+          "details": {
+            "nutrients": [
+              "proteina",
+              "carbs",
+              "grasas"
+            ],
+            "target": {
+              "kcal": 2140,
+              "proteina": 150,
+              "carbs": 250,
+              "grasas": 60
+            },
+            "actual": {
+              "kcal": 2139.2,
+              "proteina": 186.03,
+              "carbs": 286.85,
+              "grasas": 27.52
+            },
+            "difference": {
+              "kcal": -0.8,
+              "proteina": 36.03,
+              "carbs": 36.85,
+              "grasas": -32.48
+            }
+          }
+        }
+      ],
+      "meals": [
+        {
+          "type": "desayuno",
+          "target": {
+            "kcal": 564.3,
+            "proteina": 39.55,
+            "carbs": 65.92,
+            "grasas": 15.82
+          },
+          "actual": {
+            "kcal": 562.4,
+            "proteina": 54.5,
+            "carbs": 61.35,
+            "grasas": 11
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "breakfast",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-3:0:desayuno",
+            "variantPoolSize": 3,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 4,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 4,
+                "elapsedMs": 259
+              }
+            ],
+            "elapsedMs": 1409
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "quantity": 100,
+              "unit": "Grs",
+              "kcal": 352,
+              "protein": 13,
+              "carbs": 57,
+              "fat": 8
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "quantity": 50,
+              "unit": "Grs",
+              "kcal": 210.4,
+              "protein": 41.5,
+              "carbs": 4.35,
+              "fat": 3
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "almuerzo",
+          "target": {
+            "kcal": 462.54,
+            "proteina": 28,
+            "carbs": 55.31,
+            "grasas": 14.37
+          },
+          "actual": {
+            "kcal": 462.29999999999995,
+            "proteina": 35.019999999999996,
+            "carbs": 77,
+            "grasas": 1.58
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "lunch",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-3:1:almuerzo",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 28,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 28,
+                "elapsedMs": 276
+              }
+            ],
+            "elapsedMs": 1259
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769d",
+              "name": "Arroz (Cocido)",
+              "quantity": 260,
+              "unit": "Grs",
+              "kcal": 336.7,
+              "protein": 7.02,
+              "carbs": 75.4,
+              "fat": 0.78
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 8,
+              "unit": "Unid",
+              "kcal": 125.6,
+              "protein": 28,
+              "carbs": 1.6,
+              "fat": 0.8
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "merienda",
+          "target": {
+            "kcal": 571.96,
+            "proteina": 31.02,
+            "carbs": 57.26,
+            "grasas": 24.32
+          },
+          "actual": {
+            "kcal": 569.79,
+            "proteina": 50.85,
+            "carbs": 63.45,
+            "grasas": 12.51
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "snack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-3:2:merienda",
+            "variantPoolSize": 3,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 9,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 9,
+                "elapsedMs": 273
+              }
+            ],
+            "elapsedMs": 1525
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677728",
+              "name": "Galletitas de agua",
+              "quantity": 90,
+              "unit": "Grs",
+              "kcal": 396.9,
+              "protein": 9.9,
+              "carbs": 63,
+              "fat": 11.7
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "quantity": 45,
+              "unit": "Grs",
+              "kcal": 172.89,
+              "protein": 40.95,
+              "carbs": 0.45,
+              "fat": 0.81
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "cena",
+          "target": {
+            "kcal": 545.51,
+            "proteina": 9.63,
+            "carbs": 48.2,
+            "grasas": 34.91
+          },
+          "actual": {
+            "kcal": 544.71,
+            "proteina": 45.66,
+            "carbs": 85.05,
+            "grasas": 2.43
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "dinner",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-3:3:cena",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 27,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 27,
+                "elapsedMs": 284
+              }
+            ],
+            "elapsedMs": 1618
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "quantity": 1,
+              "unit": "Pote",
+              "kcal": 120,
+              "protein": 30,
+              "carbs": 0,
+              "fat": 0
+            },
+            {
+              "id": "6619bfeb147cd50b64677718",
+              "name": "Fideos (Cocidos)",
+              "quantity": 270,
+              "unit": "Grs",
+              "kcal": 424.71,
+              "protein": 15.66,
+              "carbs": 85.05,
+              "fat": 2.43
+            }
+          ],
+          "culinaryWarnings": []
+        }
+      ]
+    },
+    {
+      "requestedMealCount": 4,
+      "run": 4,
+      "seed": "curation-real-4-4",
+      "status": "OK",
+      "mealCount": 4,
+      "target": {
+        "kcal": 2140,
+        "proteina": 150,
+        "carbs": 250,
+        "grasas": 60
+      },
+      "totals": {
+        "kcal": 2139.74,
+        "proteina": 158.57,
+        "carbs": 290.32,
+        "grasas": 40.64
+      },
+      "difference": {
+        "kcal": -0.26,
+        "proteina": 8.57,
+        "carbs": 40.32,
+        "grasas": -19.36
+      },
+      "elapsedMs": 6541.14,
+      "warnings": [
+        {
+          "code": "MENU_GLOBAL_MACRO_TARGET_NOT_REACHED",
+          "message": "Las porciones físicas disponibles cerraron calorías, pero no permitieron igualar todos los macros del día.",
+          "details": {
+            "nutrients": [
+              "proteina",
+              "carbs",
+              "grasas"
+            ],
+            "target": {
+              "kcal": 2140,
+              "proteina": 150,
+              "carbs": 250,
+              "grasas": 60
+            },
+            "actual": {
+              "kcal": 2139.74,
+              "proteina": 158.57,
+              "carbs": 290.32,
+              "grasas": 40.64
+            },
+            "difference": {
+              "kcal": -0.26,
+              "proteina": 8.57,
+              "carbs": 40.32,
+              "grasas": -19.36
+            }
+          }
+        }
+      ],
+      "meals": [
+        {
+          "type": "desayuno",
+          "target": {
+            "kcal": 542.53,
+            "proteina": 38.03,
+            "carbs": 63.38,
+            "grasas": 15.21
+          },
+          "actual": {
+            "kcal": 542.49,
+            "proteina": 54.6,
+            "carbs": 60.300000000000004,
+            "grasas": 9.21
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "breakfast",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-4:0:desayuno",
+            "variantPoolSize": 3,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 4,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 4,
+                "elapsedMs": 281
+              }
+            ],
+            "elapsedMs": 1228
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "quantity": 105,
+              "unit": "Grs",
+              "kcal": 369.6,
+              "protein": 13.65,
+              "carbs": 59.85,
+              "fat": 8.4
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "quantity": 45,
+              "unit": "Grs",
+              "kcal": 172.89,
+              "protein": 40.95,
+              "carbs": 0.45,
+              "fat": 0.81
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "almuerzo",
+          "target": {
+            "kcal": 607.73,
+            "proteina": 36.29,
+            "carbs": 72.17,
+            "grasas": 19.32
+          },
+          "actual": {
+            "kcal": 606.9,
+            "proteina": 43.239999999999995,
+            "carbs": 78.2,
+            "grasas": 15.860000000000001
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "lunch",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-4:1:almuerzo",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 20,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 20,
+                "elapsedMs": 274
+              }
+            ],
+            "elapsedMs": 2335
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a0",
+              "name": "Arroz integral (Cocido)",
+              "quantity": 340,
+              "unit": "Grs",
+              "kcal": 375.7,
+              "protein": 8.84,
+              "carbs": 78.2,
+              "fat": 3.06
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "quantity": 160,
+              "unit": "Grs",
+              "kcal": 231.2,
+              "protein": 34.4,
+              "carbs": 0,
+              "fat": 12.8
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "merienda",
+          "target": {
+            "kcal": 513.37,
+            "proteina": 27.03,
+            "carbs": 57.78,
+            "grasas": 18.1
+          },
+          "actual": {
+            "kcal": 510,
+            "proteina": 35.7,
+            "carbs": 67.72,
+            "grasas": 10.7
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "snack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-4:2:merienda",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 15,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 15,
+                "elapsedMs": 280
+              }
+            ],
+            "elapsedMs": 1458
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "quantity": 115,
+              "unit": "Grs",
+              "kcal": 404.8,
+              "protein": 14.95,
+              "carbs": 65.55,
+              "fat": 9.2
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "quantity": 25,
+              "unit": "Grs",
+              "kcal": 105.2,
+              "protein": 20.75,
+              "carbs": 2.17,
+              "fat": 1.5
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "cena",
+          "target": {
+            "kcal": 480.61,
+            "proteina": 16.46,
+            "carbs": 43.78,
+            "grasas": 24.23
+          },
+          "actual": {
+            "kcal": 480.35,
+            "proteina": 25.03,
+            "carbs": 84.1,
+            "grasas": 4.87
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "dinner",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-4:3:cena",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 28,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 28,
+                "elapsedMs": 283
+              }
+            ],
+            "elapsedMs": 1519
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769d",
+              "name": "Arroz (Cocido)",
+              "quantity": 290,
+              "unit": "Grs",
+              "kcal": 375.55,
+              "protein": 7.83,
+              "carbs": 84.1,
+              "fat": 0.87
+            },
+            {
+              "id": "6619bfeb147cd50b646776f6",
+              "name": "Cuadrada (Ternera)",
+              "quantity": 80,
+              "unit": "Grs",
+              "kcal": 104.8,
+              "protein": 17.2,
+              "carbs": 0,
+              "fat": 4
+            }
+          ],
+          "culinaryWarnings": []
+        }
+      ]
+    },
+    {
+      "requestedMealCount": 4,
+      "run": 5,
+      "seed": "curation-real-4-5",
+      "status": "OK",
+      "mealCount": 4,
+      "target": {
+        "kcal": 2140,
+        "proteina": 150,
+        "carbs": 250,
+        "grasas": 60
+      },
+      "totals": {
+        "kcal": 2139.7,
+        "proteina": 158.33,
+        "carbs": 326.15,
+        "grasas": 22.42
+      },
+      "difference": {
+        "kcal": -0.3,
+        "proteina": 8.33,
+        "carbs": 76.15,
+        "grasas": -37.58
+      },
+      "elapsedMs": 5695.78,
+      "warnings": [
+        {
+          "code": "MENU_CARB_FAT_RELATION_NOT_FEASIBLE",
+          "message": "Con los macros restantes no es posible mantener carbohidratos mayores que grasas en todas las comidas.",
+          "details": {
+            "remainingCarbs": 30.55000000000001,
+            "remainingFat": 38.78,
+            "remainingSlots": 1
+          }
+        },
+        {
+          "code": "MENU_GLOBAL_MACRO_TARGET_NOT_REACHED",
+          "message": "Las porciones físicas disponibles cerraron calorías, pero no permitieron igualar todos los macros del día.",
+          "details": {
+            "nutrients": [
+              "proteina",
+              "carbs",
+              "grasas"
+            ],
+            "target": {
+              "kcal": 2140,
+              "proteina": 150,
+              "carbs": 250,
+              "grasas": 60
+            },
+            "actual": {
+              "kcal": 2139.7,
+              "proteina": 158.33,
+              "carbs": 326.15,
+              "grasas": 22.42
+            },
+            "difference": {
+              "kcal": -0.3,
+              "proteina": 8.33,
+              "carbs": 76.15,
+              "grasas": -37.58
+            }
+          }
+        }
+      ],
+      "meals": [
+        {
+          "type": "desayuno",
+          "target": {
+            "kcal": 516.55,
+            "proteina": 36.21,
+            "carbs": 60.34,
+            "grasas": 14.48
+          },
+          "actual": {
+            "kcal": 515.15,
+            "proteina": 40.75,
+            "carbs": 75.1,
+            "grasas": 5.75
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "breakfast",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-5:0:desayuno",
+            "variantPoolSize": 4,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 8,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 8,
+                "elapsedMs": 257
+              }
+            ],
+            "elapsedMs": 1332
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 8,
+              "unit": "Unid",
+              "kcal": 125.6,
+              "protein": 28,
+              "carbs": 1.6,
+              "fat": 0.8
+            },
+            {
+              "id": "6619bfeb147cd50b646777e6",
+              "name": "Pan de centeno",
+              "quantity": 150,
+              "unit": "Grs",
+              "kcal": 389.55,
+              "protein": 12.75,
+              "carbs": 73.5,
+              "fat": 4.95
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "almuerzo",
+          "target": {
+            "kcal": 475.1,
+            "proteina": 31.94,
+            "carbs": 51.14,
+            "grasas": 15.86
+          },
+          "actual": {
+            "kcal": 474.54999999999995,
+            "proteina": 33.08,
+            "carbs": 77.30000000000001,
+            "grasas": 3.67
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "lunch",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-5:1:almuerzo",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 22,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 22,
+                "elapsedMs": 272
+              }
+            ],
+            "elapsedMs": 1427
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a0",
+              "name": "Arroz integral (Cocido)",
+              "quantity": 330,
+              "unit": "Grs",
+              "kcal": 364.65,
+              "protein": 8.58,
+              "carbs": 75.9,
+              "fat": 2.97
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 7,
+              "unit": "Unid",
+              "kcal": 109.9,
+              "protein": 24.5,
+              "carbs": 1.4,
+              "fat": 0.7
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "merienda",
+          "target": {
+            "kcal": 607.15,
+            "proteina": 40.2,
+            "carbs": 51.52,
+            "grasas": 26.7
+          },
+          "actual": {
+            "kcal": 597.6,
+            "proteina": 55.8,
+            "carbs": 67.05,
+            "grasas": 11.8
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "snack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-5:2:merienda",
+            "variantPoolSize": 1,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 1,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 1,
+                "elapsedMs": 279
+              }
+            ],
+            "elapsedMs": 1514
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "quantity": 110,
+              "unit": "Grs",
+              "kcal": 387.2,
+              "protein": 14.3,
+              "carbs": 62.7,
+              "fat": 8.8
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "quantity": 50,
+              "unit": "Grs",
+              "kcal": 210.4,
+              "protein": 41.5,
+              "carbs": 4.35,
+              "fat": 3
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "cena",
+          "target": {
+            "kcal": 552.7,
+            "proteina": 20.37,
+            "carbs": 30.55,
+            "grasas": 38.78
+          },
+          "actual": {
+            "kcal": 552.4,
+            "proteina": 28.7,
+            "carbs": 106.7,
+            "grasas": 1.2
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "dinner",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-4-5:3:cena",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 27,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 27,
+                "elapsedMs": 273
+              }
+            ],
+            "elapsedMs": 1420
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "quantity": 140,
+              "unit": "Grs",
+              "kcal": 473.9,
+              "protein": 11.2,
+              "carbs": 105.7,
+              "fat": 0.7
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 5,
+              "unit": "Unid",
+              "kcal": 78.5,
+              "protein": 17.5,
+              "carbs": 1,
+              "fat": 0.5
+            }
+          ],
+          "culinaryWarnings": []
+        }
+      ]
+    },
+    {
+      "requestedMealCount": 5,
+      "run": 1,
+      "seed": "curation-real-5-1",
+      "status": "OK",
+      "mealCount": 5,
+      "target": {
+        "kcal": 2140,
+        "proteina": 150,
+        "carbs": 250,
+        "grasas": 60
+      },
+      "totals": {
+        "kcal": 2138.74,
+        "proteina": 157.31,
+        "carbs": 289.05,
+        "grasas": 39.26
+      },
+      "difference": {
+        "kcal": -1.26,
+        "proteina": 7.31,
+        "carbs": 39.05,
+        "grasas": -20.74
+      },
+      "elapsedMs": 7345.14,
+      "warnings": [
+        {
+          "code": "MENU_CARB_FAT_RELATION_NOT_FEASIBLE",
+          "message": "Con los macros restantes no es posible mantener carbohidratos mayores que grasas en todas las comidas.",
+          "details": {
+            "remainingCarbs": 18.25,
+            "remainingFat": 29.279999999999998,
+            "remainingSlots": 1
+          }
+        },
+        {
+          "code": "MENU_GLOBAL_MACRO_TARGET_NOT_REACHED",
+          "message": "Las porciones físicas disponibles cerraron calorías, pero no permitieron igualar todos los macros del día.",
+          "details": {
+            "nutrients": [
+              "proteina",
+              "carbs",
+              "grasas"
+            ],
+            "target": {
+              "kcal": 2140,
+              "proteina": 150,
+              "carbs": 250,
+              "grasas": 60
+            },
+            "actual": {
+              "kcal": 2138.74,
+              "proteina": 157.31,
+              "carbs": 289.05,
+              "grasas": 39.26
+            },
+            "difference": {
+              "kcal": -1.26,
+              "proteina": 7.31,
+              "carbs": 39.05,
+              "grasas": -20.74
+            }
+          }
+        }
+      ],
+      "meals": [
+        {
+          "type": "desayuno",
+          "target": {
+            "kcal": 450.8,
+            "proteina": 31.6,
+            "carbs": 52.66,
+            "grasas": 12.64
+          },
+          "actual": {
+            "kcal": 450.74,
+            "proteina": 31.259999999999998,
+            "carbs": 70.05,
+            "grasas": 5.06
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "breakfast",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-1:0:desayuno",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 9,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 9,
+                "elapsedMs": 265
+              }
+            ],
+            "elapsedMs": 1400
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 6,
+              "unit": "Unid",
+              "kcal": 94.2,
+              "protein": 21,
+              "carbs": 1.2,
+              "fat": 0.6
+            },
+            {
+              "id": "6619bfeb147cd50b646777e2",
+              "name": "Pan blanco",
+              "quantity": 135,
+              "unit": "Grs",
+              "kcal": 356.54,
+              "protein": 10.26,
+              "carbs": 68.85,
+              "fat": 4.46
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "almuerzo",
+          "target": {
+            "kcal": 389.73,
+            "proteina": 27.39,
+            "carbs": 41.52,
+            "grasas": 12.68
+          },
+          "actual": {
+            "kcal": 389.1,
+            "proteina": 29.25,
+            "carbs": 52.5,
+            "grasas": 6.9
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "lunch",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-1:1:almuerzo",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 30,
+            "recommendedSolutionsFound": 22,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 30,
+                "recommendedSolutionsFound": 22,
+                "elapsedMs": 246
+              }
+            ],
+            "elapsedMs": 1293
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769f",
+              "name": "Arroz integral",
+              "quantity": 70,
+              "unit": "Grs",
+              "kcal": 245,
+              "protein": 5.6,
+              "carbs": 52.5,
+              "fat": 1.4
+            },
+            {
+              "id": "6619bfeb147cd50b646776bd",
+              "name": "Bola de lomo",
+              "quantity": 110,
+              "unit": "Grs",
+              "kcal": 144.1,
+              "protein": 23.65,
+              "carbs": 0,
+              "fat": 5.5
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "merienda",
+          "target": {
+            "kcal": 386.55,
+            "proteina": 26.61,
+            "carbs": 37.89,
+            "grasas": 14.28
+          },
+          "actual": {
+            "kcal": 385.53999999999996,
+            "proteina": 25.9,
+            "carbs": 49.2,
+            "grasas": 9.459999999999999
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "snack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-1:2:merienda",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 12,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 12,
+                "elapsedMs": 273
+              }
+            ],
+            "elapsedMs": 1525
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677728",
+              "name": "Galletitas de agua",
+              "quantity": 70,
+              "unit": "Grs",
+              "kcal": 308.7,
+              "protein": 7.7,
+              "carbs": 49,
+              "fat": 9.1
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "quantity": 20,
+              "unit": "Grs",
+              "kcal": 76.84,
+              "protein": 18.2,
+              "carbs": 0.2,
+              "fat": 0.36
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "cena",
+          "target": {
+            "kcal": 446.2,
+            "proteina": 31.02,
+            "carbs": 38.17,
+            "grasas": 18.82
+          },
+          "actual": {
+            "kcal": 446.1,
+            "proteina": 30.6,
+            "carbs": 60,
+            "grasas": 9.3
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "dinner",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-1:3:cena",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 20,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 20,
+                "elapsedMs": 254
+              }
+            ],
+            "elapsedMs": 1531
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769f",
+              "name": "Arroz integral",
+              "quantity": 80,
+              "unit": "Grs",
+              "kcal": 280,
+              "protein": 6.4,
+              "carbs": 60,
+              "fat": 1.6
+            },
+            {
+              "id": "6619bfeb147cd50b646776cd",
+              "name": "Carne de cerdo magro",
+              "quantity": 110,
+              "unit": "Grs",
+              "kcal": 166.1,
+              "protein": 24.2,
+              "carbs": 0,
+              "fat": 7.7
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "snack",
+          "target": {
+            "kcal": 468.52,
+            "proteina": 32.99,
+            "carbs": 18.25,
+            "grasas": 29.28
+          },
+          "actual": {
+            "kcal": 467.26,
+            "proteina": 40.3,
+            "carbs": 57.3,
+            "grasas": 8.54
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "extraSnack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-1:4:snack",
+            "variantPoolSize": 6,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 6,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 6,
+                "elapsedMs": 272
+              }
+            ],
+            "elapsedMs": 1593
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "quantity": 100,
+              "unit": "Grs",
+              "kcal": 352,
+              "protein": 13,
+              "carbs": 57,
+              "fat": 8
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "quantity": 30,
+              "unit": "Grs",
+              "kcal": 115.26,
+              "protein": 27.3,
+              "carbs": 0.3,
+              "fat": 0.54
+            }
+          ],
+          "culinaryWarnings": []
+        }
+      ]
+    },
+    {
+      "requestedMealCount": 5,
+      "run": 2,
+      "seed": "curation-real-5-2",
+      "status": "OK",
+      "mealCount": 5,
+      "target": {
+        "kcal": 2140,
+        "proteina": 150,
+        "carbs": 250,
+        "grasas": 60
+      },
+      "totals": {
+        "kcal": 2139.24,
+        "proteina": 166.73,
+        "carbs": 268.55,
+        "grasas": 48.59
+      },
+      "difference": {
+        "kcal": -0.76,
+        "proteina": 16.73,
+        "carbs": 18.55,
+        "grasas": -11.41
+      },
+      "elapsedMs": 8905.27,
+      "warnings": [
+        {
+          "code": "MENU_GLOBAL_MACRO_TARGET_NOT_REACHED",
+          "message": "Las porciones físicas disponibles cerraron calorías, pero no permitieron igualar todos los macros del día.",
+          "details": {
+            "nutrients": [
+              "proteina",
+              "carbs",
+              "grasas"
+            ],
+            "target": {
+              "kcal": 2140,
+              "proteina": 150,
+              "carbs": 250,
+              "grasas": 60
+            },
+            "actual": {
+              "kcal": 2139.24,
+              "proteina": 166.73,
+              "carbs": 268.55,
+              "grasas": 48.59
+            },
+            "difference": {
+              "kcal": -0.76,
+              "proteina": 16.73,
+              "carbs": 18.55,
+              "grasas": -11.41
+            }
+          }
+        }
+      ],
+      "meals": [
+        {
+          "type": "desayuno",
+          "target": {
+            "kcal": 419.34,
+            "proteina": 29.39,
+            "carbs": 48.99,
+            "grasas": 11.76
+          },
+          "actual": {
+            "kcal": 418.6,
+            "proteina": 32.2,
+            "carbs": 50.4,
+            "grasas": 9.799999999999999
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "breakfast",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-2:0:desayuno",
+            "variantPoolSize": 6,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 7,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 7,
+                "elapsedMs": 339
+              }
+            ],
+            "elapsedMs": 1481
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 7,
+              "unit": "Unid",
+              "kcal": 109.9,
+              "protein": 24.5,
+              "carbs": 1.4,
+              "fat": 0.7
+            },
+            {
+              "id": "6619bfeb147cd50b64677728",
+              "name": "Galletitas de agua",
+              "quantity": 70,
+              "unit": "Grs",
+              "kcal": 308.7,
+              "protein": 7.7,
+              "carbs": 49,
+              "fat": 9.1
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "almuerzo",
+          "target": {
+            "kcal": 463.45,
+            "proteina": 31.71,
+            "carbs": 53.74,
+            "grasas": 13.52
+          },
+          "actual": {
+            "kcal": 462.8,
+            "proteina": 37.38,
+            "carbs": 55.1,
+            "grasas": 12.57
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "lunch",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-2:1:almuerzo",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 24,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 24,
+                "elapsedMs": 251
+              }
+            ],
+            "elapsedMs": 2508
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769d",
+              "name": "Arroz (Cocido)",
+              "quantity": 190,
+              "unit": "Grs",
+              "kcal": 246.05,
+              "protein": 5.13,
+              "carbs": 55.1,
+              "fat": 0.57
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "quantity": 150,
+              "unit": "Grs",
+              "kcal": 216.75,
+              "protein": 32.25,
+              "carbs": 0,
+              "fat": 12
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "merienda",
+          "target": {
+            "kcal": 408.74,
+            "proteina": 26.12,
+            "carbs": 46.93,
+            "grasas": 12.22
+          },
+          "actual": {
+            "kcal": 408.63,
+            "proteina": 27,
+            "carbs": 64.75,
+            "grasas": 4.63
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "snack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-2:2:merienda",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 15,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 15,
+                "elapsedMs": 271
+              }
+            ],
+            "elapsedMs": 1589
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 5,
+              "unit": "Unid",
+              "kcal": 78.5,
+              "protein": 17.5,
+              "carbs": 1,
+              "fat": 0.5
+            },
+            {
+              "id": "6619bfeb147cd50b646777e2",
+              "name": "Pan blanco",
+              "quantity": 125,
+              "unit": "Grs",
+              "kcal": 330.13,
+              "protein": 9.5,
+              "carbs": 63.75,
+              "fat": 4.13
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "cena",
+          "target": {
+            "kcal": 447.58,
+            "proteina": 28.13,
+            "carbs": 41.99,
+            "grasas": 17.38
+          },
+          "actual": {
+            "kcal": 447.3,
+            "proteina": 35.7,
+            "carbs": 52.5,
+            "grasas": 12.6
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "dinner",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-2:3:cena",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 26,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 26,
+                "elapsedMs": 408
+              }
+            ],
+            "elapsedMs": 1708
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769f",
+              "name": "Arroz integral",
+              "quantity": 70,
+              "unit": "Grs",
+              "kcal": 245,
+              "protein": 5.6,
+              "carbs": 52.5,
+              "fat": 1.4
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "quantity": 140,
+              "unit": "Grs",
+              "kcal": 202.3,
+              "protein": 30.1,
+              "carbs": 0,
+              "fat": 11.2
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "snack",
+          "target": {
+            "kcal": 402.67,
+            "proteina": 17.72,
+            "carbs": 27.25,
+            "grasas": 20.4
+          },
+          "actual": {
+            "kcal": 401.90999999999997,
+            "proteina": 34.45,
+            "carbs": 45.8,
+            "grasas": 8.989999999999998
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "extraSnack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-2:4:snack",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 20,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 20,
+                "elapsedMs": 284
+              }
+            ],
+            "elapsedMs": 1619
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677728",
+              "name": "Galletitas de agua",
+              "quantity": 65,
+              "unit": "Grs",
+              "kcal": 286.65,
+              "protein": 7.15,
+              "carbs": 45.5,
+              "fat": 8.45
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "quantity": 30,
+              "unit": "Grs",
+              "kcal": 115.26,
+              "protein": 27.3,
+              "carbs": 0.3,
+              "fat": 0.54
+            }
+          ],
+          "culinaryWarnings": []
+        }
+      ]
+    },
+    {
+      "requestedMealCount": 5,
+      "run": 3,
+      "seed": "curation-real-5-3",
+      "status": "OK",
+      "mealCount": 5,
+      "target": {
+        "kcal": 2140,
+        "proteina": 150,
+        "carbs": 250,
+        "grasas": 60
+      },
+      "totals": {
+        "kcal": 2138.15,
+        "proteina": 162.45,
+        "carbs": 254.9,
+        "grasas": 55.24
+      },
+      "difference": {
+        "kcal": -1.85,
+        "proteina": 12.45,
+        "carbs": 4.9,
+        "grasas": -4.76
+      },
+      "elapsedMs": 7950.25,
+      "warnings": [
+        {
+          "code": "MENU_GLOBAL_MACRO_TARGET_NOT_REACHED",
+          "message": "Las porciones físicas disponibles cerraron calorías, pero no permitieron igualar todos los macros del día.",
+          "details": {
+            "nutrients": [
+              "proteina",
+              "carbs",
+              "grasas"
+            ],
+            "target": {
+              "kcal": 2140,
+              "proteina": 150,
+              "carbs": 250,
+              "grasas": 60
+            },
+            "actual": {
+              "kcal": 2138.15,
+              "proteina": 162.45,
+              "carbs": 254.9,
+              "grasas": 55.24
+            },
+            "difference": {
+              "kcal": -1.85,
+              "proteina": 12.45,
+              "carbs": 4.9,
+              "grasas": -4.76
+            }
+          }
+        }
+      ],
+      "meals": [
+        {
+          "type": "desayuno",
+          "target": {
+            "kcal": 393.15,
+            "proteina": 27.56,
+            "carbs": 45.93,
+            "grasas": 11.02
+          },
+          "actual": {
+            "kcal": 392.87,
+            "proteina": 27.83,
+            "carbs": 22.05,
+            "grasas": 21.49
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "breakfast",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-3:0:desayuno",
+            "variantPoolSize": 7,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 13,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 13,
+                "elapsedMs": 287
+              }
+            ],
+            "elapsedMs": 1528
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "quantity": 4,
+              "unit": "Unid",
+              "kcal": 276,
+              "protein": 24,
+              "carbs": 0,
+              "fat": 20
+            },
+            {
+              "id": "6619bfeb147cd50b646777e6",
+              "name": "Pan de centeno",
+              "quantity": 45,
+              "unit": "Grs",
+              "kcal": 116.87,
+              "protein": 3.83,
+              "carbs": 22.05,
+              "fat": 1.49
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "almuerzo",
+          "target": {
+            "kcal": 471.87,
+            "proteina": 33,
+            "carbs": 61.57,
+            "grasas": 10.4
+          },
+          "actual": {
+            "kcal": 471.79999999999995,
+            "proteina": 48.66,
+            "carbs": 37.7,
+            "grasas": 17.19
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "lunch",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-3:1:almuerzo",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 19,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 19,
+                "elapsedMs": 258
+              }
+            ],
+            "elapsedMs": 1531
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769d",
+              "name": "Arroz (Cocido)",
+              "quantity": 130,
+              "unit": "Grs",
+              "kcal": 168.35,
+              "protein": 3.51,
+              "carbs": 37.7,
+              "fat": 0.39
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "quantity": 210,
+              "unit": "Grs",
+              "kcal": 303.45,
+              "protein": 45.15,
+              "carbs": 0,
+              "fat": 16.8
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "merienda",
+          "target": {
+            "kcal": 390.38,
+            "proteina": 22.5,
+            "carbs": 58.24,
+            "grasas": 6.53
+          },
+          "actual": {
+            "kcal": 390.14,
+            "proteina": 27.7,
+            "carbs": 59.8,
+            "grasas": 4.46
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "snack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-3:2:merienda",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 18,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 18,
+                "elapsedMs": 270
+              }
+            ],
+            "elapsedMs": 1609
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 5,
+              "unit": "Unid",
+              "kcal": 78.5,
+              "protein": 17.5,
+              "carbs": 1,
+              "fat": 0.5
+            },
+            {
+              "id": "6619bfeb147cd50b646777e6",
+              "name": "Pan de centeno",
+              "quantity": 120,
+              "unit": "Grs",
+              "kcal": 311.64,
+              "protein": 10.2,
+              "carbs": 58.8,
+              "fat": 3.96
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "cena",
+          "target": {
+            "kcal": 407.91,
+            "proteina": 21.11,
+            "carbs": 60.11,
+            "grasas": 7.77
+          },
+          "actual": {
+            "kcal": 407.25,
+            "proteina": 28,
+            "carbs": 57.5,
+            "grasas": 7.25
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "dinner",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-3:3:cena",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 28,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 28,
+                "elapsedMs": 304
+              }
+            ],
+            "elapsedMs": 1520
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a0",
+              "name": "Arroz integral (Cocido)",
+              "quantity": 250,
+              "unit": "Grs",
+              "kcal": 276.25,
+              "protein": 6.5,
+              "carbs": 57.5,
+              "fat": 2.25
+            },
+            {
+              "id": "6619bfeb147cd50b646776f6",
+              "name": "Cuadrada (Ternera)",
+              "quantity": 100,
+              "unit": "Grs",
+              "kcal": 131,
+              "protein": 21.5,
+              "carbs": 0,
+              "fat": 5
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "snack",
+          "target": {
+            "kcal": 477.94,
+            "proteina": 17.81,
+            "carbs": 72.95,
+            "grasas": 9.61
+          },
+          "actual": {
+            "kcal": 476.09,
+            "proteina": 30.259999999999998,
+            "carbs": 77.85,
+            "grasas": 4.85
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "extraSnack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-3:4:snack",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 17,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 17,
+                "elapsedMs": 273
+              }
+            ],
+            "elapsedMs": 1762
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 5,
+              "unit": "Unid",
+              "kcal": 78.5,
+              "protein": 17.5,
+              "carbs": 1,
+              "fat": 0.5
+            },
+            {
+              "id": "6619bfeb147cd50b646777e1",
+              "name": "Pan baguette",
+              "quantity": 145,
+              "unit": "Grs",
+              "kcal": 397.59,
+              "protein": 12.76,
+              "carbs": 76.85,
+              "fat": 4.35
+            }
+          ],
+          "culinaryWarnings": []
+        }
+      ]
+    },
+    {
+      "requestedMealCount": 5,
+      "run": 4,
+      "seed": "curation-real-5-4",
+      "status": "OK",
+      "mealCount": 5,
+      "target": {
+        "kcal": 2140,
+        "proteina": 150,
+        "carbs": 250,
+        "grasas": 60
+      },
+      "totals": {
+        "kcal": 2139.06,
+        "proteina": 150.46,
+        "carbs": 272.75,
+        "grasas": 51.38
+      },
+      "difference": {
+        "kcal": -0.94,
+        "proteina": 0.46,
+        "carbs": 22.75,
+        "grasas": -8.62
+      },
+      "elapsedMs": 9303.56,
+      "warnings": [
+        {
+          "code": "MENU_GLOBAL_MACRO_TARGET_NOT_REACHED",
+          "message": "Las porciones físicas disponibles cerraron calorías, pero no permitieron igualar todos los macros del día.",
+          "details": {
+            "nutrients": [
+              "carbs",
+              "grasas"
+            ],
+            "target": {
+              "kcal": 2140,
+              "proteina": 150,
+              "carbs": 250,
+              "grasas": 60
+            },
+            "actual": {
+              "kcal": 2139.06,
+              "proteina": 150.46,
+              "carbs": 272.75,
+              "grasas": 51.38
+            },
+            "difference": {
+              "kcal": -0.94,
+              "proteina": 0.46,
+              "carbs": 22.75,
+              "grasas": -8.62
+            }
+          }
+        }
+      ],
+      "meals": [
+        {
+          "type": "desayuno",
+          "target": {
+            "kcal": 462.54,
+            "proteina": 32.42,
+            "carbs": 54.04,
+            "grasas": 12.97
+          },
+          "actual": {
+            "kcal": 461.9,
+            "proteina": 37.5,
+            "carbs": 58.4,
+            "grasas": 8.7
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "breakfast",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-4:0:desayuno",
+            "variantPoolSize": 4,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 7,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 7,
+                "elapsedMs": 280
+              }
+            ],
+            "elapsedMs": 1761
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "quantity": 100,
+              "unit": "Grs",
+              "kcal": 352,
+              "protein": 13,
+              "carbs": 57,
+              "fat": 8
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 7,
+              "unit": "Unid",
+              "kcal": 109.9,
+              "protein": 24.5,
+              "carbs": 1.4,
+              "fat": 0.7
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "almuerzo",
+          "target": {
+            "kcal": 450.93,
+            "proteina": 30.23,
+            "carbs": 51.49,
+            "grasas": 13.79
+          },
+          "actual": {
+            "kcal": 450.65,
+            "proteina": 38.230000000000004,
+            "carbs": 52.9,
+            "grasas": 9.57
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "lunch",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-4:1:almuerzo",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 25,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 25,
+                "elapsedMs": 256
+              }
+            ],
+            "elapsedMs": 1613
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a0",
+              "name": "Arroz integral (Cocido)",
+              "quantity": 230,
+              "unit": "Grs",
+              "kcal": 254.15,
+              "protein": 5.98,
+              "carbs": 52.9,
+              "fat": 2.07
+            },
+            {
+              "id": "6619bfeb147cd50b646776bd",
+              "name": "Bola de lomo",
+              "quantity": 150,
+              "unit": "Grs",
+              "kcal": 196.5,
+              "protein": 32.25,
+              "carbs": 0,
+              "fat": 7.5
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "merienda",
+          "target": {
+            "kcal": 382.19,
+            "proteina": 23.13,
+            "carbs": 43.19,
+            "grasas": 12.99
+          },
+          "actual": {
+            "kcal": 381.5,
+            "proteina": 22.85,
+            "carbs": 54.75,
+            "grasas": 7.8999999999999995
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "snack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-4:2:merienda",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 14,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 14,
+                "elapsedMs": 279
+              }
+            ],
+            "elapsedMs": 1502
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "quantity": 95,
+              "unit": "Grs",
+              "kcal": 334.4,
+              "protein": 12.35,
+              "carbs": 54.15,
+              "fat": 7.6
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 3,
+              "unit": "Unid",
+              "kcal": 47.1,
+              "protein": 10.5,
+              "carbs": 0.6,
+              "fat": 0.3
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "cena",
+          "target": {
+            "kcal": 417.23,
+            "proteina": 25.36,
+            "carbs": 41.4,
+            "grasas": 16.69
+          },
+          "actual": {
+            "kcal": 416.5,
+            "proteina": 31.52,
+            "carbs": 50.6,
+            "grasas": 11.58
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "dinner",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-4:3:cena",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 26,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 26,
+                "elapsedMs": 304
+              }
+            ],
+            "elapsedMs": 1604
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a0",
+              "name": "Arroz integral (Cocido)",
+              "quantity": 220,
+              "unit": "Grs",
+              "kcal": 243.1,
+              "protein": 5.72,
+              "carbs": 50.6,
+              "fat": 1.98
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "quantity": 120,
+              "unit": "Grs",
+              "kcal": 173.4,
+              "protein": 25.8,
+              "carbs": 0,
+              "fat": 9.6
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "snack",
+          "target": {
+            "kcal": 429.45,
+            "proteina": 19.9,
+            "carbs": 33.35,
+            "grasas": 22.25
+          },
+          "actual": {
+            "kcal": 428.51,
+            "proteina": 20.36,
+            "carbs": 56.1,
+            "grasas": 13.629999999999999
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "extraSnack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-4:4:snack",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 16,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 16,
+                "elapsedMs": 278
+              }
+            ],
+            "elapsedMs": 2823
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "quantity": 2,
+              "unit": "Unid",
+              "kcal": 138,
+              "protein": 12,
+              "carbs": 0,
+              "fat": 10
+            },
+            {
+              "id": "6619bfeb147cd50b646777df",
+              "name": "Pan",
+              "quantity": 110,
+              "unit": "Grs",
+              "kcal": 290.51,
+              "protein": 8.36,
+              "carbs": 56.1,
+              "fat": 3.63
+            }
+          ],
+          "culinaryWarnings": []
+        }
+      ]
+    },
+    {
+      "requestedMealCount": 5,
+      "run": 5,
+      "seed": "curation-real-5-5",
+      "status": "OK",
+      "mealCount": 5,
+      "target": {
+        "kcal": 2140,
+        "proteina": 150,
+        "carbs": 250,
+        "grasas": 60
+      },
+      "totals": {
+        "kcal": 2138.75,
+        "proteina": 173.58,
+        "carbs": 227.25,
+        "grasas": 59.5
+      },
+      "difference": {
+        "kcal": -1.25,
+        "proteina": 23.58,
+        "carbs": -22.75,
+        "grasas": -0.5
+      },
+      "elapsedMs": 8197.64,
+      "warnings": [
+        {
+          "code": "MENU_PROTEIN_BELOW_FEASIBLE_RANGE",
+          "message": "Quedan 4.4 g de proteína para 1 comidas; el mínimo deseado sería 10 g.",
+          "details": {
+            "remainingProtein": 4.409999999999997,
+            "remainingSlots": 1,
+            "minimumRequired": 10
+          }
+        },
+        {
+          "code": "MENU_GLOBAL_MACRO_TARGET_NOT_REACHED",
+          "message": "Las porciones físicas disponibles cerraron calorías, pero no permitieron igualar todos los macros del día.",
+          "details": {
+            "nutrients": [
+              "proteina",
+              "carbs"
+            ],
+            "target": {
+              "kcal": 2140,
+              "proteina": 150,
+              "carbs": 250,
+              "grasas": 60
+            },
+            "actual": {
+              "kcal": 2138.75,
+              "proteina": 173.58,
+              "carbs": 227.25,
+              "grasas": 59.5
+            },
+            "difference": {
+              "kcal": -1.25,
+              "proteina": 23.58,
+              "carbs": -22.75,
+              "grasas": -0.5
+            }
+          }
+        }
+      ],
+      "meals": [
+        {
+          "type": "desayuno",
+          "target": {
+            "kcal": 388.57,
+            "proteina": 27.24,
+            "carbs": 45.39,
+            "grasas": 10.89
+          },
+          "actual": {
+            "kcal": 385.7,
+            "proteina": 52.65,
+            "carbs": 31.85,
+            "grasas": 5.300000000000001
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "breakfast",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-5:0:desayuno",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 11,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 11,
+                "elapsedMs": 248
+              }
+            ],
+            "elapsedMs": 1512
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "quantity": 55,
+              "unit": "Grs",
+              "kcal": 193.6,
+              "protein": 7.15,
+              "carbs": 31.35,
+              "fat": 4.4
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "quantity": 50,
+              "unit": "Grs",
+              "kcal": 192.1,
+              "protein": 45.5,
+              "carbs": 0.5,
+              "fat": 0.9
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "almuerzo",
+          "target": {
+            "kcal": 462.77,
+            "proteina": 25.68,
+            "carbs": 57.55,
+            "grasas": 14.43
+          },
+          "actual": {
+            "kcal": 461.84999999999997,
+            "proteina": 33,
+            "carbs": 67.95,
+            "grasas": 6.45
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "lunch",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-5:1:almuerzo",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 28,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 28,
+                "elapsedMs": 256
+              }
+            ],
+            "elapsedMs": 1487
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "quantity": 90,
+              "unit": "Grs",
+              "kcal": 304.65,
+              "protein": 7.2,
+              "carbs": 67.95,
+              "fat": 0.45
+            },
+            {
+              "id": "6619bfeb147cd50b646776f6",
+              "name": "Cuadrada (Ternera)",
+              "quantity": 120,
+              "unit": "Grs",
+              "kcal": 157.2,
+              "protein": 25.8,
+              "carbs": 0,
+              "fat": 6
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "merienda",
+          "target": {
+            "kcal": 448.42,
+            "proteina": 22.33,
+            "carbs": 52.11,
+            "grasas": 16.74
+          },
+          "actual": {
+            "kcal": 447.66999999999996,
+            "proteina": 28.94,
+            "carbs": 33.15,
+            "grasas": 22.15
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "snack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-5:2:merienda",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 16,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 16,
+                "elapsedMs": 277
+              }
+            ],
+            "elapsedMs": 1842
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "quantity": 4,
+              "unit": "Unid",
+              "kcal": 276,
+              "protein": 24,
+              "carbs": 0,
+              "fat": 20
+            },
+            {
+              "id": "6619bfeb147cd50b646777df",
+              "name": "Pan",
+              "quantity": 65,
+              "unit": "Grs",
+              "kcal": 171.67,
+              "protein": 4.94,
+              "carbs": 33.15,
+              "fat": 2.15
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "cena",
+          "target": {
+            "kcal": 378.65,
+            "proteina": 15.87,
+            "carbs": 52.46,
+            "grasas": 11.7
+          },
+          "actual": {
+            "kcal": 378.2,
+            "proteina": 31,
+            "carbs": 46,
+            "grasas": 7.8
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "dinner",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-5:3:cena",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 29,
+            "recommendedSolutionsFound": 26,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 29,
+                "recommendedSolutionsFound": 26,
+                "elapsedMs": 250
+              }
+            ],
+            "elapsedMs": 1738
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a0",
+              "name": "Arroz integral (Cocido)",
+              "quantity": 200,
+              "unit": "Grs",
+              "kcal": 221,
+              "protein": 5.2,
+              "carbs": 46,
+              "fat": 1.8
+            },
+            {
+              "id": "6619bfeb147cd50b646776f6",
+              "name": "Cuadrada (Ternera)",
+              "quantity": 120,
+              "unit": "Grs",
+              "kcal": 157.2,
+              "protein": 25.8,
+              "carbs": 0,
+              "fat": 6
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "snack",
+          "target": {
+            "kcal": 466.58,
+            "proteina": 4.41,
+            "carbs": 71.05,
+            "grasas": 18.3
+          },
+          "actual": {
+            "kcal": 465.33,
+            "proteina": 27.990000000000002,
+            "carbs": 48.3,
+            "grasas": 17.8
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "extraSnack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-5-5:4:snack",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 15,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 15,
+                "elapsedMs": 281
+              }
+            ],
+            "elapsedMs": 1617
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "quantity": 3,
+              "unit": "Unid",
+              "kcal": 207,
+              "protein": 18,
+              "carbs": 0,
+              "fat": 15
+            },
+            {
+              "id": "6619bfeb147cd50b646777e0",
+              "name": "Pan artesano bimbo",
+              "quantity": 3,
+              "unit": "Reb",
+              "kcal": 258.33,
+              "protein": 9.99,
+              "carbs": 48.3,
+              "fat": 2.8
+            }
+          ],
+          "culinaryWarnings": []
+        }
+      ]
+    },
+    {
+      "requestedMealCount": 6,
+      "run": 1,
+      "seed": "curation-real-6-1",
+      "status": "OK",
+      "mealCount": 6,
+      "target": {
+        "kcal": 2140,
+        "proteina": 150,
+        "carbs": 250,
+        "grasas": 60
+      },
+      "totals": {
+        "kcal": 2139.99,
+        "proteina": 173.19,
+        "carbs": 260.89,
+        "grasas": 48.45
+      },
+      "difference": {
+        "kcal": -0.01,
+        "proteina": 23.19,
+        "carbs": 10.89,
+        "grasas": -11.55
+      },
+      "elapsedMs": 10077.64,
+      "warnings": [
+        {
+          "code": "MENU_PROTEIN_BELOW_FEASIBLE_RANGE",
+          "message": "Quedan 0 g de proteína para 1 comidas; el mínimo deseado sería 10 g.",
+          "details": {
+            "remainingProtein": 0,
+            "remainingSlots": 1,
+            "minimumRequired": 10
+          }
+        },
+        {
+          "code": "MENU_CARB_FAT_RELATION_NOT_FEASIBLE",
+          "message": "Con los macros restantes no es posible mantener carbohidratos mayores que grasas en todas las comidas.",
+          "details": {
+            "remainingCarbs": 18.50999999999999,
+            "remainingFat": 28.529999999999998,
+            "remainingSlots": 1
+          }
+        },
+        {
+          "code": "MENU_GLOBAL_MACRO_TARGET_NOT_REACHED",
+          "message": "Las porciones físicas disponibles cerraron calorías, pero no permitieron igualar todos los macros del día.",
+          "details": {
+            "nutrients": [
+              "proteina",
+              "carbs",
+              "grasas"
+            ],
+            "target": {
+              "kcal": 2140,
+              "proteina": 150,
+              "carbs": 250,
+              "grasas": 60
+            },
+            "actual": {
+              "kcal": 2139.99,
+              "proteina": 173.19,
+              "carbs": 260.89,
+              "grasas": 48.45
+            },
+            "difference": {
+              "kcal": -0.01,
+              "proteina": 23.19,
+              "carbs": 10.89,
+              "grasas": -11.55
+            }
+          }
+        }
+      ],
+      "meals": [
+        {
+          "type": "desayuno",
+          "target": {
+            "kcal": 375.96,
+            "proteina": 26.35,
+            "carbs": 43.92,
+            "grasas": 10.54
+          },
+          "actual": {
+            "kcal": 374.44,
+            "proteina": 24.2,
+            "carbs": 59.599999999999994,
+            "grasas": 4.36
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "breakfast",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-1:0:desayuno",
+            "variantPoolSize": 6,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 9,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 9,
+                "elapsedMs": 261
+              }
+            ],
+            "elapsedMs": 1774
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 4,
+              "unit": "Unid",
+              "kcal": 62.8,
+              "protein": 14,
+              "carbs": 0.8,
+              "fat": 0.4
+            },
+            {
+              "id": "6619bfeb147cd50b646777e6",
+              "name": "Pan de centeno",
+              "quantity": 120,
+              "unit": "Grs",
+              "kcal": 311.64,
+              "protein": 10.2,
+              "carbs": 58.8,
+              "fat": 3.96
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "colacion",
+          "target": {
+            "kcal": 339.91,
+            "proteina": 24.22,
+            "carbs": 36.66,
+            "grasas": 10.71
+          },
+          "actual": {
+            "kcal": 338.99,
+            "proteina": 25.86,
+            "carbs": 51.35,
+            "grasas": 3.35
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "extraSnack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-1:1:colacion",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 19,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 19,
+                "elapsedMs": 253
+              }
+            ],
+            "elapsedMs": 1776
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 5,
+              "unit": "Unid",
+              "kcal": 78.5,
+              "protein": 17.5,
+              "carbs": 1,
+              "fat": 0.5
+            },
+            {
+              "id": "6619bfeb147cd50b646777e1",
+              "name": "Pan baguette",
+              "quantity": 95,
+              "unit": "Grs",
+              "kcal": 260.49,
+              "protein": 8.36,
+              "carbs": 50.35,
+              "fat": 2.85
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "almuerzo",
+          "target": {
+            "kcal": 386.82,
+            "proteina": 27.1,
+            "carbs": 37.7,
+            "grasas": 14.18
+          },
+          "actual": {
+            "kcal": 386.6,
+            "proteina": 37.64,
+            "carbs": 34.8,
+            "grasas": 13.16
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "lunch",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-1:2:almuerzo",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 30,
+            "recommendedSolutionsFound": 21,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 30,
+                "recommendedSolutionsFound": 21,
+                "elapsedMs": 265
+              }
+            ],
+            "elapsedMs": 1712
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769d",
+              "name": "Arroz (Cocido)",
+              "quantity": 120,
+              "unit": "Grs",
+              "kcal": 155.4,
+              "protein": 3.24,
+              "carbs": 34.8,
+              "fat": 0.36
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "quantity": 160,
+              "unit": "Grs",
+              "kcal": 231.2,
+              "protein": 34.4,
+              "carbs": 0,
+              "fat": 12.8
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "merienda",
+          "target": {
+            "kcal": 336,
+            "proteina": 20.13,
+            "carbs": 33.68,
+            "grasas": 12.64
+          },
+          "actual": {
+            "kcal": 334.04,
+            "proteina": 39.99,
+            "carbs": 36.989999999999995,
+            "grasas": 2.9000000000000004
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "snack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-1:3:merienda",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 15,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 15,
+                "elapsedMs": 262
+              }
+            ],
+            "elapsedMs": 1845
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776ed",
+              "name": "Copos de maiz sin azucar",
+              "quantity": 40,
+              "unit": "Grs",
+              "kcal": 144.68,
+              "protein": 2.64,
+              "carbs": 33.08,
+              "fat": 0.2
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "quantity": 45,
+              "unit": "Grs",
+              "kcal": 189.36,
+              "protein": 37.35,
+              "carbs": 3.91,
+              "fat": 2.7
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "cena",
+          "target": {
+            "kcal": 343.45,
+            "proteina": 10.85,
+            "carbs": 32.72,
+            "grasas": 17.63
+          },
+          "actual": {
+            "kcal": 343.1,
+            "proteina": 22.4,
+            "carbs": 48.75,
+            "grasas": 7.7
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "dinner",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-1:4:cena",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 27,
+            "recommendedSolutionsFound": 24,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 27,
+                "recommendedSolutionsFound": 24,
+                "elapsedMs": 300
+              }
+            ],
+            "elapsedMs": 1533
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769f",
+              "name": "Arroz integral",
+              "quantity": 65,
+              "unit": "Grs",
+              "kcal": 227.5,
+              "protein": 5.2,
+              "carbs": 48.75,
+              "fat": 1.3
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "quantity": 80,
+              "unit": "Grs",
+              "kcal": 115.6,
+              "protein": 17.2,
+              "carbs": 0,
+              "fat": 6.4
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "snack",
+          "target": {
+            "kcal": 362.83,
+            "proteina": 0,
+            "carbs": 18.51,
+            "grasas": 28.53
+          },
+          "actual": {
+            "kcal": 362.82,
+            "proteina": 23.1,
+            "carbs": 29.4,
+            "grasas": 16.98
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "extraSnack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-1:5:snack",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 21,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 21,
+                "elapsedMs": 253
+              }
+            ],
+            "elapsedMs": 1436
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "quantity": 3,
+              "unit": "Unid",
+              "kcal": 207,
+              "protein": 18,
+              "carbs": 0,
+              "fat": 15
+            },
+            {
+              "id": "6619bfeb147cd50b646777e6",
+              "name": "Pan de centeno",
+              "quantity": 60,
+              "unit": "Grs",
+              "kcal": 155.82,
+              "protein": 5.1,
+              "carbs": 29.4,
+              "fat": 1.98
+            }
+          ],
+          "culinaryWarnings": []
+        }
+      ]
+    },
+    {
+      "requestedMealCount": 6,
+      "run": 2,
+      "seed": "curation-real-6-2",
+      "status": "OK",
+      "mealCount": 6,
+      "target": {
+        "kcal": 2140,
+        "proteina": 150,
+        "carbs": 250,
+        "grasas": 60
+      },
+      "totals": {
+        "kcal": 2139.83,
+        "proteina": 181.16,
+        "carbs": 264.76,
+        "grasas": 42.87
+      },
+      "difference": {
+        "kcal": -0.17,
+        "proteina": 31.16,
+        "carbs": 14.76,
+        "grasas": -17.13
+      },
+      "elapsedMs": 13468.31,
+      "warnings": [
+        {
+          "code": "MENU_PROTEIN_BELOW_FEASIBLE_RANGE",
+          "message": "Quedan 0 g de proteína para 1 comidas; el mínimo deseado sería 10 g.",
+          "details": {
+            "remainingProtein": 0,
+            "remainingSlots": 1,
+            "minimumRequired": 10
+          }
+        },
+        {
+          "code": "MENU_GLOBAL_MACRO_TARGET_NOT_REACHED",
+          "message": "Las porciones físicas disponibles cerraron calorías, pero no permitieron igualar todos los macros del día.",
+          "details": {
+            "nutrients": [
+              "proteina",
+              "carbs",
+              "grasas"
+            ],
+            "target": {
+              "kcal": 2140,
+              "proteina": 150,
+              "carbs": 250,
+              "grasas": 60
+            },
+            "actual": {
+              "kcal": 2139.83,
+              "proteina": 181.16,
+              "carbs": 264.76,
+              "grasas": 42.87
+            },
+            "difference": {
+              "kcal": -0.17,
+              "proteina": 31.16,
+              "carbs": 14.76,
+              "grasas": -17.13
+            }
+          }
+        }
+      ],
+      "meals": [
+        {
+          "type": "desayuno",
+          "target": {
+            "kcal": 364.57,
+            "proteina": 25.55,
+            "carbs": 42.59,
+            "grasas": 10.22
+          },
+          "actual": {
+            "kcal": 364.17,
+            "proteina": 26.85,
+            "carbs": 54.9,
+            "grasas": 4.13
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "breakfast",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-2:0:desayuno",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 12,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 12,
+                "elapsedMs": 267
+              }
+            ],
+            "elapsedMs": 1865
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 5,
+              "unit": "Unid",
+              "kcal": 78.5,
+              "protein": 17.5,
+              "carbs": 1,
+              "fat": 0.5
+            },
+            {
+              "id": "6619bfeb147cd50b646777e6",
+              "name": "Pan de centeno",
+              "quantity": 110,
+              "unit": "Grs",
+              "kcal": 285.67,
+              "protein": 9.35,
+              "carbs": 53.9,
+              "fat": 3.63
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "colacion",
+          "target": {
+            "kcal": 355.42,
+            "proteina": 24.65,
+            "carbs": 39.05,
+            "grasas": 11.18
+          },
+          "actual": {
+            "kcal": 354.9,
+            "proteina": 27.5,
+            "carbs": 53.8,
+            "grasas": 3.3
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "extraSnack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-2:1:colacion",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 18,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 18,
+                "elapsedMs": 275
+              }
+            ],
+            "elapsedMs": 2008
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 5,
+              "unit": "Unid",
+              "kcal": 78.5,
+              "protein": 17.5,
+              "carbs": 1,
+              "fat": 0.5
+            },
+            {
+              "id": "6619bfeb147cd50b646777e3",
+              "name": "Pan con salvado carrefour",
+              "quantity": 4,
+              "unit": "Reb",
+              "kcal": 276.4,
+              "protein": 10,
+              "carbs": 52.8,
+              "fat": 2.8
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "almuerzo",
+          "target": {
+            "kcal": 358.37,
+            "proteina": 24.12,
+            "carbs": 35.64,
+            "grasas": 13.26
+          },
+          "actual": {
+            "kcal": 357.70000000000005,
+            "proteina": 33.34,
+            "carbs": 34.8,
+            "grasas": 11.559999999999999
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "lunch",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-2:2:almuerzo",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 27,
+            "recommendedSolutionsFound": 23,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 27,
+                "recommendedSolutionsFound": 23,
+                "elapsedMs": 250
+              }
+            ],
+            "elapsedMs": 2422
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769d",
+              "name": "Arroz (Cocido)",
+              "quantity": 120,
+              "unit": "Grs",
+              "kcal": 155.4,
+              "protein": 3.24,
+              "carbs": 34.8,
+              "fat": 0.36
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "quantity": 140,
+              "unit": "Grs",
+              "kcal": 202.3,
+              "protein": 30.1,
+              "carbs": 0,
+              "fat": 11.2
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "merienda",
+          "target": {
+            "kcal": 343.88,
+            "proteina": 20.15,
+            "carbs": 34.45,
+            "grasas": 13.26
+          },
+          "actual": {
+            "kcal": 343.71000000000004,
+            "proteina": 41.2,
+            "carbs": 28.41,
+            "grasas": 7.25
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "snack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-2:3:merienda",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 20,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 20,
+                "elapsedMs": 285
+              }
+            ],
+            "elapsedMs": 2738
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677728",
+              "name": "Galletitas de agua",
+              "quantity": 35,
+              "unit": "Grs",
+              "kcal": 154.35,
+              "protein": 3.85,
+              "carbs": 24.5,
+              "fat": 4.55
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "quantity": 45,
+              "unit": "Grs",
+              "kcal": 189.36,
+              "protein": 37.35,
+              "carbs": 3.91,
+              "fat": 2.7
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "cena",
+          "target": {
+            "kcal": 358.78,
+            "proteina": 10.53,
+            "carbs": 38.94,
+            "grasas": 16.83
+          },
+          "actual": {
+            "kcal": 358.7,
+            "proteina": 22.919999999999998,
+            "carbs": 50.6,
+            "grasas": 8.38
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "dinner",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-2:4:cena",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 27,
+            "recommendedSolutionsFound": 25,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 27,
+                "recommendedSolutionsFound": 25,
+                "elapsedMs": 244
+              }
+            ],
+            "elapsedMs": 2306
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a0",
+              "name": "Arroz integral (Cocido)",
+              "quantity": 220,
+              "unit": "Grs",
+              "kcal": 243.1,
+              "protein": 5.72,
+              "carbs": 50.6,
+              "fat": 1.98
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "quantity": 80,
+              "unit": "Grs",
+              "kcal": 115.6,
+              "protein": 17.2,
+              "carbs": 0,
+              "fat": 6.4
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "snack",
+          "target": {
+            "kcal": 360.82,
+            "proteina": 0,
+            "carbs": 27.49,
+            "grasas": 25.38
+          },
+          "actual": {
+            "kcal": 360.65000000000003,
+            "proteina": 29.35,
+            "carbs": 42.25,
+            "grasas": 8.25
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "extraSnack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-2:5:snack",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 20,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 20,
+                "elapsedMs": 256
+              }
+            ],
+            "elapsedMs": 2128
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677728",
+              "name": "Galletitas de agua",
+              "quantity": 60,
+              "unit": "Grs",
+              "kcal": 264.6,
+              "protein": 6.6,
+              "carbs": 42,
+              "fat": 7.8
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "quantity": 25,
+              "unit": "Grs",
+              "kcal": 96.05,
+              "protein": 22.75,
+              "carbs": 0.25,
+              "fat": 0.45
+            }
+          ],
+          "culinaryWarnings": []
+        }
+      ]
+    },
+    {
+      "requestedMealCount": 6,
+      "run": 3,
+      "seed": "curation-real-6-3",
+      "status": "OK",
+      "mealCount": 6,
+      "target": {
+        "kcal": 2140,
+        "proteina": 150,
+        "carbs": 250,
+        "grasas": 60
+      },
+      "totals": {
+        "kcal": 2138.61,
+        "proteina": 173.63,
+        "carbs": 279.41,
+        "grasas": 36.27
+      },
+      "difference": {
+        "kcal": -1.39,
+        "proteina": 23.63,
+        "carbs": 29.41,
+        "grasas": -23.73
+      },
+      "elapsedMs": 15306.78,
+      "warnings": [
+        {
+          "code": "MENU_PROTEIN_BELOW_FEASIBLE_RANGE",
+          "message": "Quedan 0 g de proteína para 1 comidas; el mínimo deseado sería 10 g.",
+          "details": {
+            "remainingProtein": 0,
+            "remainingSlots": 1,
+            "minimumRequired": 10
+          }
+        },
+        {
+          "code": "MENU_CARB_FAT_RELATION_NOT_FEASIBLE",
+          "message": "Con los macros restantes no es posible mantener carbohidratos mayores que grasas en todas las comidas.",
+          "details": {
+            "remainingCarbs": 24.939999999999998,
+            "remainingFat": 31.43,
+            "remainingSlots": 1
+          }
+        },
+        {
+          "code": "MENU_GLOBAL_MACRO_TARGET_NOT_REACHED",
+          "message": "Las porciones físicas disponibles cerraron calorías, pero no permitieron igualar todos los macros del día.",
+          "details": {
+            "nutrients": [
+              "proteina",
+              "carbs",
+              "grasas"
+            ],
+            "target": {
+              "kcal": 2140,
+              "proteina": 150,
+              "carbs": 250,
+              "grasas": 60
+            },
+            "actual": {
+              "kcal": 2138.61,
+              "proteina": 173.63,
+              "carbs": 279.41,
+              "grasas": 36.27
+            },
+            "difference": {
+              "kcal": -1.39,
+              "proteina": 23.63,
+              "carbs": 29.41,
+              "grasas": -23.73
+            }
+          }
+        }
+      ],
+      "meals": [
+        {
+          "type": "desayuno",
+          "target": {
+            "kcal": 344.58,
+            "proteina": 24.15,
+            "carbs": 40.25,
+            "grasas": 9.66
+          },
+          "actual": {
+            "kcal": 343.71000000000004,
+            "proteina": 41.2,
+            "carbs": 28.41,
+            "grasas": 7.25
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "breakfast",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-3:0:desayuno",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 20,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 20,
+                "elapsedMs": 277
+              }
+            ],
+            "elapsedMs": 2044
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677728",
+              "name": "Galletitas de agua",
+              "quantity": 35,
+              "unit": "Grs",
+              "kcal": 154.35,
+              "protein": 3.85,
+              "carbs": 24.5,
+              "fat": 4.55
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "quantity": 45,
+              "unit": "Grs",
+              "kcal": 189.36,
+              "protein": 37.35,
+              "carbs": 3.91,
+              "fat": 2.7
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "colacion",
+          "target": {
+            "kcal": 351.3,
+            "proteina": 21.28,
+            "carbs": 43.34,
+            "grasas": 10.32
+          },
+          "actual": {
+            "kcal": 349.45,
+            "proteina": 21.15,
+            "carbs": 46.3,
+            "grasas": 8.85
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "extraSnack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-3:1:colacion",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 14,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 14,
+                "elapsedMs": 274
+              }
+            ],
+            "elapsedMs": 2182
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 4,
+              "unit": "Unid",
+              "kcal": 62.8,
+              "protein": 14,
+              "carbs": 0.8,
+              "fat": 0.4
+            },
+            {
+              "id": "6619bfeb147cd50b64677728",
+              "name": "Galletitas de agua",
+              "quantity": 65,
+              "unit": "Grs",
+              "kcal": 286.65,
+              "protein": 7.15,
+              "carbs": 45.5,
+              "fat": 8.45
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "almuerzo",
+          "target": {
+            "kcal": 372.16,
+            "proteina": 22.55,
+            "carbs": 45.09,
+            "grasas": 11.29
+          },
+          "actual": {
+            "kcal": 371.65,
+            "proteina": 33.13,
+            "carbs": 56.7,
+            "grasas": 1.37
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "lunch",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-3:2:almuerzo",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 27,
+            "recommendedSolutionsFound": 24,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 27,
+                "recommendedSolutionsFound": 24,
+                "elapsedMs": 368
+              }
+            ],
+            "elapsedMs": 2162
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769d",
+              "name": "Arroz (Cocido)",
+              "quantity": 190,
+              "unit": "Grs",
+              "kcal": 246.05,
+              "protein": 5.13,
+              "carbs": 55.1,
+              "fat": 0.57
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 8,
+              "unit": "Unid",
+              "kcal": 125.6,
+              "protein": 28,
+              "carbs": 1.6,
+              "fat": 0.8
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "merienda",
+          "target": {
+            "kcal": 374.63,
+            "proteina": 19,
+            "carbs": 41.32,
+            "grasas": 14.82
+          },
+          "actual": {
+            "kcal": 374,
+            "proteina": 32.1,
+            "carbs": 52.4,
+            "grasas": 4
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "snack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-3:3:merienda",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 17,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 17,
+                "elapsedMs": 251
+              }
+            ],
+            "elapsedMs": 2117
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 7,
+              "unit": "Unid",
+              "kcal": 109.9,
+              "protein": 24.5,
+              "carbs": 1.4,
+              "fat": 0.7
+            },
+            {
+              "id": "6619bfeb147cd50b646777df",
+              "name": "Pan",
+              "quantity": 100,
+              "unit": "Grs",
+              "kcal": 264.1,
+              "protein": 7.6,
+              "carbs": 51,
+              "fat": 3.3
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "cena",
+          "target": {
+            "kcal": 349.73,
+            "proteina": 11.18,
+            "carbs": 33.01,
+            "grasas": 19.22
+          },
+          "actual": {
+            "kcal": 349.7,
+            "proteina": 30.200000000000003,
+            "carbs": 41.25,
+            "grasas": 7.1
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "dinner",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-3:4:cena",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 27,
+            "recommendedSolutionsFound": 25,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 27,
+                "recommendedSolutionsFound": 25,
+                "elapsedMs": 253
+              }
+            ],
+            "elapsedMs": 1842
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769f",
+              "name": "Arroz integral",
+              "quantity": 55,
+              "unit": "Grs",
+              "kcal": 192.5,
+              "protein": 4.4,
+              "carbs": 41.25,
+              "fat": 1.1
+            },
+            {
+              "id": "6619bfeb147cd50b646776f6",
+              "name": "Cuadrada (Ternera)",
+              "quantity": 120,
+              "unit": "Grs",
+              "kcal": 157.2,
+              "protein": 25.8,
+              "carbs": 0,
+              "fat": 6
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "snack",
+          "target": {
+            "kcal": 351.49,
+            "proteina": 0,
+            "carbs": 24.94,
+            "grasas": 31.43
+          },
+          "actual": {
+            "kcal": 350.09999999999997,
+            "proteina": 15.85,
+            "carbs": 54.35,
+            "grasas": 7.699999999999999
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "extraSnack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-3:5:snack",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 19,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 19,
+                "elapsedMs": 213
+              }
+            ],
+            "elapsedMs": 4956
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "quantity": 95,
+              "unit": "Grs",
+              "kcal": 334.4,
+              "protein": 12.35,
+              "carbs": 54.15,
+              "fat": 7.6
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 1,
+              "unit": "Unid",
+              "kcal": 15.7,
+              "protein": 3.5,
+              "carbs": 0.2,
+              "fat": 0.1
+            }
+          ],
+          "culinaryWarnings": []
+        }
+      ]
+    },
+    {
+      "requestedMealCount": 6,
+      "run": 4,
+      "seed": "curation-real-6-4",
+      "status": "OK",
+      "mealCount": 6,
+      "target": {
+        "kcal": 2140,
+        "proteina": 150,
+        "carbs": 250,
+        "grasas": 60
+      },
+      "totals": {
+        "kcal": 2139.18,
+        "proteina": 177.88,
+        "carbs": 284.78,
+        "grasas": 32.06
+      },
+      "difference": {
+        "kcal": -0.82,
+        "proteina": 27.88,
+        "carbs": 34.78,
+        "grasas": -27.94
+      },
+      "elapsedMs": 11396.82,
+      "warnings": [
+        {
+          "code": "MENU_PROTEIN_BELOW_FEASIBLE_RANGE",
+          "message": "Quedan 7.2 g de proteína para 1 comidas; el mínimo deseado sería 10 g.",
+          "details": {
+            "remainingProtein": 7.159999999999997,
+            "remainingSlots": 1,
+            "minimumRequired": 10
+          }
+        },
+        {
+          "code": "MENU_CARB_FAT_RELATION_NOT_FEASIBLE",
+          "message": "Con los macros restantes no es posible mantener carbohidratos mayores que grasas en todas las comidas.",
+          "details": {
+            "remainingCarbs": 9.220000000000027,
+            "remainingFat": 31.140000000000004,
+            "remainingSlots": 1
+          }
+        },
+        {
+          "code": "MENU_GLOBAL_MACRO_TARGET_NOT_REACHED",
+          "message": "Las porciones físicas disponibles cerraron calorías, pero no permitieron igualar todos los macros del día.",
+          "details": {
+            "nutrients": [
+              "proteina",
+              "carbs",
+              "grasas"
+            ],
+            "target": {
+              "kcal": 2140,
+              "proteina": 150,
+              "carbs": 250,
+              "grasas": 60
+            },
+            "actual": {
+              "kcal": 2139.18,
+              "proteina": 177.88,
+              "carbs": 284.78,
+              "grasas": 32.06
+            },
+            "difference": {
+              "kcal": -0.82,
+              "proteina": 27.88,
+              "carbs": 34.78,
+              "grasas": -27.94
+            }
+          }
+        }
+      ],
+      "meals": [
+        {
+          "type": "desayuno",
+          "target": {
+            "kcal": 382.19,
+            "proteina": 26.79,
+            "carbs": 44.65,
+            "grasas": 10.72
+          },
+          "actual": {
+            "kcal": 379.52,
+            "proteina": 41,
+            "carbs": 37.68,
+            "grasas": 7.199999999999999
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "breakfast",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-4:0:desayuno",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 9,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 9,
+                "elapsedMs": 233
+              }
+            ],
+            "elapsedMs": 1653
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "quantity": 60,
+              "unit": "Grs",
+              "kcal": 211.2,
+              "protein": 7.8,
+              "carbs": 34.2,
+              "fat": 4.8
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "quantity": 40,
+              "unit": "Grs",
+              "kcal": 168.32,
+              "protein": 33.2,
+              "carbs": 3.48,
+              "fat": 2.4
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "colacion",
+          "target": {
+            "kcal": 349.53,
+            "proteina": 21.64,
+            "carbs": 42.15,
+            "grasas": 10.48
+          },
+          "actual": {
+            "kcal": 349.45,
+            "proteina": 21.15,
+            "carbs": 46.3,
+            "grasas": 8.85
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "extraSnack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-4:1:colacion",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 12,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 12,
+                "elapsedMs": 282
+              }
+            ],
+            "elapsedMs": 2017
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 4,
+              "unit": "Unid",
+              "kcal": 62.8,
+              "protein": 14,
+              "carbs": 0.8,
+              "fat": 0.4
+            },
+            {
+              "id": "6619bfeb147cd50b64677728",
+              "name": "Galletitas de agua",
+              "quantity": 65,
+              "unit": "Grs",
+              "kcal": 286.65,
+              "protein": 7.15,
+              "carbs": 45.5,
+              "fat": 8.45
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "almuerzo",
+          "target": {
+            "kcal": 371.56,
+            "proteina": 23.13,
+            "carbs": 43.72,
+            "grasas": 11.57
+          },
+          "actual": {
+            "kcal": 371.15,
+            "proteina": 26.59,
+            "carbs": 49.3,
+            "grasas": 7.51
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "lunch",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-4:2:almuerzo",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 27,
+            "recommendedSolutionsFound": 23,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 27,
+                "recommendedSolutionsFound": 23,
+                "elapsedMs": 243
+              }
+            ],
+            "elapsedMs": 1817
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769d",
+              "name": "Arroz (Cocido)",
+              "quantity": 170,
+              "unit": "Grs",
+              "kcal": 220.15,
+              "protein": 4.59,
+              "carbs": 49.3,
+              "fat": 0.51
+            },
+            {
+              "id": "6619bfeb147cd50b646776cd",
+              "name": "Carne de cerdo magro",
+              "quantity": 100,
+              "unit": "Grs",
+              "kcal": 151,
+              "protein": 22,
+              "carbs": 0,
+              "fat": 7
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "merienda",
+          "target": {
+            "kcal": 355.28,
+            "proteina": 20.93,
+            "carbs": 39.88,
+            "grasas": 12.45
+          },
+          "actual": {
+            "kcal": 354.9,
+            "proteina": 27.5,
+            "carbs": 53.8,
+            "grasas": 3.3
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "snack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-4:3:merienda",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 19,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 19,
+                "elapsedMs": 278
+              }
+            ],
+            "elapsedMs": 2095
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 5,
+              "unit": "Unid",
+              "kcal": 78.5,
+              "protein": 17.5,
+              "carbs": 1,
+              "fat": 0.5
+            },
+            {
+              "id": "6619bfeb147cd50b646777e3",
+              "name": "Pan con salvado carrefour",
+              "quantity": 4,
+              "unit": "Reb",
+              "kcal": 276.4,
+              "protein": 10,
+              "carbs": 52.8,
+              "fat": 2.8
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "cena",
+          "target": {
+            "kcal": 339.77,
+            "proteina": 16.75,
+            "carbs": 31.21,
+            "grasas": 16.44
+          },
+          "actual": {
+            "kcal": 339.2,
+            "proteina": 26.6,
+            "carbs": 53.7,
+            "grasas": 2
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "dinner",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-4:4:cena",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 27,
+            "recommendedSolutionsFound": 20,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 27,
+                "recommendedSolutionsFound": 20,
+                "elapsedMs": 263
+              }
+            ],
+            "elapsedMs": 1793
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769f",
+              "name": "Arroz integral",
+              "quantity": 70,
+              "unit": "Grs",
+              "kcal": 245,
+              "protein": 5.6,
+              "carbs": 52.5,
+              "fat": 1.4
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 6,
+              "unit": "Unid",
+              "kcal": 94.2,
+              "protein": 21,
+              "carbs": 1.2,
+              "fat": 0.6
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "snack",
+          "target": {
+            "kcal": 345.78,
+            "proteina": 7.16,
+            "carbs": 9.22,
+            "grasas": 31.14
+          },
+          "actual": {
+            "kcal": 344.96000000000004,
+            "proteina": 35.04,
+            "carbs": 44,
+            "grasas": 3.2
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "extraSnack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-4:5:snack",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 21,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 21,
+                "elapsedMs": 316
+              }
+            ],
+            "elapsedMs": 2021
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 8,
+              "unit": "Unid",
+              "kcal": 125.6,
+              "protein": 28,
+              "carbs": 1.6,
+              "fat": 0.8
+            },
+            {
+              "id": "6619bfeb147cd50b646777e1",
+              "name": "Pan baguette",
+              "quantity": 80,
+              "unit": "Grs",
+              "kcal": 219.36,
+              "protein": 7.04,
+              "carbs": 42.4,
+              "fat": 2.4
+            }
+          ],
+          "culinaryWarnings": []
+        }
+      ]
+    },
+    {
+      "requestedMealCount": 6,
+      "run": 5,
+      "seed": "curation-real-6-5",
+      "status": "OK",
+      "mealCount": 6,
+      "target": {
+        "kcal": 2140,
+        "proteina": 150,
+        "carbs": 250,
+        "grasas": 60
+      },
+      "totals": {
+        "kcal": 2138.68,
+        "proteina": 173.79,
+        "carbs": 250.55,
+        "grasas": 51.59
+      },
+      "difference": {
+        "kcal": -1.32,
+        "proteina": 23.79,
+        "carbs": 0.55,
+        "grasas": -8.41
+      },
+      "elapsedMs": 12632.43,
+      "warnings": [
+        {
+          "code": "MENU_CARB_FAT_RELATION_NOT_FEASIBLE",
+          "message": "Con los macros restantes no es posible mantener carbohidratos mayores que grasas en todas las comidas.",
+          "details": {
+            "remainingCarbs": 38.85000000000002,
+            "remainingFat": 41.629999999999995,
+            "remainingSlots": 2
+          }
+        },
+        {
+          "code": "MENU_PROTEIN_BELOW_FEASIBLE_RANGE",
+          "message": "Quedan 0 g de proteína para 1 comidas; el mínimo deseado sería 10 g.",
+          "details": {
+            "remainingProtein": 0,
+            "remainingSlots": 1,
+            "minimumRequired": 10
+          }
+        },
+        {
+          "code": "MENU_GLOBAL_MACRO_TARGET_NOT_REACHED",
+          "message": "Las porciones físicas disponibles cerraron calorías, pero no permitieron igualar todos los macros del día.",
+          "details": {
+            "nutrients": [
+              "proteina",
+              "carbs",
+              "grasas"
+            ],
+            "target": {
+              "kcal": 2140,
+              "proteina": 150,
+              "carbs": 250,
+              "grasas": 60
+            },
+            "actual": {
+              "kcal": 2138.68,
+              "proteina": 173.79,
+              "carbs": 250.55,
+              "grasas": 51.59
+            },
+            "difference": {
+              "kcal": -1.32,
+              "proteina": 23.79,
+              "carbs": 0.55,
+              "grasas": -8.41
+            }
+          }
+        }
+      ],
+      "meals": [
+        {
+          "type": "desayuno",
+          "target": {
+            "kcal": 356.02,
+            "proteina": 24.95,
+            "carbs": 41.59,
+            "grasas": 9.98
+          },
+          "actual": {
+            "kcal": 355.81,
+            "proteina": 25.48,
+            "carbs": 54.55,
+            "grasas": 3.97
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "breakfast",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-5:0:desayuno",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 17,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 17,
+                "elapsedMs": 285
+              }
+            ],
+            "elapsedMs": 2150
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 5,
+              "unit": "Unid",
+              "kcal": 78.5,
+              "protein": 17.5,
+              "carbs": 1,
+              "fat": 0.5
+            },
+            {
+              "id": "6619bfeb147cd50b646777df",
+              "name": "Pan",
+              "quantity": 105,
+              "unit": "Grs",
+              "kcal": 277.31,
+              "protein": 7.98,
+              "carbs": 53.55,
+              "fat": 3.47
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "colacion",
+          "target": {
+            "kcal": 375.12,
+            "proteina": 26.18,
+            "carbs": 41.09,
+            "grasas": 11.78
+          },
+          "actual": {
+            "kcal": 374.5,
+            "proteina": 31.1,
+            "carbs": 43.4,
+            "grasas": 8.5
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "extraSnack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-5:1:colacion",
+            "variantPoolSize": 6,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 11,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 11,
+                "elapsedMs": 263
+              }
+            ],
+            "elapsedMs": 1875
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 7,
+              "unit": "Unid",
+              "kcal": 109.9,
+              "protein": 24.5,
+              "carbs": 1.4,
+              "fat": 0.7
+            },
+            {
+              "id": "6619bfeb147cd50b64677728",
+              "name": "Galletitas de agua",
+              "quantity": 60,
+              "unit": "Grs",
+              "kcal": 264.6,
+              "protein": 6.6,
+              "carbs": 42,
+              "fat": 7.8
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "almuerzo",
+          "target": {
+            "kcal": 370.81,
+            "proteina": 24.57,
+            "carbs": 40,
+            "grasas": 12.5
+          },
+          "actual": {
+            "kcal": 370.6,
+            "proteina": 33.6,
+            "carbs": 54.1,
+            "grasas": 2.2
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "lunch",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-5:2:almuerzo",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 27,
+            "recommendedSolutionsFound": 25,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 27,
+                "recommendedSolutionsFound": 25,
+                "elapsedMs": 338
+              }
+            ],
+            "elapsedMs": 2453
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769f",
+              "name": "Arroz integral",
+              "quantity": 70,
+              "unit": "Grs",
+              "kcal": 245,
+              "protein": 5.6,
+              "carbs": 52.5,
+              "fat": 1.4
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 8,
+              "unit": "Unid",
+              "kcal": 125.6,
+              "protein": 28,
+              "carbs": 1.6,
+              "fat": 0.8
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "merienda",
+          "target": {
+            "kcal": 364.96,
+            "proteina": 21.01,
+            "carbs": 34.4,
+            "grasas": 15.92
+          },
+          "actual": {
+            "kcal": 364.42,
+            "proteina": 23.68,
+            "carbs": 59.099999999999994,
+            "grasas": 3.6999999999999997
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "snack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-5:3:merienda",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 15,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 15,
+                "elapsedMs": 270
+              }
+            ],
+            "elapsedMs": 1527
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "quantity": 4,
+              "unit": "Unid",
+              "kcal": 62.8,
+              "protein": 14,
+              "carbs": 0.8,
+              "fat": 0.4
+            },
+            {
+              "id": "6619bfeb147cd50b646777e1",
+              "name": "Pan baguette",
+              "quantity": 110,
+              "unit": "Grs",
+              "kcal": 301.62,
+              "protein": 9.68,
+              "carbs": 58.3,
+              "fat": 3.3
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "cena",
+          "target": {
+            "kcal": 334.39,
+            "proteina": 17.91,
+            "carbs": 19.26,
+            "grasas": 20.63
+          },
+          "actual": {
+            "kcal": 334.05,
+            "proteina": 38.629999999999995,
+            "carbs": 18.4,
+            "grasas": 14.32
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "dinner",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-5:4:cena",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 27,
+            "recommendedSolutionsFound": 24,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 27,
+                "recommendedSolutionsFound": 24,
+                "elapsedMs": 251
+              }
+            ],
+            "elapsedMs": 1540
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a0",
+              "name": "Arroz integral (Cocido)",
+              "quantity": 80,
+              "unit": "Grs",
+              "kcal": 88.4,
+              "protein": 2.08,
+              "carbs": 18.4,
+              "fat": 0.72
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "quantity": 170,
+              "unit": "Grs",
+              "kcal": 245.65,
+              "protein": 36.55,
+              "carbs": 0,
+              "fat": 13.6
+            }
+          ],
+          "culinaryWarnings": []
+        },
+        {
+          "type": "snack",
+          "target": {
+            "kcal": 340.62,
+            "proteina": 0,
+            "carbs": 20.45,
+            "grasas": 27.31
+          },
+          "actual": {
+            "kcal": 339.3,
+            "proteina": 21.3,
+            "carbs": 21,
+            "grasas": 18.9
+          },
+          "structure": "P1+C1",
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false
+          },
+          "solverMeta": {
+            "structuresEvaluated": 32,
+            "mealType": "extraSnack",
+            "mode": "ALLOW_SUGGESTIONS",
+            "variantSeed": "curation-real-6-5:5:snack",
+            "variantPoolSize": 8,
+            "combinationCandidatesEvaluated": 32,
+            "totalCandidateExecutions": 32,
+            "quantitySolutionsFound": 32,
+            "recommendedSolutionsFound": 23,
+            "rounds": [
+              {
+                "level": "STRICT",
+                "candidatesProcessed": 32,
+                "quantitySolutionsFound": 32,
+                "recommendedSolutionsFound": 23,
+                "elapsedMs": 288
+              }
+            ],
+            "elapsedMs": 3087
+          },
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b64677728",
+              "name": "Galletitas de agua",
+              "quantity": 30,
+              "unit": "Grs",
+              "kcal": 132.3,
+              "protein": 3.3,
+              "carbs": 21,
+              "fat": 3.9
+            },
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "quantity": 3,
+              "unit": "Unid",
+              "kcal": 207,
+              "protein": 18,
+              "carbs": 0,
+              "fat": 15
+            }
+          ],
+          "culinaryWarnings": []
+        }
+      ]
+    }
+  ]
+}

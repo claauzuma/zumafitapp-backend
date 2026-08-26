@@ -113,6 +113,49 @@ test("Admin actualiza generation sin enviar ni modificar nombre o macros", async
   assert.equal(updated.generation.mode, "GENERIC");
 });
 
+test("Admin guarda varios mealTypes y conserva roles, portionRule y nutricion", async () => {
+  const currentGeneration = genericGeneration({
+    roles: { ...defaultFoodGeneration().roles, P1: true, C1: true },
+    mealTypes: { ...defaultFoodGeneration().mealTypes, lunch: true, dinner: true },
+    portionRule: { unit: "g", min: 25, max: 250, step: 5, allowedValues: [50, 100] },
+  });
+  const original = {
+    _id: "507f1f77bcf86cd799439012",
+    Alimentos: "Pechuga de pollo",
+    Calorias: 110,
+    Proteinas: 23,
+    Carbohidratos: 0,
+    Grasas: 2,
+    generation: currentGeneration,
+  };
+  let persisted = null;
+  const model = {
+    obtenerAlimentoPorId: async () => original,
+    actualizarGenerationPorId: async (_id, generation) => {
+      persisted = generation;
+      return { ...original, generation };
+    },
+  };
+  const service = new ServicioAdminFoods({ model });
+  const updated = await service.actualizarGeneration(original._id, {
+    mealTypes: { breakfast: true, lunch: false, extraSnack: true },
+  });
+
+  assert.deepEqual(persisted.mealTypes, {
+    breakfast: true,
+    lunch: false,
+    snack: false,
+    dinner: true,
+    extraSnack: true,
+  });
+  assert.deepEqual(persisted.roles, currentGeneration.roles);
+  assert.deepEqual(persisted.portionRule, currentGeneration.portionRule);
+  assert.equal(updated.Calorias, original.Calorias);
+  assert.equal(updated.Proteinas, original.Proteinas);
+  assert.equal(updated.Carbohidratos, original.Carbohidratos);
+  assert.equal(updated.Grasas, original.Grasas);
+});
+
 test("el middleware bloquea sin sesion, clientes y coaches", () => {
   const previousSecret = process.env.JWT_SECRET;
   process.env.JWT_SECRET = "admin-foods-test-secret";

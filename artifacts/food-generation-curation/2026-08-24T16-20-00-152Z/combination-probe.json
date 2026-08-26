@@ -1,0 +1,878 @@
+{
+  "generatedAt": "2026-08-24T16:27:50.306Z",
+  "mode": "read-only combination probe",
+  "safety": {
+    "totalBefore": 574,
+    "totalAfter": 574,
+    "generationFingerprintBefore": "c80b7a48ffca154c09e1e97ffaa0d55705afc51e70b43204354fbcfa3df44680",
+    "generationFingerprintAfter": "c80b7a48ffca154c09e1e97ffaa0d55705afc51e70b43204354fbcfa3df44680",
+    "generationUnchanged": true
+  },
+  "probes": [
+    {
+      "mealType": "breakfast",
+      "limit": 32,
+      "candidateCount": 32,
+      "structures": {
+        "P1+C1": 32
+      },
+      "optionalStructureCandidates": 0,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776ed",
+              "name": "Copos de maiz sin azucar",
+              "role": "C1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "breakfast",
+      "limit": 100,
+      "candidateCount": 100,
+      "structures": {
+        "P1+C1": 48,
+        "P1+C1+C2": 52
+      },
+      "optionalStructureCandidates": 52,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776ed",
+              "name": "Copos de maiz sin azucar",
+              "role": "C1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "lunch",
+      "limit": 32,
+      "candidateCount": 32,
+      "structures": {
+        "P1+C1": 32
+      },
+      "optionalStructureCandidates": 0,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776bd",
+              "name": "Bola de lomo",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776cd",
+              "name": "Carne de cerdo magro",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "lunch",
+      "limit": 100,
+      "candidateCount": 100,
+      "structures": {
+        "P1+C1": 96,
+        "P1+C1+F": 4
+      },
+      "optionalStructureCandidates": 4,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776bd",
+              "name": "Bola de lomo",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776cd",
+              "name": "Carne de cerdo magro",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "snack",
+      "limit": 32,
+      "candidateCount": 32,
+      "structures": {
+        "P1+C1": 32
+      },
+      "optionalStructureCandidates": 0,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776ed",
+              "name": "Copos de maiz sin azucar",
+              "role": "C1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "snack",
+      "limit": 100,
+      "candidateCount": 100,
+      "structures": {
+        "P1+C1": 48,
+        "P1+C1+C2": 52
+      },
+      "optionalStructureCandidates": 52,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776ed",
+              "name": "Copos de maiz sin azucar",
+              "role": "C1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "dinner",
+      "limit": 32,
+      "candidateCount": 32,
+      "structures": {
+        "P1+C1": 32
+      },
+      "optionalStructureCandidates": 0,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776bd",
+              "name": "Bola de lomo",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776cd",
+              "name": "Carne de cerdo magro",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "dinner",
+      "limit": 100,
+      "candidateCount": 100,
+      "structures": {
+        "P1+C1": 96,
+        "P1+C1+F": 4
+      },
+      "optionalStructureCandidates": 4,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776a4",
+              "name": "Atun en lomitos al natural",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776bd",
+              "name": "Bola de lomo",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776cd",
+              "name": "Carne de cerdo magro",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e6",
+              "name": "Churrasco magro",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "extraSnack",
+      "limit": 32,
+      "candidateCount": 32,
+      "structures": {
+        "P1+C1": 32
+      },
+      "optionalStructureCandidates": 0,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776ed",
+              "name": "Copos de maiz sin azucar",
+              "role": "C1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mealType": "extraSnack",
+      "limit": 100,
+      "candidateCount": 100,
+      "structures": {
+        "P1+C1": 48,
+        "P1+C1+C2": 52
+      },
+      "optionalStructureCandidates": 52,
+      "examples": [
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b64677755",
+              "name": "Huevos",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cb",
+              "name": "Whey protein Isolate",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776a6",
+              "name": "Avena instantanea",
+              "role": "C1"
+            },
+            {
+              "id": "6619bfeb147cd50b646778cc",
+              "name": "Whey protein SN",
+              "role": "P1"
+            }
+          ]
+        },
+        {
+          "structure": "P1+C1",
+          "foods": [
+            {
+              "id": "6619bfeb147cd50b646776e8",
+              "name": "Claras de huevos",
+              "role": "P1"
+            },
+            {
+              "id": "6619bfeb147cd50b646776ed",
+              "name": "Copos de maiz sin azucar",
+              "role": "C1"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -288,20 +288,19 @@ test("menu automatico GENERIC respeta portionRule y no inventa maximo cuando no 
   assert.equal(unboundedResult.optimization.constraints[0].maxSource, "automatic.unbounded.max");
 });
 
-test("menu automatico rechaza un alimento que no sea GENERIC o no corresponda a la comida", async () => {
+test("menu automatico acepta EXPLICIT_ONLY elegido por el usuario aunque no corresponda a la comida", async () => {
   const explicit = catalogFood({ id: "explicit-only", name: "Alimento explicito", unit: "g" });
-  explicit.generation = { mode: "EXPLICIT_ONLY", mealTypes: { lunch: true } };
-  await assert.rejects(
-    () => quantityService([explicit]).generarCantidades({
-      ...trackingPayload(explicit),
-      menuGenerationPolicy: "generic_menu_v1",
-      generationMealType: "lunch",
-    }, {
-      authorization: TRACKING_QUANTITY_INTERNAL_CONTEXT,
-      trackingQuantityMode: "calorie_fill",
-    }),
-    (error) => error?.code === "MENU_NON_GENERIC_FOOD"
-  );
+  explicit.generation = { mode: "EXPLICIT_ONLY", mealTypes: { breakfast: false, lunch: true } };
+  const result = await quantityService([explicit]).generarCantidades({
+    ...trackingPayload(explicit),
+    menuGenerationPolicy: "generic_menu_v1",
+    generationMealType: "breakfast",
+  }, {
+    authorization: TRACKING_QUANTITY_INTERNAL_CONTEXT,
+    trackingQuantityMode: "calorie_fill",
+  });
+  assert.equal(result.optimization?.policy, "tracking_calorie_fill_v1");
+  assert.equal(result.foods[0].foodId, "explicit-only");
 });
 
 test("la comida automática normal de Admin y Coach respeta los steps reales sin cambiar de policy", async () => {

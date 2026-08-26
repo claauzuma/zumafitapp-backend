@@ -1,0 +1,3452 @@
+{
+  "generatedAt": "2026-08-25T15:29:01.716Z",
+  "mode": "read-only real-catalog ranking audit",
+  "safety": {
+    "documentsBefore": 574,
+    "documentsAfter": 574,
+    "directMongoReads": 2,
+    "directMongoWrites": 0,
+    "generationFingerprintBefore": "e80d0a9b7455a65f9caa5cc6c512eec4254bd43165cce58fe6f3cfcb0d7dc386",
+    "generationFingerprintAfter": "e80d0a9b7455a65f9caa5cc6c512eec4254bd43165cce58fe6f3cfcb0d7dc386",
+    "catalogFingerprintBefore": "b979ad885318581c20b3bb0855bde38f2ec7f2ae77ddca2c7d3ef82f3f86fe3e",
+    "catalogFingerprintAfter": "b979ad885318581c20b3bb0855bde38f2ec7f2ae77ddca2c7d3ef82f3f86fe3e",
+    "databaseUnchanged": true
+  },
+  "case": {
+    "target": {
+      "kcal": 776,
+      "proteina": 57.6,
+      "carbs": 94.6,
+      "grasas": 15.6
+    },
+    "foods": [
+      {
+        "id": "6619bfeb147cd50b6467769c",
+        "name": "Arroz",
+        "nutritionPerUnit": {
+          "kcal": 3.385,
+          "proteina": 0.08,
+          "carbs": 0.755,
+          "grasas": 0.005
+        },
+        "strictPortionRule": {
+          "unit": "g",
+          "min": 80,
+          "max": 200,
+          "step": 10,
+          "allowedValues": [],
+          "sources": {
+            "min": "generation",
+            "max": "generation",
+            "step": "generation"
+          }
+        },
+        "enumeratedQuantities": [
+          80,
+          90,
+          100,
+          110,
+          120,
+          130,
+          140,
+          150,
+          160,
+          170,
+          180,
+          190,
+          200
+        ]
+      },
+      {
+        "id": "6619bfeb147cd50b646776a8",
+        "name": "Banana",
+        "nutritionPerUnit": {
+          "kcal": 0.891,
+          "proteina": 0.011,
+          "carbs": 0.205,
+          "grasas": 0.003
+        },
+        "strictPortionRule": {
+          "unit": "g",
+          "min": 80,
+          "max": 250,
+          "step": 10,
+          "allowedValues": [],
+          "sources": {
+            "min": "legacy",
+            "max": "legacy",
+            "step": "legacy"
+          }
+        },
+        "enumeratedQuantities": [
+          80,
+          90,
+          100,
+          110,
+          120,
+          130,
+          140,
+          150,
+          160,
+          170,
+          180,
+          190,
+          200,
+          210,
+          220,
+          230,
+          240,
+          250
+        ]
+      },
+      {
+        "id": "6619bfeb147cd50b64677809",
+        "name": "Pechuga de pollo",
+        "nutritionPerUnit": {
+          "kcal": 1.105,
+          "proteina": 0.22,
+          "carbs": 0,
+          "grasas": 0.025
+        },
+        "strictPortionRule": {
+          "unit": "g",
+          "min": 100,
+          "max": 350,
+          "step": 10,
+          "allowedValues": [],
+          "sources": {
+            "min": "generation",
+            "max": "generation",
+            "step": "generation"
+          }
+        },
+        "enumeratedQuantities": [
+          100,
+          110,
+          120,
+          130,
+          140,
+          150,
+          160,
+          170,
+          180,
+          190,
+          200,
+          210,
+          220,
+          230,
+          240,
+          250,
+          260,
+          270,
+          280,
+          290,
+          300,
+          310,
+          320,
+          330,
+          340,
+          350
+        ]
+      }
+    ],
+    "physicalStrictCombinations": 6084,
+    "legacyEligibleCombinations": 1795,
+    "historical": {
+      "quantities": {
+        "Arroz": 100,
+        "Banana": 180,
+        "Pechuga de pollo": 250
+      },
+      "totals": {
+        "kcal": 775.13,
+        "proteina": 64.98,
+        "carbs": 112.4,
+        "grasas": 7.29
+      },
+      "difference": {
+        "kcal": -0.87,
+        "proteina": 7.38,
+        "carbs": 17.8,
+        "grasas": -8.31
+      },
+      "classification": "BEST_EFFORT",
+      "zones": {
+        "calories": "EXCELLENT",
+        "protein": "DEVIATED"
+      },
+      "reasons": [
+        "PROTEIN_ABOVE_REASONABLE_RANGE",
+        "CARBS_OUTSIDE_REASONABLE_RANGE",
+        "FAT_OUTSIDE_REASONABLE_RANGE"
+      ],
+      "legacyRank": 2,
+      "currentRank": 59
+    },
+    "legacyTop20": [
+      {
+        "quantities": {
+          "Arroz": 110,
+          "Banana": 180,
+          "Pechuga de pollo": 220
+        },
+        "totals": {
+          "kcal": 775.83,
+          "proteina": 59.18,
+          "carbs": 119.95,
+          "grasas": 6.59
+        },
+        "difference": {
+          "kcal": -0.17,
+          "proteina": 1.58,
+          "carbs": 25.35,
+          "grasas": -9.01
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 1,
+        "currentRank": 1
+      },
+      {
+        "quantities": {
+          "Arroz": 100,
+          "Banana": 180,
+          "Pechuga de pollo": 250
+        },
+        "totals": {
+          "kcal": 775.13,
+          "proteina": 64.98,
+          "carbs": 112.4,
+          "grasas": 7.29
+        },
+        "difference": {
+          "kcal": -0.87,
+          "proteina": 7.38,
+          "carbs": 17.8,
+          "grasas": -8.31
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "DEVIATED"
+        },
+        "reasons": [
+          "PROTEIN_ABOVE_REASONABLE_RANGE",
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 2,
+        "currentRank": 59
+      },
+      {
+        "quantities": {
+          "Arroz": 110,
+          "Banana": 130,
+          "Pechuga de pollo": 260
+        },
+        "totals": {
+          "kcal": 775.48,
+          "proteina": 67.43,
+          "carbs": 109.7,
+          "grasas": 7.44
+        },
+        "difference": {
+          "kcal": -0.52,
+          "proteina": 9.83,
+          "carbs": 15.1,
+          "grasas": -8.16
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "DEVIATED"
+        },
+        "reasons": [
+          "PROTEIN_ABOVE_REASONABLE_RANGE",
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 3,
+        "currentRank": 56
+      },
+      {
+        "quantities": {
+          "Arroz": 120,
+          "Banana": 80,
+          "Pechuga de pollo": 270
+        },
+        "totals": {
+          "kcal": 775.83,
+          "proteina": 69.88,
+          "carbs": 107,
+          "grasas": 7.59
+        },
+        "difference": {
+          "kcal": -0.17,
+          "proteina": 12.28,
+          "carbs": 12.4,
+          "grasas": -8.01
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "WARNING"
+        },
+        "reasons": [
+          "PROTEIN_ABOVE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 4,
+        "currentRank": 112
+      },
+      {
+        "quantities": {
+          "Arroz": 110,
+          "Banana": 80,
+          "Pechuga de pollo": 300
+        },
+        "totals": {
+          "kcal": 775.13,
+          "proteina": 75.68,
+          "carbs": 99.45,
+          "grasas": 8.29
+        },
+        "difference": {
+          "kcal": -0.87,
+          "proteina": 18.08,
+          "carbs": 4.85,
+          "grasas": -7.31
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "WARNING"
+        },
+        "reasons": [
+          "PROTEIN_ABOVE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 5,
+        "currentRank": 120
+      },
+      {
+        "quantities": {
+          "Arroz": 80,
+          "Banana": 170,
+          "Pechuga de pollo": 320
+        },
+        "totals": {
+          "kcal": 775.87,
+          "proteina": 78.67,
+          "carbs": 95.25,
+          "grasas": 8.91
+        },
+        "difference": {
+          "kcal": -0.13,
+          "proteina": 21.07,
+          "carbs": 0.65,
+          "grasas": -6.69
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "WARNING"
+        },
+        "reasons": [
+          "PROTEIN_ABOVE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 6,
+        "currentRank": 110
+      },
+      {
+        "quantities": {
+          "Arroz": 100,
+          "Banana": 230,
+          "Pechuga de pollo": 210
+        },
+        "totals": {
+          "kcal": 775.48,
+          "proteina": 56.73,
+          "carbs": 122.65,
+          "grasas": 6.44
+        },
+        "difference": {
+          "kcal": -0.52,
+          "proteina": -0.87,
+          "carbs": 28.05,
+          "grasas": -9.16
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 7,
+        "currentRank": 2
+      },
+      {
+        "quantities": {
+          "Arroz": 140,
+          "Banana": 90,
+          "Pechuga de pollo": 200
+        },
+        "totals": {
+          "kcal": 775.09,
+          "proteina": 56.19,
+          "carbs": 124.15,
+          "grasas": 5.97
+        },
+        "difference": {
+          "kcal": -0.91,
+          "proteina": -1.41,
+          "carbs": 29.55,
+          "grasas": -9.63
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 8,
+        "currentRank": 4
+      },
+      {
+        "quantities": {
+          "Arroz": 150,
+          "Banana": 90,
+          "Pechuga de pollo": 170
+        },
+        "totals": {
+          "kcal": 775.79,
+          "proteina": 50.39,
+          "carbs": 131.7,
+          "grasas": 5.27
+        },
+        "difference": {
+          "kcal": -0.21,
+          "proteina": -7.21,
+          "carbs": 37.1,
+          "grasas": -10.33
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "DEVIATED"
+        },
+        "reasons": [
+          "PROTEIN_BELOW_REASONABLE_RANGE",
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 9,
+        "currentRank": 55
+      },
+      {
+        "quantities": {
+          "Arroz": 140,
+          "Banana": 140,
+          "Pechuga de pollo": 160
+        },
+        "totals": {
+          "kcal": 775.44,
+          "proteina": 47.94,
+          "carbs": 134.4,
+          "grasas": 5.12
+        },
+        "difference": {
+          "kcal": -0.56,
+          "proteina": -9.66,
+          "carbs": 39.8,
+          "grasas": -10.48
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "DEVIATED"
+        },
+        "reasons": [
+          "PROTEIN_BELOW_REASONABLE_RANGE",
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 10,
+        "currentRank": 58
+      },
+      {
+        "quantities": {
+          "Arroz": 130,
+          "Banana": 190,
+          "Pechuga de pollo": 150
+        },
+        "totals": {
+          "kcal": 775.09,
+          "proteina": 45.49,
+          "carbs": 137.1,
+          "grasas": 4.97
+        },
+        "difference": {
+          "kcal": -0.91,
+          "proteina": -12.11,
+          "carbs": 42.5,
+          "grasas": -10.63
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "WARNING"
+        },
+        "reasons": [
+          "PROTEIN_BELOW_REASONABLE_RANGE",
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 11,
+        "currentRank": 122
+      },
+      {
+        "quantities": {
+          "Arroz": 140,
+          "Banana": 190,
+          "Pechuga de pollo": 120
+        },
+        "totals": {
+          "kcal": 775.79,
+          "proteina": 39.69,
+          "carbs": 144.65,
+          "grasas": 4.27
+        },
+        "difference": {
+          "kcal": -0.21,
+          "proteina": -17.91,
+          "carbs": 50.05,
+          "grasas": -11.33
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "WARNING"
+        },
+        "reasons": [
+          "PROTEIN_BELOW_REASONABLE_RANGE",
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 12,
+        "currentRank": 113
+      },
+      {
+        "quantities": {
+          "Arroz": 130,
+          "Banana": 240,
+          "Pechuga de pollo": 110
+        },
+        "totals": {
+          "kcal": 775.44,
+          "proteina": 37.24,
+          "carbs": 147.35,
+          "grasas": 4.12
+        },
+        "difference": {
+          "kcal": -0.56,
+          "proteina": -20.36,
+          "carbs": 52.75,
+          "grasas": -11.48
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "WARNING"
+        },
+        "reasons": [
+          "PROTEIN_BELOW_REASONABLE_RANGE",
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 13,
+        "currentRank": 117
+      },
+      {
+        "quantities": {
+          "Arroz": 170,
+          "Banana": 100,
+          "Pechuga de pollo": 100
+        },
+        "totals": {
+          "kcal": 775.05,
+          "proteina": 36.7,
+          "carbs": 148.85,
+          "grasas": 3.65
+        },
+        "difference": {
+          "kcal": -0.95,
+          "proteina": -20.9,
+          "carbs": 54.25,
+          "grasas": -11.95
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "WARNING"
+        },
+        "reasons": [
+          "PROTEIN_BELOW_REASONABLE_RANGE",
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 14,
+        "currentRank": 124
+      },
+      {
+        "quantities": {
+          "Arroz": 90,
+          "Banana": 230,
+          "Pechuga de pollo": 240
+        },
+        "totals": {
+          "kcal": 774.78,
+          "proteina": 62.53,
+          "carbs": 115.1,
+          "grasas": 7.14
+        },
+        "difference": {
+          "kcal": -1.22,
+          "proteina": 4.93,
+          "carbs": 20.5,
+          "grasas": -8.46
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "REASONABLE"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 15,
+        "currentRank": 32
+      },
+      {
+        "quantities": {
+          "Arroz": 100,
+          "Banana": 130,
+          "Pechuga de pollo": 290
+        },
+        "totals": {
+          "kcal": 774.78,
+          "proteina": 73.23,
+          "carbs": 102.15,
+          "grasas": 8.14
+        },
+        "difference": {
+          "kcal": -1.22,
+          "proteina": 15.63,
+          "carbs": 7.55,
+          "grasas": -7.46
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "WARNING"
+        },
+        "reasons": [
+          "PROTEIN_ABOVE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 16,
+        "currentRank": 126
+      },
+      {
+        "quantities": {
+          "Arroz": 130,
+          "Banana": 140,
+          "Pechuga de pollo": 190
+        },
+        "totals": {
+          "kcal": 774.74,
+          "proteina": 53.74,
+          "carbs": 126.85,
+          "grasas": 5.82
+        },
+        "difference": {
+          "kcal": -1.26,
+          "proteina": -3.86,
+          "carbs": 32.25,
+          "grasas": -9.78
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "REASONABLE"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 17,
+        "currentRank": 33
+      },
+      {
+        "quantities": {
+          "Arroz": 120,
+          "Banana": 240,
+          "Pechuga de pollo": 140
+        },
+        "totals": {
+          "kcal": 774.74,
+          "proteina": 43.04,
+          "carbs": 139.8,
+          "grasas": 4.82
+        },
+        "difference": {
+          "kcal": -1.26,
+          "proteina": -14.56,
+          "carbs": 45.2,
+          "grasas": -10.78
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "WARNING"
+        },
+        "reasons": [
+          "PROTEIN_BELOW_REASONABLE_RANGE",
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 18,
+        "currentRank": 128
+      },
+      {
+        "quantities": {
+          "Arroz": 90,
+          "Banana": 180,
+          "Pechuga de pollo": 280
+        },
+        "totals": {
+          "kcal": 774.43,
+          "proteina": 70.78,
+          "carbs": 104.85,
+          "grasas": 7.99
+        },
+        "difference": {
+          "kcal": -1.57,
+          "proteina": 13.18,
+          "carbs": 10.25,
+          "grasas": -7.61
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "WARNING"
+        },
+        "reasons": [
+          "PROTEIN_ABOVE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 19,
+        "currentRank": 129
+      },
+      {
+        "quantities": {
+          "Arroz": 100,
+          "Banana": 80,
+          "Pechuga de pollo": 330
+        },
+        "totals": {
+          "kcal": 774.43,
+          "proteina": 81.48,
+          "carbs": 91.9,
+          "grasas": 8.99
+        },
+        "difference": {
+          "kcal": -1.57,
+          "proteina": 23.88,
+          "carbs": -2.7,
+          "grasas": -6.61
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "WARNING"
+        },
+        "reasons": [
+          "PROTEIN_ABOVE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 20,
+        "currentRank": 130
+      }
+    ],
+    "currentTop20": [
+      {
+        "quantities": {
+          "Arroz": 110,
+          "Banana": 180,
+          "Pechuga de pollo": 220
+        },
+        "totals": {
+          "kcal": 775.83,
+          "proteina": 59.18,
+          "carbs": 119.95,
+          "grasas": 6.59
+        },
+        "difference": {
+          "kcal": -0.17,
+          "proteina": 1.58,
+          "carbs": 25.35,
+          "grasas": -9.01
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 1,
+        "currentRank": 1
+      },
+      {
+        "quantities": {
+          "Arroz": 100,
+          "Banana": 230,
+          "Pechuga de pollo": 210
+        },
+        "totals": {
+          "kcal": 775.48,
+          "proteina": 56.73,
+          "carbs": 122.65,
+          "grasas": 6.44
+        },
+        "difference": {
+          "kcal": -0.52,
+          "proteina": -0.87,
+          "carbs": 28.05,
+          "grasas": -9.16
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 7,
+        "currentRank": 2
+      },
+      {
+        "quantities": {
+          "Arroz": 130,
+          "Banana": 130,
+          "Pechuga de pollo": 200
+        },
+        "totals": {
+          "kcal": 776.88,
+          "proteina": 55.83,
+          "carbs": 124.8,
+          "grasas": 6.04
+        },
+        "difference": {
+          "kcal": 0.88,
+          "proteina": -1.77,
+          "carbs": 30.2,
+          "grasas": -9.56
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": null,
+        "currentRank": 3
+      },
+      {
+        "quantities": {
+          "Arroz": 140,
+          "Banana": 90,
+          "Pechuga de pollo": 200
+        },
+        "totals": {
+          "kcal": 775.09,
+          "proteina": 56.19,
+          "carbs": 124.15,
+          "grasas": 5.97
+        },
+        "difference": {
+          "kcal": -0.91,
+          "proteina": -1.41,
+          "carbs": 29.55,
+          "grasas": -9.63
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 8,
+        "currentRank": 4
+      },
+      {
+        "quantities": {
+          "Arroz": 140,
+          "Banana": 80,
+          "Pechuga de pollo": 210
+        },
+        "totals": {
+          "kcal": 777.23,
+          "proteina": 58.28,
+          "carbs": 122.1,
+          "grasas": 6.19
+        },
+        "difference": {
+          "kcal": 1.23,
+          "proteina": 0.68,
+          "carbs": 27.5,
+          "grasas": -9.41
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": null,
+        "currentRank": 5
+      },
+      {
+        "quantities": {
+          "Arroz": 100,
+          "Banana": 220,
+          "Pechuga de pollo": 220
+        },
+        "totals": {
+          "kcal": 777.62,
+          "proteina": 58.82,
+          "carbs": 120.6,
+          "grasas": 6.66
+        },
+        "difference": {
+          "kcal": 1.62,
+          "proteina": 1.22,
+          "carbs": 26,
+          "grasas": -8.94
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": null,
+        "currentRank": 6
+      },
+      {
+        "quantities": {
+          "Arroz": 120,
+          "Banana": 140,
+          "Pechuga de pollo": 220
+        },
+        "totals": {
+          "kcal": 774.04,
+          "proteina": 59.54,
+          "carbs": 119.3,
+          "grasas": 6.52
+        },
+        "difference": {
+          "kcal": -1.96,
+          "proteina": 1.94,
+          "carbs": 24.7,
+          "grasas": -9.08
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 26,
+        "currentRank": 7
+      },
+      {
+        "quantities": {
+          "Arroz": 110,
+          "Banana": 190,
+          "Pechuga de pollo": 210
+        },
+        "totals": {
+          "kcal": 773.69,
+          "proteina": 57.09,
+          "carbs": 122,
+          "grasas": 6.37
+        },
+        "difference": {
+          "kcal": -2.31,
+          "proteina": -0.51,
+          "carbs": 27.4,
+          "grasas": -9.23
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 31,
+        "currentRank": 8
+      },
+      {
+        "quantities": {
+          "Arroz": 120,
+          "Banana": 170,
+          "Pechuga de pollo": 200
+        },
+        "totals": {
+          "kcal": 778.67,
+          "proteina": 55.47,
+          "carbs": 125.45,
+          "grasas": 6.11
+        },
+        "difference": {
+          "kcal": 2.67,
+          "proteina": -2.13,
+          "carbs": 30.85,
+          "grasas": -9.49
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": null,
+        "currentRank": 9
+      },
+      {
+        "quantities": {
+          "Arroz": 130,
+          "Banana": 120,
+          "Pechuga de pollo": 210
+        },
+        "totals": {
+          "kcal": 779.02,
+          "proteina": 57.92,
+          "carbs": 122.75,
+          "grasas": 6.26
+        },
+        "difference": {
+          "kcal": 3.02,
+          "proteina": 0.32,
+          "carbs": 28.15,
+          "grasas": -9.34
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": null,
+        "currentRank": 10
+      },
+      {
+        "quantities": {
+          "Arroz": 130,
+          "Banana": 100,
+          "Pechuga de pollo": 220
+        },
+        "totals": {
+          "kcal": 772.25,
+          "proteina": 59.9,
+          "carbs": 118.65,
+          "grasas": 6.45
+        },
+        "difference": {
+          "kcal": -3.75,
+          "proteina": 2.3,
+          "carbs": 24.05,
+          "grasas": -9.15
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 49,
+        "currentRank": 11
+      },
+      {
+        "quantities": {
+          "Arroz": 120,
+          "Banana": 150,
+          "Pechuga de pollo": 210
+        },
+        "totals": {
+          "kcal": 771.9,
+          "proteina": 57.45,
+          "carbs": 121.35,
+          "grasas": 6.3
+        },
+        "difference": {
+          "kcal": -4.1,
+          "proteina": -0.15,
+          "carbs": 26.75,
+          "grasas": -9.3
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 54,
+        "currentRank": 12
+      },
+      {
+        "quantities": {
+          "Arroz": 110,
+          "Banana": 210,
+          "Pechuga de pollo": 200
+        },
+        "totals": {
+          "kcal": 780.46,
+          "proteina": 55.11,
+          "carbs": 126.1,
+          "grasas": 6.18
+        },
+        "difference": {
+          "kcal": 4.46,
+          "proteina": -2.49,
+          "carbs": 31.5,
+          "grasas": -9.42
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": null,
+        "currentRank": 13
+      },
+      {
+        "quantities": {
+          "Arroz": 120,
+          "Banana": 160,
+          "Pechuga de pollo": 210
+        },
+        "totals": {
+          "kcal": 780.81,
+          "proteina": 57.56,
+          "carbs": 123.4,
+          "grasas": 6.33
+        },
+        "difference": {
+          "kcal": 4.81,
+          "proteina": -0.04,
+          "carbs": 28.8,
+          "grasas": -9.27
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": null,
+        "currentRank": 14
+      },
+      {
+        "quantities": {
+          "Arroz": 130,
+          "Banana": 110,
+          "Pechuga de pollo": 220
+        },
+        "totals": {
+          "kcal": 781.16,
+          "proteina": 60.01,
+          "carbs": 120.7,
+          "grasas": 6.48
+        },
+        "difference": {
+          "kcal": 5.16,
+          "proteina": 2.41,
+          "carbs": 26.1,
+          "grasas": -9.12
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "ACCEPTABLE",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": null,
+        "currentRank": 15
+      },
+      {
+        "quantities": {
+          "Arroz": 90,
+          "Banana": 250,
+          "Pechuga de pollo": 220
+        },
+        "totals": {
+          "kcal": 770.5,
+          "proteina": 58.35,
+          "carbs": 119.2,
+          "grasas": 6.7
+        },
+        "difference": {
+          "kcal": -5.5,
+          "proteina": 0.75,
+          "carbs": 24.6,
+          "grasas": -8.9
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "ACCEPTABLE",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 71,
+        "currentRank": 16
+      },
+      {
+        "quantities": {
+          "Arroz": 130,
+          "Banana": 110,
+          "Pechuga de pollo": 210
+        },
+        "totals": {
+          "kcal": 770.11,
+          "proteina": 57.81,
+          "carbs": 120.7,
+          "grasas": 6.23
+        },
+        "difference": {
+          "kcal": -5.89,
+          "proteina": 0.21,
+          "carbs": 26.1,
+          "grasas": -9.37
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "ACCEPTABLE",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 76,
+        "currentRank": 17
+      },
+      {
+        "quantities": {
+          "Arroz": 120,
+          "Banana": 160,
+          "Pechuga de pollo": 200
+        },
+        "totals": {
+          "kcal": 769.76,
+          "proteina": 55.36,
+          "carbs": 123.4,
+          "grasas": 6.08
+        },
+        "difference": {
+          "kcal": -6.24,
+          "proteina": -2.24,
+          "carbs": 28.8,
+          "grasas": -9.52
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "ACCEPTABLE",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": 81,
+        "currentRank": 18
+      },
+      {
+        "quantities": {
+          "Arroz": 110,
+          "Banana": 200,
+          "Pechuga de pollo": 210
+        },
+        "totals": {
+          "kcal": 782.6,
+          "proteina": 57.2,
+          "carbs": 124.05,
+          "grasas": 6.4
+        },
+        "difference": {
+          "kcal": 6.6,
+          "proteina": -0.4,
+          "carbs": 29.45,
+          "grasas": -9.2
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "ACCEPTABLE",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": null,
+        "currentRank": 19
+      },
+      {
+        "quantities": {
+          "Arroz": 120,
+          "Banana": 150,
+          "Pechuga de pollo": 220
+        },
+        "totals": {
+          "kcal": 782.95,
+          "proteina": 59.65,
+          "carbs": 121.35,
+          "grasas": 6.55
+        },
+        "difference": {
+          "kcal": 6.95,
+          "proteina": 2.05,
+          "carbs": 26.75,
+          "grasas": -9.05
+        },
+        "classification": "BEST_EFFORT",
+        "zones": {
+          "calories": "ACCEPTABLE",
+          "protein": "EXCELLENT"
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "legacyRank": null,
+        "currentRank": 20
+      }
+    ],
+    "engineResult": {
+      "status": "SUCCESS",
+      "classification": "BEST_EFFORT",
+      "recommended": false,
+      "usable": true,
+      "nutrition": {
+        "policy": "meal_generation_balanced_v1",
+        "status": "BEST_EFFORT",
+        "recommended": false,
+        "usable": true,
+        "target": {
+          "kcal": 776,
+          "proteina": 57.6,
+          "carbs": 94.6,
+          "grasas": 15.6
+        },
+        "totals": {
+          "kcal": 775.98,
+          "proteina": 56.01,
+          "carbs": 124.48,
+          "grasas": 6.01
+        },
+        "difference": {
+          "kcal": -0.02,
+          "proteina": -1.59,
+          "carbs": 29.88,
+          "grasas": -9.59
+        },
+        "absoluteDifference": {
+          "kcal": 0.02,
+          "proteina": 1.59,
+          "carbs": 29.88,
+          "grasas": 9.59
+        },
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "proteinDistance": 1.59,
+        "proteinZoneRank": 0,
+        "macroEnergyDifference": {
+          "carbs": 119.52,
+          "grasas": 86.31
+        },
+        "macroEnergyTolerances": {
+          "carbs": 56.76,
+          "grasas": 45
+        },
+        "macrosWithinRange": {
+          "carbs": false,
+          "grasas": false
+        },
+        "secondaryEnergyError": 0.189982051,
+        "warning": {
+          "code": "MEAL_NUTRITION_BEST_EFFORT",
+          "category": "nutrition",
+          "severity": "warning",
+          "title": "Revisa esta alternativa",
+          "summary": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado.",
+          "message": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado. Carbohidratos: sobran 29.9 g Grasas: faltan 9.6 g",
+          "reasons": [
+            "Carbohidratos: sobran 29.9 g",
+            "Grasas: faltan 9.6 g"
+          ],
+          "reasonCodes": [
+            "CARBS_OUTSIDE_REASONABLE_RANGE",
+            "FAT_OUTSIDE_REASONABLE_RANGE"
+          ]
+        },
+        "thresholds": {
+          "calorieExcellent": 5,
+          "calorieAcceptable": 10,
+          "proteinExcellent": 2.5,
+          "proteinReasonable": 5,
+          "proteinRelevant": 10,
+          "carbEnergyFloor": 48,
+          "carbEnergyRatio": 0.15,
+          "fatEnergyFloor": 45,
+          "fatEnergyRatio": 0.2
+        }
+      },
+      "relaxation": {
+        "level": "RELAX_STEP",
+        "portionRulesRelaxed": true,
+        "exhausted": true
+      },
+      "alternative": {
+        "status": "BEST_EFFORT",
+        "classification": "BEST_EFFORT",
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "role": null,
+            "quantity": 135,
+            "unit": "Grs",
+            "kcal": 456.98,
+            "proteina": 10.8,
+            "carbs": 101.93,
+            "grasas": 0.68,
+            "image": {
+              "exactaKey": "arroz",
+              "genericaKey": "arroz",
+              "urlExacta": "/images/foods/arroz.jpeg",
+              "urlGenerica": "/images/foods/arroz.jpeg",
+              "url": "/images/foods/arroz.jpeg",
+              "alt": "Arroz",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/arroz.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776a8",
+            "name": "Banana",
+            "role": null,
+            "quantity": 110,
+            "unit": "Grs",
+            "kcal": 98.01,
+            "proteina": 1.21,
+            "carbs": 22.55,
+            "grasas": 0.33,
+            "image": {
+              "exactaKey": "banana",
+              "genericaKey": "banana",
+              "urlExacta": "/images/foods/banana.jpeg",
+              "urlGenerica": "/images/foods/banana.jpeg",
+              "url": "/images/foods/banana.jpeg",
+              "alt": "Banana",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/banana.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b64677809",
+            "name": "Pechuga de pollo",
+            "role": null,
+            "quantity": 200,
+            "unit": "Grs",
+            "kcal": 221,
+            "proteina": 44,
+            "carbs": 0,
+            "grasas": 5,
+            "image": {
+              "exactaKey": "pechugadepollo",
+              "genericaKey": "pollo",
+              "urlExacta": "/images/foods/pechugadepollo.jpeg",
+              "urlGenerica": "/images/foods/pollo.jpeg",
+              "url": "/images/foods/pollo.jpeg",
+              "alt": "Pechuga de pollo",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/pollo.jpeg"
+          }
+        ],
+        "totals": {
+          "kcal": 775.98,
+          "proteina": 56.01,
+          "carbs": 124.48,
+          "grasas": 6.01
+        },
+        "target": {
+          "kcal": 776,
+          "proteina": 57.6,
+          "carbs": 94.6,
+          "grasas": 15.6
+        },
+        "difference": {
+          "kcal": -0.02,
+          "proteina": -1.59,
+          "carbs": 29.88,
+          "grasas": -9.59
+        },
+        "structure": "RECALCULATE:6619bfeb147cd50b6467769c+6619bfeb147cd50b646776a8+6619bfeb147cd50b64677809",
+        "score": 99981.910018,
+        "warnings": [
+          {
+            "code": "MEAL_NUTRITION_BEST_EFFORT",
+            "category": "nutrition",
+            "severity": "warning",
+            "title": "Revisa esta alternativa",
+            "summary": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado.",
+            "message": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado. Carbohidratos: sobran 29.9 g Grasas: faltan 9.6 g",
+            "reasons": [
+              "Carbohidratos: sobran 29.9 g",
+              "Grasas: faltan 9.6 g"
+            ],
+            "reasonCodes": [
+              "CARBS_OUTSIDE_REASONABLE_RANGE",
+              "FAT_OUTSIDE_REASONABLE_RANGE"
+            ]
+          }
+        ],
+        "optimization": {
+          "profile": "meal_generation_balanced",
+          "policy": "meal_generation_balanced_v1",
+          "requestedMode": "calorie_fill",
+          "mode": "calorie_fill",
+          "calorieTarget": 776,
+          "calorieCeiling": 791.53,
+          "calorieCeilingSatisfied": true,
+          "calorieTolerance": 10,
+          "calorieEquivalentTolerance": 10,
+          "calorieDeficit": 0.015,
+          "calorieTargetCompleted": true,
+          "bestReachableCalories": 775.985,
+          "inCalorieZone": true,
+          "normalCalorieZoneReached": true,
+          "continuousFoodsAvailable": true,
+          "discreteOnly": false,
+          "discreteLimited": false,
+          "granularityLimited": false,
+          "proteinTargetActive": true,
+          "proteinReached": true,
+          "proteinDeficit": 1.59,
+          "macroScore": 0.478036,
+          "nutritionAssessment": {
+            "policy": "meal_generation_balanced_v1",
+            "status": "BEST_EFFORT",
+            "recommended": false,
+            "usable": true,
+            "target": {
+              "kcal": 776,
+              "proteina": 57.6,
+              "carbs": 94.6,
+              "grasas": 15.6
+            },
+            "totals": {
+              "kcal": 775.98,
+              "proteina": 56.01,
+              "carbs": 124.48,
+              "grasas": 6.01
+            },
+            "difference": {
+              "kcal": -0.02,
+              "proteina": -1.59,
+              "carbs": 29.88,
+              "grasas": -9.59
+            },
+            "absoluteDifference": {
+              "kcal": 0.02,
+              "proteina": 1.59,
+              "carbs": 29.88,
+              "grasas": 9.59
+            },
+            "zones": {
+              "calories": "EXCELLENT",
+              "protein": "EXCELLENT"
+            },
+            "proteinDistance": 1.59,
+            "proteinZoneRank": 0,
+            "macroEnergyDifference": {
+              "carbs": 119.52,
+              "grasas": 86.31
+            },
+            "macroEnergyTolerances": {
+              "carbs": 56.76,
+              "grasas": 45
+            },
+            "macrosWithinRange": {
+              "carbs": false,
+              "grasas": false
+            },
+            "secondaryEnergyError": 0.189982051,
+            "warning": {
+              "code": "MEAL_NUTRITION_BEST_EFFORT",
+              "category": "nutrition",
+              "severity": "warning",
+              "title": "Revisa esta alternativa",
+              "summary": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado.",
+              "message": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado. Carbohidratos: sobran 29.9 g Grasas: faltan 9.6 g",
+              "reasons": [
+                "Carbohidratos: sobran 29.9 g",
+                "Grasas: faltan 9.6 g"
+              ],
+              "reasonCodes": [
+                "CARBS_OUTSIDE_REASONABLE_RANGE",
+                "FAT_OUTSIDE_REASONABLE_RANGE"
+              ]
+            },
+            "thresholds": {
+              "calorieExcellent": 5,
+              "calorieAcceptable": 10,
+              "proteinExcellent": 2.5,
+              "proteinReasonable": 5,
+              "proteinRelevant": 10,
+              "carbEnergyFloor": 48,
+              "carbEnergyRatio": 0.15,
+              "fatEnergyFloor": 45,
+              "fatEnergyRatio": 0.2
+            }
+          },
+          "macroLimitations": [
+            {
+              "macro": "proteina",
+              "target": 57.6,
+              "actual": 56.01,
+              "deficit": 1.59
+            },
+            {
+              "macro": "grasas",
+              "target": 15.6,
+              "actual": 6.01,
+              "deficit": 9.59
+            }
+          ],
+          "exceededRecommendedPortions": [],
+          "invalidFoods": [],
+          "skippedFoods": [],
+          "allSelectedFoodsUsed": true,
+          "constraints": [
+            {
+              "foodId": "6619bfeb147cd50b64677809",
+              "name": "Pechuga de pollo",
+              "unit": "g",
+              "kind": "continuous",
+              "step": 5,
+              "recommendedMin": 100,
+              "recommendedMax": 350,
+              "recommendedStep": 5,
+              "minExplicit": true,
+              "maxExplicit": true,
+              "stepExplicit": true,
+              "minSource": "catalog.generation.portionRule.min",
+              "maxSource": "catalog.generation.portionRule.max",
+              "stepSource": "catalog.generation.portionRule.step",
+              "technicalMax": 350
+            },
+            {
+              "foodId": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "unit": "g",
+              "kind": "continuous",
+              "step": 5,
+              "recommendedMin": 80,
+              "recommendedMax": 200,
+              "recommendedStep": 5,
+              "minExplicit": true,
+              "maxExplicit": true,
+              "stepExplicit": true,
+              "minSource": "catalog.generation.portionRule.min",
+              "maxSource": "catalog.generation.portionRule.max",
+              "stepSource": "catalog.generation.portionRule.step",
+              "technicalMax": 200
+            },
+            {
+              "foodId": "6619bfeb147cd50b646776a8",
+              "name": "Banana",
+              "unit": "g",
+              "kind": "continuous",
+              "step": 10,
+              "recommendedMin": 80,
+              "recommendedMax": 250,
+              "recommendedStep": 10,
+              "minExplicit": true,
+              "maxExplicit": true,
+              "stepExplicit": true,
+              "minSource": "catalog.porcionMin",
+              "maxSource": "catalog.porcionMax",
+              "stepSource": "catalog.multiplo",
+              "technicalMax": 250
+            }
+          ],
+          "exactSmallSearch": {
+            "executed": true,
+            "evaluated": 1242,
+            "estimated": 3150
+          },
+          "iterations": 4017
+        },
+        "variant": {
+          "requested": false,
+          "applied": false
+        },
+        "recommended": false,
+        "usable": true,
+        "nutrition": {
+          "policy": "meal_generation_balanced_v1",
+          "status": "BEST_EFFORT",
+          "recommended": false,
+          "usable": true,
+          "target": {
+            "kcal": 776,
+            "proteina": 57.6,
+            "carbs": 94.6,
+            "grasas": 15.6
+          },
+          "totals": {
+            "kcal": 775.98,
+            "proteina": 56.01,
+            "carbs": 124.48,
+            "grasas": 6.01
+          },
+          "difference": {
+            "kcal": -0.02,
+            "proteina": -1.59,
+            "carbs": 29.88,
+            "grasas": -9.59
+          },
+          "absoluteDifference": {
+            "kcal": 0.02,
+            "proteina": 1.59,
+            "carbs": 29.88,
+            "grasas": 9.59
+          },
+          "zones": {
+            "calories": "EXCELLENT",
+            "protein": "EXCELLENT"
+          },
+          "proteinDistance": 1.59,
+          "proteinZoneRank": 0,
+          "macroEnergyDifference": {
+            "carbs": 119.52,
+            "grasas": 86.31
+          },
+          "macroEnergyTolerances": {
+            "carbs": 56.76,
+            "grasas": 45
+          },
+          "macrosWithinRange": {
+            "carbs": false,
+            "grasas": false
+          },
+          "secondaryEnergyError": 0.189982051,
+          "warning": {
+            "code": "MEAL_NUTRITION_BEST_EFFORT",
+            "category": "nutrition",
+            "severity": "warning",
+            "title": "Revisa esta alternativa",
+            "summary": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado.",
+            "message": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado. Carbohidratos: sobran 29.9 g Grasas: faltan 9.6 g",
+            "reasons": [
+              "Carbohidratos: sobran 29.9 g",
+              "Grasas: faltan 9.6 g"
+            ],
+            "reasonCodes": [
+              "CARBS_OUTSIDE_REASONABLE_RANGE",
+              "FAT_OUTSIDE_REASONABLE_RANGE"
+            ]
+          },
+          "thresholds": {
+            "calorieExcellent": 5,
+            "calorieAcceptable": 10,
+            "proteinExcellent": 2.5,
+            "proteinReasonable": 5,
+            "proteinRelevant": 10,
+            "carbEnergyFloor": 48,
+            "carbEnergyRatio": 0.15,
+            "fatEnergyFloor": 45,
+            "fatEnergyRatio": 0.2
+          }
+        },
+        "relaxation": {
+          "level": "RELAX_STEP",
+          "portionRulesRelaxed": true,
+          "exhausted": true
+        }
+      },
+      "alternatives": [
+        {
+          "status": "BEST_EFFORT",
+          "classification": "BEST_EFFORT",
+          "foods": [
+            {
+              "foodId": "6619bfeb147cd50b6467769c",
+              "name": "Arroz",
+              "role": null,
+              "quantity": 110,
+              "unit": "Grs",
+              "kcal": 372.35,
+              "proteina": 8.8,
+              "carbs": 83.05,
+              "grasas": 0.55,
+              "image": {
+                "exactaKey": "arroz",
+                "genericaKey": "arroz",
+                "urlExacta": "/images/foods/arroz.jpeg",
+                "urlGenerica": "/images/foods/arroz.jpeg",
+                "url": "/images/foods/arroz.jpeg",
+                "alt": "Arroz",
+                "estado": "exacta_o_generica",
+                "fuente": "local_front"
+              },
+              "imageUrl": "/images/foods/arroz.jpeg"
+            },
+            {
+              "foodId": "6619bfeb147cd50b646776a8",
+              "name": "Banana",
+              "role": null,
+              "quantity": 180,
+              "unit": "Grs",
+              "kcal": 160.38,
+              "proteina": 1.98,
+              "carbs": 36.9,
+              "grasas": 0.54,
+              "image": {
+                "exactaKey": "banana",
+                "genericaKey": "banana",
+                "urlExacta": "/images/foods/banana.jpeg",
+                "urlGenerica": "/images/foods/banana.jpeg",
+                "url": "/images/foods/banana.jpeg",
+                "alt": "Banana",
+                "estado": "exacta_o_generica",
+                "fuente": "local_front"
+              },
+              "imageUrl": "/images/foods/banana.jpeg"
+            },
+            {
+              "foodId": "6619bfeb147cd50b64677809",
+              "name": "Pechuga de pollo",
+              "role": null,
+              "quantity": 220,
+              "unit": "Grs",
+              "kcal": 243.1,
+              "proteina": 48.4,
+              "carbs": 0,
+              "grasas": 5.5,
+              "image": {
+                "exactaKey": "pechugadepollo",
+                "genericaKey": "pollo",
+                "urlExacta": "/images/foods/pechugadepollo.jpeg",
+                "urlGenerica": "/images/foods/pollo.jpeg",
+                "url": "/images/foods/pollo.jpeg",
+                "alt": "Pechuga de pollo",
+                "estado": "generica_por_defecto",
+                "fuente": "local_front"
+              },
+              "imageUrl": "/images/foods/pollo.jpeg"
+            }
+          ],
+          "totals": {
+            "kcal": 775.83,
+            "proteina": 59.18,
+            "carbs": 119.95,
+            "grasas": 6.59
+          },
+          "target": {
+            "kcal": 776,
+            "proteina": 57.6,
+            "carbs": 94.6,
+            "grasas": 15.6
+          },
+          "difference": {
+            "kcal": -0.17,
+            "proteina": 1.58,
+            "carbs": 25.35,
+            "grasas": -9.01
+          },
+          "structure": "RECALCULATE:6619bfeb147cd50b6467769c+6619bfeb147cd50b646776a8+6619bfeb147cd50b64677809",
+          "score": 99967.032685,
+          "warnings": [
+            {
+              "code": "MEAL_NUTRITION_BEST_EFFORT",
+              "category": "nutrition",
+              "severity": "warning",
+              "title": "Revisa esta alternativa",
+              "summary": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado.",
+              "message": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado. Carbohidratos: sobran 25.4 g Grasas: faltan 9 g",
+              "reasons": [
+                "Carbohidratos: sobran 25.4 g",
+                "Grasas: faltan 9 g"
+              ],
+              "reasonCodes": [
+                "CARBS_OUTSIDE_REASONABLE_RANGE",
+                "FAT_OUTSIDE_REASONABLE_RANGE"
+              ]
+            }
+          ],
+          "optimization": {
+            "profile": "meal_generation_balanced",
+            "policy": "meal_generation_balanced_v1",
+            "requestedMode": "calorie_fill",
+            "mode": "calorie_fill",
+            "calorieTarget": 776,
+            "calorieCeiling": 794.91,
+            "calorieCeilingSatisfied": true,
+            "calorieTolerance": 10,
+            "calorieEquivalentTolerance": 10,
+            "calorieDeficit": 0.17,
+            "calorieTargetCompleted": true,
+            "bestReachableCalories": 775.83,
+            "inCalorieZone": true,
+            "normalCalorieZoneReached": true,
+            "continuousFoodsAvailable": true,
+            "discreteOnly": false,
+            "discreteLimited": false,
+            "granularityLimited": false,
+            "proteinTargetActive": true,
+            "proteinReached": true,
+            "proteinDeficit": 0,
+            "macroScore": 0.405388,
+            "nutritionAssessment": {
+              "policy": "meal_generation_balanced_v1",
+              "status": "BEST_EFFORT",
+              "recommended": false,
+              "usable": true,
+              "target": {
+                "kcal": 776,
+                "proteina": 57.6,
+                "carbs": 94.6,
+                "grasas": 15.6
+              },
+              "totals": {
+                "kcal": 775.83,
+                "proteina": 59.18,
+                "carbs": 119.95,
+                "grasas": 6.59
+              },
+              "difference": {
+                "kcal": -0.17,
+                "proteina": 1.58,
+                "carbs": 25.35,
+                "grasas": -9.01
+              },
+              "absoluteDifference": {
+                "kcal": 0.17,
+                "proteina": 1.58,
+                "carbs": 25.35,
+                "grasas": 9.01
+              },
+              "zones": {
+                "calories": "EXCELLENT",
+                "protein": "EXCELLENT"
+              },
+              "proteinDistance": 1.58,
+              "proteinZoneRank": 0,
+              "macroEnergyDifference": {
+                "carbs": 101.4,
+                "grasas": 81.09
+              },
+              "macroEnergyTolerances": {
+                "carbs": 56.76,
+                "grasas": 45
+              },
+              "macrosWithinRange": {
+                "carbs": false,
+                "grasas": false
+              },
+              "secondaryEnergyError": 0.167315233,
+              "warning": {
+                "code": "MEAL_NUTRITION_BEST_EFFORT",
+                "category": "nutrition",
+                "severity": "warning",
+                "title": "Revisa esta alternativa",
+                "summary": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado.",
+                "message": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado. Carbohidratos: sobran 25.4 g Grasas: faltan 9 g",
+                "reasons": [
+                  "Carbohidratos: sobran 25.4 g",
+                  "Grasas: faltan 9 g"
+                ],
+                "reasonCodes": [
+                  "CARBS_OUTSIDE_REASONABLE_RANGE",
+                  "FAT_OUTSIDE_REASONABLE_RANGE"
+                ]
+              },
+              "thresholds": {
+                "calorieExcellent": 5,
+                "calorieAcceptable": 10,
+                "proteinExcellent": 2.5,
+                "proteinReasonable": 5,
+                "proteinRelevant": 10,
+                "carbEnergyFloor": 48,
+                "carbEnergyRatio": 0.15,
+                "fatEnergyFloor": 45,
+                "fatEnergyRatio": 0.2
+              }
+            },
+            "macroLimitations": [
+              {
+                "macro": "grasas",
+                "target": 15.6,
+                "actual": 6.59,
+                "deficit": 9.01
+              }
+            ],
+            "exceededRecommendedPortions": [],
+            "invalidFoods": [],
+            "skippedFoods": [],
+            "allSelectedFoodsUsed": true,
+            "constraints": [
+              {
+                "foodId": "6619bfeb147cd50b64677809",
+                "name": "Pechuga de pollo",
+                "unit": "g",
+                "kind": "continuous",
+                "step": 10,
+                "recommendedMin": 100,
+                "recommendedMax": 350,
+                "recommendedStep": 10,
+                "minExplicit": true,
+                "maxExplicit": true,
+                "stepExplicit": true,
+                "minSource": "catalog.generation.portionRule.min",
+                "maxSource": "catalog.generation.portionRule.max",
+                "stepSource": "catalog.generation.portionRule.step",
+                "technicalMax": 350
+              },
+              {
+                "foodId": "6619bfeb147cd50b6467769c",
+                "name": "Arroz",
+                "unit": "g",
+                "kind": "continuous",
+                "step": 10,
+                "recommendedMin": 80,
+                "recommendedMax": 200,
+                "recommendedStep": 10,
+                "minExplicit": true,
+                "maxExplicit": true,
+                "stepExplicit": true,
+                "minSource": "catalog.generation.portionRule.min",
+                "maxSource": "catalog.generation.portionRule.max",
+                "stepSource": "catalog.generation.portionRule.step",
+                "technicalMax": 200
+              },
+              {
+                "foodId": "6619bfeb147cd50b646776a8",
+                "name": "Banana",
+                "unit": "g",
+                "kind": "continuous",
+                "step": 10,
+                "recommendedMin": 80,
+                "recommendedMax": 250,
+                "recommendedStep": 10,
+                "minExplicit": true,
+                "maxExplicit": true,
+                "stepExplicit": true,
+                "minSource": "catalog.porcionMin",
+                "maxSource": "catalog.porcionMax",
+                "stepSource": "catalog.multiplo",
+                "technicalMax": 250
+              }
+            ],
+            "exactSmallSearch": {
+              "executed": true,
+              "evaluated": 364,
+              "estimated": 1170
+            },
+            "iterations": 1882
+          },
+          "variant": {
+            "requested": false,
+            "applied": false
+          },
+          "recommended": false,
+          "usable": true,
+          "nutrition": {
+            "policy": "meal_generation_balanced_v1",
+            "status": "BEST_EFFORT",
+            "recommended": false,
+            "usable": true,
+            "target": {
+              "kcal": 776,
+              "proteina": 57.6,
+              "carbs": 94.6,
+              "grasas": 15.6
+            },
+            "totals": {
+              "kcal": 775.83,
+              "proteina": 59.18,
+              "carbs": 119.95,
+              "grasas": 6.59
+            },
+            "difference": {
+              "kcal": -0.17,
+              "proteina": 1.58,
+              "carbs": 25.35,
+              "grasas": -9.01
+            },
+            "absoluteDifference": {
+              "kcal": 0.17,
+              "proteina": 1.58,
+              "carbs": 25.35,
+              "grasas": 9.01
+            },
+            "zones": {
+              "calories": "EXCELLENT",
+              "protein": "EXCELLENT"
+            },
+            "proteinDistance": 1.58,
+            "proteinZoneRank": 0,
+            "macroEnergyDifference": {
+              "carbs": 101.4,
+              "grasas": 81.09
+            },
+            "macroEnergyTolerances": {
+              "carbs": 56.76,
+              "grasas": 45
+            },
+            "macrosWithinRange": {
+              "carbs": false,
+              "grasas": false
+            },
+            "secondaryEnergyError": 0.167315233,
+            "warning": {
+              "code": "MEAL_NUTRITION_BEST_EFFORT",
+              "category": "nutrition",
+              "severity": "warning",
+              "title": "Revisa esta alternativa",
+              "summary": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado.",
+              "message": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado. Carbohidratos: sobran 25.4 g Grasas: faltan 9 g",
+              "reasons": [
+                "Carbohidratos: sobran 25.4 g",
+                "Grasas: faltan 9 g"
+              ],
+              "reasonCodes": [
+                "CARBS_OUTSIDE_REASONABLE_RANGE",
+                "FAT_OUTSIDE_REASONABLE_RANGE"
+              ]
+            },
+            "thresholds": {
+              "calorieExcellent": 5,
+              "calorieAcceptable": 10,
+              "proteinExcellent": 2.5,
+              "proteinReasonable": 5,
+              "proteinRelevant": 10,
+              "carbEnergyFloor": 48,
+              "carbEnergyRatio": 0.15,
+              "fatEnergyFloor": 45,
+              "fatEnergyRatio": 0.2
+            }
+          },
+          "relaxation": {
+            "level": "STRICT",
+            "portionRulesRelaxed": false,
+            "exhausted": true
+          }
+        }
+      ],
+      "meta": {
+        "structuresEvaluated": 1,
+        "mealType": "lunch",
+        "mode": "ONLY_SELECTED_FOODS",
+        "recalculation": true,
+        "fixedFoods": 0,
+        "variantSeed": null,
+        "variantPoolSize": 2,
+        "combinationCandidatesEvaluated": 1,
+        "totalCandidateExecutions": 3,
+        "quantitySolutionsFound": 3,
+        "recommendedSolutionsFound": 0,
+        "bestEffortSolutionsFound": 2,
+        "rounds": [
+          {
+            "level": "STRICT",
+            "candidatesProcessed": 1,
+            "quantitySolutionsFound": 1,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 35
+          },
+          {
+            "level": "RELAX_STEP",
+            "candidatesProcessed": 1,
+            "quantitySolutionsFound": 1,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 28
+          },
+          {
+            "level": "RELAX_MIN",
+            "candidatesProcessed": 1,
+            "quantitySolutionsFound": 1,
+            "recommendedSolutionsFound": 0,
+            "elapsedMs": 21
+          }
+        ],
+        "elapsedMs": 87
+      }
+    },
+    "engineHardConstraintViolations": [],
+    "snapshotQueries": {
+      "obtenerAlimentos": 1,
+      "obtenerAlimentosPorIds": 0,
+      "obtenerAlimentoPorId": 0,
+      "obtenerAlimentosGeneracionAutomatica": 0
+    }
+  },
+  "structureMatrix": {
+    "batches": {
+      "lunch": {
+        "candidateMeta": {
+          "mealType": "lunch",
+          "mode": "ALLOW_SUGGESTIONS",
+          "candidateCount": 32,
+          "candidatesGeneratedBeforeLimit": 1024,
+          "structuresGeneratedBeforeLimit": 16,
+          "structuresSelected": 8,
+          "selectionPolicy": "ranked_structural_frontier_v1",
+          "structuralRepresentativesSelected": 8,
+          "structuresEvaluated": 32
+        },
+        "structures": [
+          "P1+C1",
+          "P1+C1+P2",
+          "P1+C1+V",
+          "P1+C1+F",
+          "P1+C1+G",
+          "P1+C1+F+G",
+          "P1+C1+P2+F+G",
+          "P1+C1+P2+V+F+G"
+        ],
+        "roleCoverage": {
+          "P2": true,
+          "C2": false,
+          "V": true,
+          "F": true,
+          "G": true
+        }
+      },
+      "breakfast": {
+        "candidateMeta": {
+          "mealType": "breakfast",
+          "mode": "ALLOW_SUGGESTIONS",
+          "candidateCount": 32,
+          "candidatesGeneratedBeforeLimit": 1008,
+          "structuresGeneratedBeforeLimit": 16,
+          "structuresSelected": 8,
+          "selectionPolicy": "ranked_structural_frontier_v1",
+          "structuralRepresentativesSelected": 8,
+          "structuresEvaluated": 32
+        },
+        "structures": [
+          "P1+C1",
+          "P1+C1+P2",
+          "P1+C1+C2",
+          "P1+C1+F",
+          "P1+C1+G",
+          "P1+C1+C2+F",
+          "P1+C1+C2+F+G",
+          "P1+C1+P2+C2+F+G"
+        ],
+        "roleCoverage": {
+          "P2": true,
+          "C2": true,
+          "V": false,
+          "F": true,
+          "G": true
+        }
+      }
+    },
+    "entries": [
+      {
+        "mealType": "lunch",
+        "structure": "P1+C1",
+        "targetProfile": "low",
+        "target": {
+          "label": "low",
+          "kcal": 350,
+          "proteina": 25,
+          "carbs": 42,
+          "grasas": 10
+        },
+        "selectedFoods": [
+          {
+            "id": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "role": "C1"
+          },
+          {
+            "id": "6619bfeb147cd50b646776a4",
+            "name": "Atun en lomitos al natural",
+            "role": "P1"
+          }
+        ],
+        "elapsedMs": 23.71,
+        "status": "SUCCESS",
+        "classification": "BEST_EFFORT",
+        "recommended": false,
+        "usable": true,
+        "relaxation": {
+          "level": "RELAX_MIN",
+          "portionRulesRelaxed": true,
+          "exhausted": true
+        },
+        "totals": {
+          "kcal": 356.95,
+          "proteina": 35.6,
+          "carbs": 52.85,
+          "grasas": 0.35
+        },
+        "difference": {
+          "kcal": 6.95,
+          "proteina": 10.6,
+          "carbs": 10.85,
+          "grasas": -9.65
+        },
+        "reasons": [
+          "PROTEIN_ABOVE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "role": null,
+            "quantity": 70,
+            "unit": "Grs",
+            "kcal": 236.95,
+            "proteina": 5.6,
+            "carbs": 52.85,
+            "grasas": 0.35,
+            "image": {
+              "exactaKey": "arroz",
+              "genericaKey": "arroz",
+              "urlExacta": "/images/foods/arroz.jpeg",
+              "urlGenerica": "/images/foods/arroz.jpeg",
+              "url": "/images/foods/arroz.jpeg",
+              "alt": "Arroz",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/arroz.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776a4",
+            "name": "Atun en lomitos al natural",
+            "role": null,
+            "quantity": 1,
+            "unit": "Pote",
+            "kcal": 120,
+            "proteina": 30,
+            "carbs": 0,
+            "grasas": 0,
+            "image": {
+              "exactaKey": "atunenlomitosalnatural",
+              "genericaKey": "atun",
+              "urlExacta": "/images/foods/atunenlomitosalnatural.jpeg",
+              "urlGenerica": "/images/foods/atun.jpeg",
+              "url": "/images/foods/atun.jpeg",
+              "alt": "Atun en lomitos al natural",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/atun.jpeg"
+          }
+        ],
+        "hardConstraintViolations": [],
+        "snapshotQueries": {
+          "obtenerAlimentos": 1,
+          "obtenerAlimentosPorIds": 0,
+          "obtenerAlimentoPorId": 0,
+          "obtenerAlimentosGeneracionAutomatica": 0
+        }
+      },
+      {
+        "mealType": "lunch",
+        "structure": "P1+C1+F",
+        "targetProfile": "medium",
+        "target": {
+          "label": "medium",
+          "kcal": 620,
+          "proteina": 42,
+          "carbs": 72,
+          "grasas": 18
+        },
+        "selectedFoods": [
+          {
+            "id": "6619bfeb147cd50b64677698",
+            "name": "Anana",
+            "role": "F"
+          },
+          {
+            "id": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "role": "C1"
+          },
+          {
+            "id": "6619bfeb147cd50b646776a4",
+            "name": "Atun en lomitos al natural",
+            "role": "P1"
+          }
+        ],
+        "elapsedMs": 31.04,
+        "status": "SUCCESS",
+        "classification": "BEST_EFFORT",
+        "recommended": false,
+        "usable": true,
+        "relaxation": {
+          "level": "STRICT",
+          "portionRulesRelaxed": false,
+          "exhausted": true
+        },
+        "totals": {
+          "kcal": 619.85,
+          "proteina": 40.05,
+          "carbs": 108.05,
+          "grasas": 3.05
+        },
+        "difference": {
+          "kcal": -0.15,
+          "proteina": -1.95,
+          "carbs": 36.05,
+          "grasas": -14.95
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b64677698",
+            "name": "Anana",
+            "role": null,
+            "quantity": 250,
+            "unit": "Grs",
+            "kcal": 127.5,
+            "proteina": 1.25,
+            "carbs": 25,
+            "grasas": 2.5,
+            "image": {
+              "exactaKey": "anana",
+              "genericaKey": "anana",
+              "urlExacta": "/images/foods/anana.jpeg",
+              "urlGenerica": "/images/foods/anana.jpeg",
+              "url": "/images/foods/anana.jpeg",
+              "alt": "Anana",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/anana.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "role": null,
+            "quantity": 110,
+            "unit": "Grs",
+            "kcal": 372.35,
+            "proteina": 8.8,
+            "carbs": 83.05,
+            "grasas": 0.55,
+            "image": {
+              "exactaKey": "arroz",
+              "genericaKey": "arroz",
+              "urlExacta": "/images/foods/arroz.jpeg",
+              "urlGenerica": "/images/foods/arroz.jpeg",
+              "url": "/images/foods/arroz.jpeg",
+              "alt": "Arroz",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/arroz.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776a4",
+            "name": "Atun en lomitos al natural",
+            "role": null,
+            "quantity": 1,
+            "unit": "Pote",
+            "kcal": 120,
+            "proteina": 30,
+            "carbs": 0,
+            "grasas": 0,
+            "image": {
+              "exactaKey": "atunenlomitosalnatural",
+              "genericaKey": "atun",
+              "urlExacta": "/images/foods/atunenlomitosalnatural.jpeg",
+              "urlGenerica": "/images/foods/atun.jpeg",
+              "url": "/images/foods/atun.jpeg",
+              "alt": "Atun en lomitos al natural",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/atun.jpeg"
+          }
+        ],
+        "hardConstraintViolations": [],
+        "snapshotQueries": {
+          "obtenerAlimentos": 1,
+          "obtenerAlimentosPorIds": 0,
+          "obtenerAlimentoPorId": 0,
+          "obtenerAlimentosGeneracionAutomatica": 0
+        }
+      },
+      {
+        "mealType": "lunch",
+        "structure": "P1+C1+V",
+        "targetProfile": "high",
+        "target": {
+          "label": "high",
+          "kcal": 800,
+          "proteina": 60,
+          "carbs": 95,
+          "grasas": 24
+        },
+        "selectedFoods": [
+          {
+            "id": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "role": "C1"
+          },
+          {
+            "id": "6619bfeb147cd50b646776a4",
+            "name": "Atun en lomitos al natural",
+            "role": "P1"
+          },
+          {
+            "id": "6619bfeb147cd50b646776b3",
+            "name": "Berenjena",
+            "role": "V"
+          }
+        ],
+        "elapsedMs": 37.2,
+        "status": "SUCCESS",
+        "classification": "BEST_EFFORT",
+        "recommended": false,
+        "usable": true,
+        "relaxation": {
+          "level": "RELAX_STEP",
+          "portionRulesRelaxed": true,
+          "exhausted": true
+        },
+        "totals": {
+          "kcal": 799.96,
+          "proteina": 74.53,
+          "carbs": 122.53,
+          "grasas": 1.31
+        },
+        "difference": {
+          "kcal": -0.04,
+          "proteina": 14.53,
+          "carbs": 27.53,
+          "grasas": -22.69
+        },
+        "reasons": [
+          "PROTEIN_ABOVE_REASONABLE_RANGE",
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "role": null,
+            "quantity": 145,
+            "unit": "Grs",
+            "kcal": 490.83,
+            "proteina": 11.6,
+            "carbs": 109.48,
+            "grasas": 0.73,
+            "image": {
+              "exactaKey": "arroz",
+              "genericaKey": "arroz",
+              "urlExacta": "/images/foods/arroz.jpeg",
+              "urlGenerica": "/images/foods/arroz.jpeg",
+              "url": "/images/foods/arroz.jpeg",
+              "alt": "Arroz",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/arroz.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776a4",
+            "name": "Atun en lomitos al natural",
+            "role": null,
+            "quantity": 2,
+            "unit": "Pote",
+            "kcal": 240,
+            "proteina": 60,
+            "carbs": 0,
+            "grasas": 0,
+            "image": {
+              "exactaKey": "atunenlomitosalnatural",
+              "genericaKey": "atun",
+              "urlExacta": "/images/foods/atunenlomitosalnatural.jpeg",
+              "urlGenerica": "/images/foods/atun.jpeg",
+              "url": "/images/foods/atun.jpeg",
+              "alt": "Atun en lomitos al natural",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/atun.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776b3",
+            "name": "Berenjena",
+            "role": null,
+            "quantity": 290,
+            "unit": "Grs",
+            "kcal": 69.14,
+            "proteina": 2.93,
+            "carbs": 13.05,
+            "grasas": 0.58,
+            "image": {
+              "exactaKey": "berenjena",
+              "genericaKey": "berenjena",
+              "urlExacta": "/images/foods/berenjena.jpeg",
+              "urlGenerica": "/images/foods/berenjena.jpeg",
+              "url": "/images/foods/berenjena.jpeg",
+              "alt": "Berenjena",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/berenjena.jpeg"
+          }
+        ],
+        "hardConstraintViolations": [],
+        "snapshotQueries": {
+          "obtenerAlimentos": 1,
+          "obtenerAlimentosPorIds": 0,
+          "obtenerAlimentoPorId": 0,
+          "obtenerAlimentosGeneracionAutomatica": 0
+        }
+      },
+      {
+        "mealType": "lunch",
+        "structure": "P1+C1+G",
+        "targetProfile": "low",
+        "target": {
+          "label": "low",
+          "kcal": 350,
+          "proteina": 25,
+          "carbs": 42,
+          "grasas": 10
+        },
+        "selectedFoods": [
+          {
+            "id": "6619bfeb147cd50b64677676",
+            "name": "Aceite de coco",
+            "role": "G"
+          },
+          {
+            "id": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "role": "C1"
+          },
+          {
+            "id": "6619bfeb147cd50b646776a4",
+            "name": "Atun en lomitos al natural",
+            "role": "P1"
+          }
+        ],
+        "elapsedMs": 27.7,
+        "status": "SUCCESS",
+        "classification": "BEST_EFFORT",
+        "recommended": false,
+        "usable": true,
+        "relaxation": {
+          "level": "RELAX_MIN",
+          "portionRulesRelaxed": true,
+          "exhausted": true
+        },
+        "totals": {
+          "kcal": 368.06,
+          "proteina": 34.8,
+          "carbs": 45.3,
+          "grasas": 5.3
+        },
+        "difference": {
+          "kcal": 18.06,
+          "proteina": 9.8,
+          "carbs": 3.3,
+          "grasas": -4.7
+        },
+        "reasons": [
+          "CALORIES_OUTSIDE_ACCEPTABLE_RANGE",
+          "PROTEIN_ABOVE_REASONABLE_RANGE"
+        ],
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b64677676",
+            "name": "Aceite de coco",
+            "role": null,
+            "quantity": 5,
+            "unit": "Grs",
+            "kcal": 44.96,
+            "proteina": 0,
+            "carbs": 0,
+            "grasas": 5,
+            "image": {
+              "exactaKey": "aceitedecoco",
+              "genericaKey": "aceitedecoco",
+              "urlExacta": "/images/foods/aceitedecoco.jpeg",
+              "urlGenerica": "/images/foods/aceitedecoco.jpeg",
+              "url": "/images/foods/aceitedecoco.jpeg",
+              "alt": "Aceite de coco",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/aceitedecoco.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "role": null,
+            "quantity": 60,
+            "unit": "Grs",
+            "kcal": 203.1,
+            "proteina": 4.8,
+            "carbs": 45.3,
+            "grasas": 0.3,
+            "image": {
+              "exactaKey": "arroz",
+              "genericaKey": "arroz",
+              "urlExacta": "/images/foods/arroz.jpeg",
+              "urlGenerica": "/images/foods/arroz.jpeg",
+              "url": "/images/foods/arroz.jpeg",
+              "alt": "Arroz",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/arroz.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776a4",
+            "name": "Atun en lomitos al natural",
+            "role": null,
+            "quantity": 1,
+            "unit": "Pote",
+            "kcal": 120,
+            "proteina": 30,
+            "carbs": 0,
+            "grasas": 0,
+            "image": {
+              "exactaKey": "atunenlomitosalnatural",
+              "genericaKey": "atun",
+              "urlExacta": "/images/foods/atunenlomitosalnatural.jpeg",
+              "urlGenerica": "/images/foods/atun.jpeg",
+              "url": "/images/foods/atun.jpeg",
+              "alt": "Atun en lomitos al natural",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/atun.jpeg"
+          }
+        ],
+        "hardConstraintViolations": [],
+        "snapshotQueries": {
+          "obtenerAlimentos": 1,
+          "obtenerAlimentosPorIds": 0,
+          "obtenerAlimentoPorId": 0,
+          "obtenerAlimentosGeneracionAutomatica": 0
+        }
+      },
+      {
+        "mealType": "lunch",
+        "structure": "P1+C1+F+G",
+        "targetProfile": "medium",
+        "target": {
+          "label": "medium",
+          "kcal": 620,
+          "proteina": 42,
+          "carbs": 72,
+          "grasas": 18
+        },
+        "selectedFoods": [
+          {
+            "id": "6619bfeb147cd50b64677676",
+            "name": "Aceite de coco",
+            "role": "G"
+          },
+          {
+            "id": "6619bfeb147cd50b64677698",
+            "name": "Anana",
+            "role": "F"
+          },
+          {
+            "id": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "role": "C1"
+          },
+          {
+            "id": "6619bfeb147cd50b646776a4",
+            "name": "Atun en lomitos al natural",
+            "role": "P1"
+          }
+        ],
+        "elapsedMs": 16.43,
+        "status": "SUCCESS",
+        "classification": "RECOMMENDED",
+        "recommended": true,
+        "usable": true,
+        "relaxation": {
+          "level": "STRICT",
+          "portionRulesRelaxed": false
+        },
+        "totals": {
+          "kcal": 620.71,
+          "proteina": 37.8,
+          "carbs": 79.95,
+          "grasas": 16.63
+        },
+        "difference": {
+          "kcal": 0.71,
+          "proteina": -4.2,
+          "carbs": 7.95,
+          "grasas": -1.37
+        },
+        "reasons": [],
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b64677676",
+            "name": "Aceite de coco",
+            "role": null,
+            "quantity": 15,
+            "unit": "Grs",
+            "kcal": 134.87,
+            "proteina": 0,
+            "carbs": 0,
+            "grasas": 14.99,
+            "image": {
+              "exactaKey": "aceitedecoco",
+              "genericaKey": "aceitedecoco",
+              "urlExacta": "/images/foods/aceitedecoco.jpeg",
+              "urlGenerica": "/images/foods/aceitedecoco.jpeg",
+              "url": "/images/foods/aceitedecoco.jpeg",
+              "alt": "Aceite de coco",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/aceitedecoco.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b64677698",
+            "name": "Anana",
+            "role": null,
+            "quantity": 120,
+            "unit": "Grs",
+            "kcal": 61.2,
+            "proteina": 0.6,
+            "carbs": 12,
+            "grasas": 1.2,
+            "image": {
+              "exactaKey": "anana",
+              "genericaKey": "anana",
+              "urlExacta": "/images/foods/anana.jpeg",
+              "urlGenerica": "/images/foods/anana.jpeg",
+              "url": "/images/foods/anana.jpeg",
+              "alt": "Anana",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/anana.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "role": null,
+            "quantity": 90,
+            "unit": "Grs",
+            "kcal": 304.65,
+            "proteina": 7.2,
+            "carbs": 67.95,
+            "grasas": 0.45,
+            "image": {
+              "exactaKey": "arroz",
+              "genericaKey": "arroz",
+              "urlExacta": "/images/foods/arroz.jpeg",
+              "urlGenerica": "/images/foods/arroz.jpeg",
+              "url": "/images/foods/arroz.jpeg",
+              "alt": "Arroz",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/arroz.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776a4",
+            "name": "Atun en lomitos al natural",
+            "role": null,
+            "quantity": 1,
+            "unit": "Pote",
+            "kcal": 120,
+            "proteina": 30,
+            "carbs": 0,
+            "grasas": 0,
+            "image": {
+              "exactaKey": "atunenlomitosalnatural",
+              "genericaKey": "atun",
+              "urlExacta": "/images/foods/atunenlomitosalnatural.jpeg",
+              "urlGenerica": "/images/foods/atun.jpeg",
+              "url": "/images/foods/atun.jpeg",
+              "alt": "Atun en lomitos al natural",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/atun.jpeg"
+          }
+        ],
+        "hardConstraintViolations": [],
+        "snapshotQueries": {
+          "obtenerAlimentos": 1,
+          "obtenerAlimentosPorIds": 0,
+          "obtenerAlimentoPorId": 0,
+          "obtenerAlimentosGeneracionAutomatica": 0
+        }
+      },
+      {
+        "mealType": "lunch",
+        "structure": "P1+C1+P2",
+        "targetProfile": "high",
+        "target": {
+          "label": "high",
+          "kcal": 800,
+          "proteina": 60,
+          "carbs": 95,
+          "grasas": 24
+        },
+        "selectedFoods": [
+          {
+            "id": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "role": "C1"
+          },
+          {
+            "id": "6619bfeb147cd50b646776a4",
+            "name": "Atun en lomitos al natural",
+            "role": "P1"
+          },
+          {
+            "id": "6619bfeb147cd50b646776e8",
+            "name": "Claras de huevos",
+            "role": "P2"
+          }
+        ],
+        "elapsedMs": 37.48,
+        "status": "SUCCESS",
+        "classification": "BEST_EFFORT",
+        "recommended": false,
+        "usable": true,
+        "relaxation": {
+          "level": "STRICT",
+          "portionRulesRelaxed": false,
+          "exhausted": true
+        },
+        "totals": {
+          "kcal": 807.8,
+          "proteina": 61.9,
+          "carbs": 136.9,
+          "grasas": 1.4
+        },
+        "difference": {
+          "kcal": 7.8,
+          "proteina": 1.9,
+          "carbs": 41.9,
+          "grasas": -22.6
+        },
+        "reasons": [
+          "CARBS_OUTSIDE_REASONABLE_RANGE",
+          "FAT_OUTSIDE_REASONABLE_RANGE"
+        ],
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "role": null,
+            "quantity": 180,
+            "unit": "Grs",
+            "kcal": 609.3,
+            "proteina": 14.4,
+            "carbs": 135.9,
+            "grasas": 0.9,
+            "image": {
+              "exactaKey": "arroz",
+              "genericaKey": "arroz",
+              "urlExacta": "/images/foods/arroz.jpeg",
+              "urlGenerica": "/images/foods/arroz.jpeg",
+              "url": "/images/foods/arroz.jpeg",
+              "alt": "Arroz",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/arroz.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776a4",
+            "name": "Atun en lomitos al natural",
+            "role": null,
+            "quantity": 1,
+            "unit": "Pote",
+            "kcal": 120,
+            "proteina": 30,
+            "carbs": 0,
+            "grasas": 0,
+            "image": {
+              "exactaKey": "atunenlomitosalnatural",
+              "genericaKey": "atun",
+              "urlExacta": "/images/foods/atunenlomitosalnatural.jpeg",
+              "urlGenerica": "/images/foods/atun.jpeg",
+              "url": "/images/foods/atun.jpeg",
+              "alt": "Atun en lomitos al natural",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/atun.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776e8",
+            "name": "Claras de huevos",
+            "role": null,
+            "quantity": 5,
+            "unit": "Unid",
+            "kcal": 78.5,
+            "proteina": 17.5,
+            "carbs": 1,
+            "grasas": 0.5,
+            "image": {
+              "exactaKey": "clarasdehuevos",
+              "genericaKey": "clarashuevos",
+              "urlExacta": "/images/foods/clarasdehuevos.jpeg",
+              "urlGenerica": "/images/foods/clarashuevos.jpeg",
+              "url": "/images/foods/clarashuevos.jpeg",
+              "alt": "Claras de huevos",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/clarashuevos.jpeg"
+          }
+        ],
+        "hardConstraintViolations": [],
+        "snapshotQueries": {
+          "obtenerAlimentos": 1,
+          "obtenerAlimentosPorIds": 0,
+          "obtenerAlimentoPorId": 0,
+          "obtenerAlimentosGeneracionAutomatica": 0
+        }
+      },
+      {
+        "mealType": "breakfast",
+        "structure": "P1+C1+C2",
+        "targetProfile": "low",
+        "target": {
+          "label": "low",
+          "kcal": 350,
+          "proteina": 25,
+          "carbs": 42,
+          "grasas": 10
+        },
+        "selectedFoods": [
+          {
+            "id": "6619bfeb147cd50b646776a6",
+            "name": "Avena instantanea",
+            "role": "C1"
+          },
+          {
+            "id": "6619bfeb147cd50b646776e8",
+            "name": "Claras de huevos",
+            "role": "P1"
+          },
+          {
+            "id": "6619bfeb147cd50b646776ed",
+            "name": "Copos de maiz sin azucar",
+            "role": "C2"
+          }
+        ],
+        "elapsedMs": 15.62,
+        "status": "SUCCESS",
+        "classification": "RECOMMENDED",
+        "recommended": true,
+        "usable": true,
+        "relaxation": {
+          "level": "STRICT",
+          "portionRulesRelaxed": false
+        },
+        "totals": {
+          "kcal": 346.34,
+          "proteina": 23.12,
+          "carbs": 51.54,
+          "grasas": 5.3
+        },
+        "difference": {
+          "kcal": -3.66,
+          "proteina": -1.88,
+          "carbs": 9.54,
+          "grasas": -4.7
+        },
+        "reasons": [],
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b646776a6",
+            "name": "Avena instantanea",
+            "role": null,
+            "quantity": 60,
+            "unit": "Grs",
+            "kcal": 211.2,
+            "proteina": 7.8,
+            "carbs": 34.2,
+            "grasas": 4.8,
+            "image": {
+              "exactaKey": "avenainstantanea",
+              "genericaKey": "avenainstantanea",
+              "urlExacta": "/images/foods/avenainstantanea.jpeg",
+              "urlGenerica": "/images/foods/avenainstantanea.jpeg",
+              "url": "/images/foods/avenainstantanea.jpeg",
+              "alt": "Avena instantanea",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/avenainstantanea.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776e8",
+            "name": "Claras de huevos",
+            "role": null,
+            "quantity": 4,
+            "unit": "Unid",
+            "kcal": 62.8,
+            "proteina": 14,
+            "carbs": 0.8,
+            "grasas": 0.4,
+            "image": {
+              "exactaKey": "clarasdehuevos",
+              "genericaKey": "clarashuevos",
+              "urlExacta": "/images/foods/clarasdehuevos.jpeg",
+              "urlGenerica": "/images/foods/clarashuevos.jpeg",
+              "url": "/images/foods/clarashuevos.jpeg",
+              "alt": "Claras de huevos",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/clarashuevos.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776ed",
+            "name": "Copos de maiz sin azucar",
+            "role": null,
+            "quantity": 20,
+            "unit": "Grs",
+            "kcal": 72.34,
+            "proteina": 1.32,
+            "carbs": 16.54,
+            "grasas": 0.1,
+            "image": {
+              "exactaKey": "coposdemaizsinazucar",
+              "genericaKey": "coposmaizsinazucar",
+              "urlExacta": "/images/foods/coposdemaizsinazucar.jpeg",
+              "urlGenerica": "/images/foods/coposmaizsinazucar.jpeg",
+              "url": "/images/foods/coposmaizsinazucar.jpeg",
+              "alt": "Copos de maiz sin azucar",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/coposmaizsinazucar.jpeg"
+          }
+        ],
+        "hardConstraintViolations": [],
+        "snapshotQueries": {
+          "obtenerAlimentos": 1,
+          "obtenerAlimentosPorIds": 0,
+          "obtenerAlimentoPorId": 0,
+          "obtenerAlimentosGeneracionAutomatica": 0
+        }
+      },
+      {
+        "mealType": "breakfast",
+        "structure": "P1+C1+P2+C2+F+G",
+        "targetProfile": "medium",
+        "target": {
+          "label": "medium",
+          "kcal": 620,
+          "proteina": 42,
+          "carbs": 72,
+          "grasas": 18
+        },
+        "selectedFoods": [
+          {
+            "id": "6619bfeb147cd50b64677696",
+            "name": "Almendras",
+            "role": "G"
+          },
+          {
+            "id": "6619bfeb147cd50b64677698",
+            "name": "Anana",
+            "role": "F"
+          },
+          {
+            "id": "6619bfeb147cd50b646776a6",
+            "name": "Avena instantanea",
+            "role": "C1"
+          },
+          {
+            "id": "6619bfeb147cd50b646776e8",
+            "name": "Claras de huevos",
+            "role": "P1"
+          },
+          {
+            "id": "6619bfeb147cd50b646776ed",
+            "name": "Copos de maiz sin azucar",
+            "role": "C2"
+          },
+          {
+            "id": "6619bfeb147cd50b64677755",
+            "name": "Huevos",
+            "role": "P2"
+          }
+        ],
+        "elapsedMs": 19.61,
+        "status": "SUCCESS",
+        "classification": "RECOMMENDED",
+        "recommended": true,
+        "usable": true,
+        "relaxation": {
+          "level": "STRICT",
+          "portionRulesRelaxed": false
+        },
+        "totals": {
+          "kcal": 619.89,
+          "proteina": 40.53,
+          "carbs": 65.15,
+          "grasas": 21.91
+        },
+        "difference": {
+          "kcal": -0.11,
+          "proteina": -1.47,
+          "carbs": -6.85,
+          "grasas": 3.91
+        },
+        "reasons": [],
+        "foods": [
+          {
+            "foodId": "6619bfeb147cd50b64677696",
+            "name": "Almendras",
+            "role": null,
+            "quantity": 1,
+            "unit": "Unid",
+            "kcal": 7.15,
+            "proteina": 0.26,
+            "carbs": 0.16,
+            "grasas": 0.61,
+            "image": {
+              "exactaKey": "almendras",
+              "genericaKey": "almendras",
+              "urlExacta": "/images/foods/almendras.jpeg",
+              "urlGenerica": "/images/foods/almendras.jpeg",
+              "url": "/images/foods/almendras.jpeg",
+              "alt": "Almendras",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/almendras.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b64677698",
+            "name": "Anana",
+            "role": null,
+            "quantity": 220,
+            "unit": "Grs",
+            "kcal": 112.2,
+            "proteina": 1.1,
+            "carbs": 22,
+            "grasas": 2.2,
+            "image": {
+              "exactaKey": "anana",
+              "genericaKey": "anana",
+              "urlExacta": "/images/foods/anana.jpeg",
+              "urlGenerica": "/images/foods/anana.jpeg",
+              "url": "/images/foods/anana.jpeg",
+              "alt": "Anana",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/anana.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776a6",
+            "name": "Avena instantanea",
+            "role": null,
+            "quantity": 45,
+            "unit": "Grs",
+            "kcal": 158.4,
+            "proteina": 5.85,
+            "carbs": 25.65,
+            "grasas": 3.6,
+            "image": {
+              "exactaKey": "avenainstantanea",
+              "genericaKey": "avenainstantanea",
+              "urlExacta": "/images/foods/avenainstantanea.jpeg",
+              "urlGenerica": "/images/foods/avenainstantanea.jpeg",
+              "url": "/images/foods/avenainstantanea.jpeg",
+              "alt": "Avena instantanea",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/avenainstantanea.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776e8",
+            "name": "Claras de huevos",
+            "role": null,
+            "quantity": 4,
+            "unit": "Unid",
+            "kcal": 62.8,
+            "proteina": 14,
+            "carbs": 0.8,
+            "grasas": 0.4,
+            "image": {
+              "exactaKey": "clarasdehuevos",
+              "genericaKey": "clarashuevos",
+              "urlExacta": "/images/foods/clarasdehuevos.jpeg",
+              "urlGenerica": "/images/foods/clarashuevos.jpeg",
+              "url": "/images/foods/clarashuevos.jpeg",
+              "alt": "Claras de huevos",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/clarashuevos.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b646776ed",
+            "name": "Copos de maiz sin azucar",
+            "role": null,
+            "quantity": 20,
+            "unit": "Grs",
+            "kcal": 72.34,
+            "proteina": 1.32,
+            "carbs": 16.54,
+            "grasas": 0.1,
+            "image": {
+              "exactaKey": "coposdemaizsinazucar",
+              "genericaKey": "coposmaizsinazucar",
+              "urlExacta": "/images/foods/coposdemaizsinazucar.jpeg",
+              "urlGenerica": "/images/foods/coposmaizsinazucar.jpeg",
+              "url": "/images/foods/coposmaizsinazucar.jpeg",
+              "alt": "Copos de maiz sin azucar",
+              "estado": "generica_por_defecto",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/coposmaizsinazucar.jpeg"
+          },
+          {
+            "foodId": "6619bfeb147cd50b64677755",
+            "name": "Huevos",
+            "role": null,
+            "quantity": 3,
+            "unit": "Unid",
+            "kcal": 207,
+            "proteina": 18,
+            "carbs": 0,
+            "grasas": 15,
+            "image": {
+              "exactaKey": "huevos",
+              "genericaKey": "huevos",
+              "urlExacta": "/images/foods/huevos.jpeg",
+              "urlGenerica": "/images/foods/huevos.jpeg",
+              "url": "/images/foods/huevos.jpeg",
+              "alt": "Huevos",
+              "estado": "exacta_o_generica",
+              "fuente": "local_front"
+            },
+            "imageUrl": "/images/foods/huevos.jpeg"
+          }
+        ],
+        "hardConstraintViolations": [],
+        "snapshotQueries": {
+          "obtenerAlimentos": 1,
+          "obtenerAlimentosPorIds": 0,
+          "obtenerAlimentoPorId": 0,
+          "obtenerAlimentosGeneracionAutomatica": 0
+        }
+      }
+    ]
+  }
+}

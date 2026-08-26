@@ -1,0 +1,1719 @@
+{
+  "generatedAt": "2026-08-25T20:31:45.786Z",
+  "mode": "read-only central nutrition contract audit",
+  "safety": {
+    "documentsBefore": 574,
+    "documentsAfter": 574,
+    "directMongoReads": 2,
+    "directMongoWrites": 0,
+    "catalogFingerprintBefore": "b979ad885318581c20b3bb0855bde38f2ec7f2ae77ddca2c7d3ef82f3f86fe3e",
+    "catalogFingerprintAfter": "b979ad885318581c20b3bb0855bde38f2ec7f2ae77ddca2c7d3ef82f3f86fe3e",
+    "generationFingerprintBefore": "e80d0a9b7455a65f9caa5cc6c512eec4254bd43165cce58fe6f3cfcb0d7dc386",
+    "generationFingerprintAfter": "e80d0a9b7455a65f9caa5cc6c512eec4254bd43165cce58fe6f3cfcb0d7dc386",
+    "databaseUnchanged": true
+  },
+  "catalogCoverage": {
+    "documents": 574,
+    "persistedGeneration": 191,
+    "modes": {
+      "GENERIC": 191,
+      "EXPLICIT_ONLY": 383
+    },
+    "genericRoles": {
+      "P1": 29,
+      "P2": 43,
+      "C1": 50,
+      "C2": 26,
+      "V": 12,
+      "F": 43,
+      "G": 28
+    },
+    "genericMealTypes": {
+      "breakfast": 126,
+      "lunch": 121,
+      "snack": 126,
+      "dinner": 121,
+      "extraSnack": 125
+    },
+    "explicitWithAtLeastOneRole": 0,
+    "genericMl": 0,
+    "genericDiscrete": 43
+  },
+  "policyCases": [
+    {
+      "id": "policy-protein-band-wins",
+      "input": {
+        "target": {
+          "kcal": 776,
+          "proteina": 57.6,
+          "carbs": 94.6,
+          "grasas": 15.6
+        },
+        "a": {
+          "kcal": 775,
+          "proteina": 65,
+          "carbs": 94.6,
+          "grasas": 15.6
+        },
+        "b": {
+          "kcal": 770,
+          "proteina": 59,
+          "carbs": 94.6,
+          "grasas": 15.6
+        }
+      },
+      "expectedWinner": "B",
+      "status": "PASS",
+      "winner": "B",
+      "assessmentA": {
+        "policy": "meal_generation_balanced_v1",
+        "status": "BEST_EFFORT",
+        "recommended": false,
+        "usable": true,
+        "target": {
+          "kcal": 776,
+          "proteina": 57.6,
+          "carbs": 94.6,
+          "grasas": 15.6
+        },
+        "totals": {
+          "kcal": 775,
+          "proteina": 65,
+          "carbs": 94.6,
+          "grasas": 15.6
+        },
+        "difference": {
+          "kcal": -1,
+          "proteina": 7.4,
+          "carbs": 0,
+          "grasas": 0
+        },
+        "absoluteDifference": {
+          "kcal": 1,
+          "proteina": 7.4,
+          "carbs": 0,
+          "grasas": 0
+        },
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "DEVIATED"
+        },
+        "proteinDistance": 7.4,
+        "proteinZoneRank": 2,
+        "macroEnergyDifference": {
+          "carbs": 0,
+          "grasas": 0
+        },
+        "macroEnergyTolerances": {
+          "carbs": 56.76,
+          "grasas": 45
+        },
+        "macrosWithinRange": {
+          "carbs": true,
+          "grasas": true
+        },
+        "secondaryEnergyError": 0,
+        "warning": {
+          "code": "MEAL_NUTRITION_BEST_EFFORT",
+          "category": "nutrition",
+          "severity": "warning",
+          "title": "Revisa esta alternativa",
+          "summary": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado.",
+          "message": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado. Proteina: sobran 7.4 g",
+          "reasons": [
+            "Proteina: sobran 7.4 g"
+          ],
+          "reasonCodes": [
+            "PROTEIN_ABOVE_REASONABLE_RANGE"
+          ]
+        },
+        "thresholds": {
+          "calorieExcellent": 5,
+          "calorieAcceptable": 10,
+          "proteinExcellent": 2.5,
+          "proteinReasonable": 5,
+          "proteinRelevant": 10,
+          "carbEnergyFloor": 48,
+          "carbEnergyRatio": 0.15,
+          "fatEnergyFloor": 45,
+          "fatEnergyRatio": 0.2
+        }
+      },
+      "assessmentB": {
+        "policy": "meal_generation_balanced_v1",
+        "status": "RECOMMENDED",
+        "recommended": true,
+        "usable": true,
+        "target": {
+          "kcal": 776,
+          "proteina": 57.6,
+          "carbs": 94.6,
+          "grasas": 15.6
+        },
+        "totals": {
+          "kcal": 770,
+          "proteina": 59,
+          "carbs": 94.6,
+          "grasas": 15.6
+        },
+        "difference": {
+          "kcal": -6,
+          "proteina": 1.4,
+          "carbs": 0,
+          "grasas": 0
+        },
+        "absoluteDifference": {
+          "kcal": 6,
+          "proteina": 1.4,
+          "carbs": 0,
+          "grasas": 0
+        },
+        "zones": {
+          "calories": "ACCEPTABLE",
+          "protein": "EXCELLENT"
+        },
+        "proteinDistance": 1.4,
+        "proteinZoneRank": 0,
+        "macroEnergyDifference": {
+          "carbs": 0,
+          "grasas": 0
+        },
+        "macroEnergyTolerances": {
+          "carbs": 56.76,
+          "grasas": 45
+        },
+        "macrosWithinRange": {
+          "carbs": true,
+          "grasas": true
+        },
+        "secondaryEnergyError": 0,
+        "warning": null,
+        "thresholds": {
+          "calorieExcellent": 5,
+          "calorieAcceptable": 10,
+          "proteinExcellent": 2.5,
+          "proteinReasonable": 5,
+          "proteinRelevant": 10,
+          "carbEnergyFloor": 48,
+          "carbEnergyRatio": 0.15,
+          "fatEnergyFloor": 45,
+          "fatEnergyRatio": 0.2
+        }
+      }
+    },
+    {
+      "id": "policy-kcal-wins-same-protein-band",
+      "input": {
+        "target": {
+          "kcal": 776,
+          "proteina": 57.6,
+          "carbs": 94.6,
+          "grasas": 15.6
+        },
+        "a": {
+          "kcal": 775,
+          "proteina": 58.5,
+          "carbs": 94.6,
+          "grasas": 15.6
+        },
+        "b": {
+          "kcal": 770,
+          "proteina": 58,
+          "carbs": 94.6,
+          "grasas": 15.6
+        }
+      },
+      "expectedWinner": "A",
+      "status": "PASS",
+      "winner": "A",
+      "assessmentA": {
+        "policy": "meal_generation_balanced_v1",
+        "status": "RECOMMENDED",
+        "recommended": true,
+        "usable": true,
+        "target": {
+          "kcal": 776,
+          "proteina": 57.6,
+          "carbs": 94.6,
+          "grasas": 15.6
+        },
+        "totals": {
+          "kcal": 775,
+          "proteina": 58.5,
+          "carbs": 94.6,
+          "grasas": 15.6
+        },
+        "difference": {
+          "kcal": -1,
+          "proteina": 0.9,
+          "carbs": 0,
+          "grasas": 0
+        },
+        "absoluteDifference": {
+          "kcal": 1,
+          "proteina": 0.9,
+          "carbs": 0,
+          "grasas": 0
+        },
+        "zones": {
+          "calories": "EXCELLENT",
+          "protein": "EXCELLENT"
+        },
+        "proteinDistance": 0.9,
+        "proteinZoneRank": 0,
+        "macroEnergyDifference": {
+          "carbs": 0,
+          "grasas": 0
+        },
+        "macroEnergyTolerances": {
+          "carbs": 56.76,
+          "grasas": 45
+        },
+        "macrosWithinRange": {
+          "carbs": true,
+          "grasas": true
+        },
+        "secondaryEnergyError": 0,
+        "warning": null,
+        "thresholds": {
+          "calorieExcellent": 5,
+          "calorieAcceptable": 10,
+          "proteinExcellent": 2.5,
+          "proteinReasonable": 5,
+          "proteinRelevant": 10,
+          "carbEnergyFloor": 48,
+          "carbEnergyRatio": 0.15,
+          "fatEnergyFloor": 45,
+          "fatEnergyRatio": 0.2
+        }
+      },
+      "assessmentB": {
+        "policy": "meal_generation_balanced_v1",
+        "status": "RECOMMENDED",
+        "recommended": true,
+        "usable": true,
+        "target": {
+          "kcal": 776,
+          "proteina": 57.6,
+          "carbs": 94.6,
+          "grasas": 15.6
+        },
+        "totals": {
+          "kcal": 770,
+          "proteina": 58,
+          "carbs": 94.6,
+          "grasas": 15.6
+        },
+        "difference": {
+          "kcal": -6,
+          "proteina": 0.4,
+          "carbs": 0,
+          "grasas": 0
+        },
+        "absoluteDifference": {
+          "kcal": 6,
+          "proteina": 0.4,
+          "carbs": 0,
+          "grasas": 0
+        },
+        "zones": {
+          "calories": "ACCEPTABLE",
+          "protein": "EXCELLENT"
+        },
+        "proteinDistance": 0.4,
+        "proteinZoneRank": 0,
+        "macroEnergyDifference": {
+          "carbs": 0,
+          "grasas": 0
+        },
+        "macroEnergyTolerances": {
+          "carbs": 56.76,
+          "grasas": 45
+        },
+        "macrosWithinRange": {
+          "carbs": true,
+          "grasas": true
+        },
+        "secondaryEnergyError": 0,
+        "warning": null,
+        "thresholds": {
+          "calorieExcellent": 5,
+          "calorieAcceptable": 10,
+          "proteinExcellent": 2.5,
+          "proteinReasonable": 5,
+          "proteinRelevant": 10,
+          "carbEnergyFloor": 48,
+          "carbEnergyRatio": 0.15,
+          "fatEnergyFloor": 45,
+          "fatEnergyRatio": 0.2
+        }
+      }
+    }
+  ],
+  "warningConsistency": {
+    "status": "BEST_EFFORT",
+    "caloriesZone": "EXCELLENT",
+    "summary": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado.",
+    "reasonCodes": [
+      "PROTEIN_ABOVE_REASONABLE_RANGE",
+      "CARBS_OUTSIDE_REASONABLE_RANGE"
+    ],
+    "falselyClaimsCaloriesMissing": false
+  },
+  "structureCoverage": [
+    {
+      "mealType": "breakfast",
+      "candidates": 32,
+      "uniqueStructures": 8,
+      "availableRoles": {
+        "P2": true,
+        "C2": true,
+        "V": false,
+        "F": true,
+        "G": true
+      },
+      "roles": {
+        "P2": true,
+        "C2": true,
+        "V": false,
+        "F": true,
+        "G": true
+      },
+      "meta": {
+        "mealType": "breakfast",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 32,
+        "candidatesGeneratedBeforeLimit": 1008,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresSelected": 8,
+        "selectionPolicy": "ranked_structural_frontier_v1",
+        "structuralRepresentativesSelected": 8,
+        "structuresEvaluated": 32
+      }
+    },
+    {
+      "mealType": "lunch",
+      "candidates": 32,
+      "uniqueStructures": 8,
+      "availableRoles": {
+        "P2": true,
+        "C2": false,
+        "V": true,
+        "F": true,
+        "G": true
+      },
+      "roles": {
+        "P2": true,
+        "C2": false,
+        "V": true,
+        "F": true,
+        "G": true
+      },
+      "meta": {
+        "mealType": "lunch",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 32,
+        "candidatesGeneratedBeforeLimit": 1024,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresSelected": 8,
+        "selectionPolicy": "ranked_structural_frontier_v1",
+        "structuralRepresentativesSelected": 8,
+        "structuresEvaluated": 32
+      }
+    },
+    {
+      "mealType": "snack",
+      "candidates": 32,
+      "uniqueStructures": 8,
+      "availableRoles": {
+        "P2": true,
+        "C2": true,
+        "V": false,
+        "F": true,
+        "G": true
+      },
+      "roles": {
+        "P2": true,
+        "C2": true,
+        "V": false,
+        "F": true,
+        "G": true
+      },
+      "meta": {
+        "mealType": "snack",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 32,
+        "candidatesGeneratedBeforeLimit": 1008,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresSelected": 8,
+        "selectionPolicy": "ranked_structural_frontier_v1",
+        "structuralRepresentativesSelected": 8,
+        "structuresEvaluated": 32
+      }
+    },
+    {
+      "mealType": "dinner",
+      "candidates": 32,
+      "uniqueStructures": 8,
+      "availableRoles": {
+        "P2": true,
+        "C2": false,
+        "V": true,
+        "F": true,
+        "G": true
+      },
+      "roles": {
+        "P2": true,
+        "C2": false,
+        "V": true,
+        "F": true,
+        "G": true
+      },
+      "meta": {
+        "mealType": "dinner",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 32,
+        "candidatesGeneratedBeforeLimit": 1024,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresSelected": 8,
+        "selectionPolicy": "ranked_structural_frontier_v1",
+        "structuralRepresentativesSelected": 8,
+        "structuresEvaluated": 32
+      }
+    },
+    {
+      "mealType": "extraSnack",
+      "candidates": 32,
+      "uniqueStructures": 8,
+      "availableRoles": {
+        "P2": true,
+        "C2": true,
+        "V": false,
+        "F": true,
+        "G": true
+      },
+      "roles": {
+        "P2": true,
+        "C2": true,
+        "V": false,
+        "F": true,
+        "G": true
+      },
+      "meta": {
+        "mealType": "extraSnack",
+        "mode": "ALLOW_SUGGESTIONS",
+        "candidateCount": 32,
+        "candidatesGeneratedBeforeLimit": 1008,
+        "structuresGeneratedBeforeLimit": 16,
+        "structuresSelected": 8,
+        "selectionPolicy": "ranked_structural_frontier_v1",
+        "structuralRepresentativesSelected": 8,
+        "structuresEvaluated": 32
+      }
+    }
+  ],
+  "cases": [
+    {
+      "id": "real-only-selected-three-foods",
+      "intent": "ONLY_SELECTED real conserva exactamente Arroz+Banana+Pechuga y devuelve la mejor solución física",
+      "status": "PASS",
+      "failures": [],
+      "elapsedMs": 102.05,
+      "result": {
+        "status": "SUCCESS",
+        "classification": "BEST_EFFORT",
+        "code": null,
+        "recommended": false,
+        "usable": true,
+        "relaxation": {
+          "level": "STRICT",
+          "portionRulesRelaxed": false,
+          "exhausted": true
+        },
+        "totals": {
+          "kcal": 775.83,
+          "proteina": 59.18,
+          "carbs": 119.95,
+          "grasas": 6.59
+        },
+        "difference": {
+          "kcal": -0.17,
+          "proteina": 1.58,
+          "carbs": 25.35,
+          "grasas": -9.01
+        },
+        "warning": {
+          "code": "MEAL_NUTRITION_BEST_EFFORT",
+          "category": "nutrition",
+          "severity": "warning",
+          "title": "Revisa esta alternativa",
+          "summary": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado.",
+          "message": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado. Carbohidratos: sobran 25.4 g Grasas: faltan 9 g",
+          "reasons": [
+            "Carbohidratos: sobran 25.4 g",
+            "Grasas: faltan 9 g"
+          ],
+          "reasonCodes": [
+            "CARBS_OUTSIDE_REASONABLE_RANGE",
+            "FAT_OUTSIDE_REASONABLE_RANGE"
+          ]
+        },
+        "foods": [
+          {
+            "id": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "quantity": 110,
+            "unit": "Grs",
+            "role": "C1"
+          },
+          {
+            "id": "6619bfeb147cd50b646776a8",
+            "name": "Banana",
+            "quantity": 180,
+            "unit": "Grs",
+            "role": "F"
+          },
+          {
+            "id": "6619bfeb147cd50b64677809",
+            "name": "Pechuga de pollo",
+            "quantity": 220,
+            "unit": "Grs",
+            "role": "P1"
+          }
+        ],
+        "meta": {
+          "structuresEvaluated": 32,
+          "mealType": "lunch",
+          "mode": "ONLY_SELECTED_FOODS",
+          "variantSeed": "central-audit-real-selected",
+          "variantPoolSize": 2,
+          "combinationCandidatesEvaluated": 1,
+          "totalCandidateExecutions": 3,
+          "quantitySolutionsFound": 3,
+          "recommendedSolutionsFound": 0,
+          "bestEffortSolutionsFound": 2,
+          "rounds": [
+            {
+              "level": "STRICT",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 47
+            },
+            {
+              "level": "RELAX_STEP",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 27
+            },
+            {
+              "level": "RELAX_MIN",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 23
+            }
+          ],
+          "elapsedMs": 102
+        }
+      }
+    },
+    {
+      "id": "real-locks-0",
+      "intent": "0 locks reales; cada cantidad fija debe conservarse exacta",
+      "status": "PASS",
+      "failures": [],
+      "elapsedMs": 53.71,
+      "result": {
+        "status": "SUCCESS",
+        "classification": "BEST_EFFORT",
+        "code": null,
+        "recommended": false,
+        "usable": true,
+        "relaxation": {
+          "level": "RELAX_STEP",
+          "portionRulesRelaxed": true,
+          "exhausted": true
+        },
+        "totals": {
+          "kcal": 775.98,
+          "proteina": 56.01,
+          "carbs": 124.48,
+          "grasas": 6.01
+        },
+        "difference": {
+          "kcal": -0.02,
+          "proteina": -1.59,
+          "carbs": 29.88,
+          "grasas": -9.59
+        },
+        "warning": {
+          "code": "MEAL_NUTRITION_BEST_EFFORT",
+          "category": "nutrition",
+          "severity": "warning",
+          "title": "Revisa esta alternativa",
+          "summary": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado.",
+          "message": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado. Carbohidratos: sobran 29.9 g Grasas: faltan 9.6 g",
+          "reasons": [
+            "Carbohidratos: sobran 29.9 g",
+            "Grasas: faltan 9.6 g"
+          ],
+          "reasonCodes": [
+            "CARBS_OUTSIDE_REASONABLE_RANGE",
+            "FAT_OUTSIDE_REASONABLE_RANGE"
+          ]
+        },
+        "foods": [
+          {
+            "id": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "quantity": 135,
+            "unit": "Grs",
+            "role": null
+          },
+          {
+            "id": "6619bfeb147cd50b646776a8",
+            "name": "Banana",
+            "quantity": 110,
+            "unit": "Grs",
+            "role": null
+          },
+          {
+            "id": "6619bfeb147cd50b64677809",
+            "name": "Pechuga de pollo",
+            "quantity": 200,
+            "unit": "Grs",
+            "role": null
+          }
+        ],
+        "meta": {
+          "structuresEvaluated": 1,
+          "mealType": "lunch",
+          "mode": "ONLY_SELECTED_FOODS",
+          "recalculation": true,
+          "fixedFoods": 0,
+          "variantSeed": null,
+          "variantPoolSize": 2,
+          "combinationCandidatesEvaluated": 1,
+          "totalCandidateExecutions": 3,
+          "quantitySolutionsFound": 3,
+          "recommendedSolutionsFound": 0,
+          "bestEffortSolutionsFound": 2,
+          "rounds": [
+            {
+              "level": "STRICT",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 13
+            },
+            {
+              "level": "RELAX_STEP",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 19
+            },
+            {
+              "level": "RELAX_MIN",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 20
+            }
+          ],
+          "elapsedMs": 53
+        }
+      }
+    },
+    {
+      "id": "real-locks-1",
+      "intent": "1 locks reales; cada cantidad fija debe conservarse exacta",
+      "status": "PASS",
+      "failures": [],
+      "elapsedMs": 29.08,
+      "result": {
+        "status": "SUCCESS",
+        "classification": "BEST_EFFORT",
+        "code": null,
+        "recommended": false,
+        "usable": true,
+        "relaxation": {
+          "level": "RELAX_STEP",
+          "portionRulesRelaxed": true,
+          "exhausted": true
+        },
+        "totals": {
+          "kcal": 776.03,
+          "proteina": 64.8,
+          "carbs": 112.73,
+          "grasas": 7.32
+        },
+        "difference": {
+          "kcal": 0.03,
+          "proteina": 7.2,
+          "carbs": 18.13,
+          "grasas": -8.28
+        },
+        "warning": {
+          "code": "MEAL_NUTRITION_BEST_EFFORT",
+          "category": "nutrition",
+          "severity": "warning",
+          "title": "Revisa esta alternativa",
+          "summary": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado.",
+          "message": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado. Proteina: sobran 7.2 g Carbohidratos: sobran 18.1 g Grasas: faltan 8.3 g",
+          "reasons": [
+            "Proteina: sobran 7.2 g",
+            "Carbohidratos: sobran 18.1 g",
+            "Grasas: faltan 8.3 g"
+          ],
+          "reasonCodes": [
+            "PROTEIN_ABOVE_REASONABLE_RANGE",
+            "CARBS_OUTSIDE_REASONABLE_RANGE",
+            "FAT_OUTSIDE_REASONABLE_RANGE"
+          ]
+        },
+        "foods": [
+          {
+            "id": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "quantity": 95,
+            "unit": "Grs",
+            "role": null
+          },
+          {
+            "id": "6619bfeb147cd50b646776a8",
+            "name": "Banana",
+            "quantity": 200,
+            "unit": "Grs",
+            "role": null
+          },
+          {
+            "id": "6619bfeb147cd50b64677809",
+            "name": "Pechuga de pollo",
+            "quantity": 250,
+            "unit": "Grs",
+            "role": null
+          }
+        ],
+        "meta": {
+          "structuresEvaluated": 1,
+          "mealType": "lunch",
+          "mode": "ONLY_SELECTED_FOODS",
+          "recalculation": true,
+          "fixedFoods": 1,
+          "variantSeed": null,
+          "variantPoolSize": 2,
+          "combinationCandidatesEvaluated": 1,
+          "totalCandidateExecutions": 3,
+          "quantitySolutionsFound": 3,
+          "recommendedSolutionsFound": 0,
+          "bestEffortSolutionsFound": 2,
+          "rounds": [
+            {
+              "level": "STRICT",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 11
+            },
+            {
+              "level": "RELAX_STEP",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 8
+            },
+            {
+              "level": "RELAX_MIN",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 8
+            }
+          ],
+          "elapsedMs": 29
+        }
+      }
+    },
+    {
+      "id": "real-locks-2",
+      "intent": "2 locks reales; cada cantidad fija debe conservarse exacta",
+      "status": "PASS",
+      "failures": [],
+      "elapsedMs": 28.66,
+      "result": {
+        "status": "SUCCESS",
+        "classification": "BEST_EFFORT",
+        "code": null,
+        "recommended": false,
+        "usable": true,
+        "relaxation": {
+          "level": "STRICT",
+          "portionRulesRelaxed": false,
+          "exhausted": true
+        },
+        "totals": {
+          "kcal": 775.13,
+          "proteina": 64.98,
+          "carbs": 112.4,
+          "grasas": 7.29
+        },
+        "difference": {
+          "kcal": -0.87,
+          "proteina": 7.38,
+          "carbs": 17.8,
+          "grasas": -8.31
+        },
+        "warning": {
+          "code": "MEAL_NUTRITION_BEST_EFFORT",
+          "category": "nutrition",
+          "severity": "warning",
+          "title": "Revisa esta alternativa",
+          "summary": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado.",
+          "message": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado. Proteina: sobran 7.4 g Carbohidratos: sobran 17.8 g Grasas: faltan 8.3 g",
+          "reasons": [
+            "Proteina: sobran 7.4 g",
+            "Carbohidratos: sobran 17.8 g",
+            "Grasas: faltan 8.3 g"
+          ],
+          "reasonCodes": [
+            "PROTEIN_ABOVE_REASONABLE_RANGE",
+            "CARBS_OUTSIDE_REASONABLE_RANGE",
+            "FAT_OUTSIDE_REASONABLE_RANGE"
+          ]
+        },
+        "foods": [
+          {
+            "id": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "quantity": 100,
+            "unit": "Grs",
+            "role": null
+          },
+          {
+            "id": "6619bfeb147cd50b646776a8",
+            "name": "Banana",
+            "quantity": 180,
+            "unit": "Grs",
+            "role": null
+          },
+          {
+            "id": "6619bfeb147cd50b64677809",
+            "name": "Pechuga de pollo",
+            "quantity": 250,
+            "unit": "Grs",
+            "role": null
+          }
+        ],
+        "meta": {
+          "structuresEvaluated": 1,
+          "mealType": "lunch",
+          "mode": "ONLY_SELECTED_FOODS",
+          "recalculation": true,
+          "fixedFoods": 2,
+          "variantSeed": null,
+          "variantPoolSize": 1,
+          "combinationCandidatesEvaluated": 1,
+          "totalCandidateExecutions": 3,
+          "quantitySolutionsFound": 3,
+          "recommendedSolutionsFound": 0,
+          "bestEffortSolutionsFound": 1,
+          "rounds": [
+            {
+              "level": "STRICT",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 10
+            },
+            {
+              "level": "RELAX_STEP",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 9
+            },
+            {
+              "level": "RELAX_MIN",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 9
+            }
+          ],
+          "elapsedMs": 28
+        }
+      }
+    },
+    {
+      "id": "real-locks-all",
+      "intent": "3 locks reales; cada cantidad fija debe conservarse exacta",
+      "status": "PASS",
+      "failures": [],
+      "elapsedMs": 4.82,
+      "result": {
+        "status": "SUCCESS",
+        "classification": "BEST_EFFORT",
+        "code": null,
+        "recommended": false,
+        "usable": true,
+        "relaxation": {
+          "level": "STRICT",
+          "portionRulesRelaxed": false,
+          "exhausted": true
+        },
+        "totals": {
+          "kcal": 775.13,
+          "proteina": 64.98,
+          "carbs": 112.4,
+          "grasas": 7.29
+        },
+        "difference": {
+          "kcal": -0.87,
+          "proteina": 7.38,
+          "carbs": 17.8,
+          "grasas": -8.31
+        },
+        "warning": {
+          "code": "MEAL_NUTRITION_BEST_EFFORT",
+          "category": "nutrition",
+          "severity": "warning",
+          "title": "Revisa esta alternativa",
+          "summary": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado.",
+          "message": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado. Proteina: sobran 7.4 g Carbohidratos: sobran 17.8 g Grasas: faltan 8.3 g",
+          "reasons": [
+            "Proteina: sobran 7.4 g",
+            "Carbohidratos: sobran 17.8 g",
+            "Grasas: faltan 8.3 g"
+          ],
+          "reasonCodes": [
+            "PROTEIN_ABOVE_REASONABLE_RANGE",
+            "CARBS_OUTSIDE_REASONABLE_RANGE",
+            "FAT_OUTSIDE_REASONABLE_RANGE"
+          ]
+        },
+        "foods": [
+          {
+            "id": "6619bfeb147cd50b6467769c",
+            "name": "Arroz",
+            "quantity": 100,
+            "unit": "Grs",
+            "role": null
+          },
+          {
+            "id": "6619bfeb147cd50b646776a8",
+            "name": "Banana",
+            "quantity": 180,
+            "unit": "Grs",
+            "role": null
+          },
+          {
+            "id": "6619bfeb147cd50b64677809",
+            "name": "Pechuga de pollo",
+            "quantity": 250,
+            "unit": "Grs",
+            "role": null
+          }
+        ],
+        "meta": {
+          "structuresEvaluated": 1,
+          "mealType": "lunch",
+          "mode": "ONLY_SELECTED_FOODS",
+          "recalculation": true,
+          "fixedFoods": 3,
+          "variantSeed": null,
+          "variantPoolSize": 1,
+          "combinationCandidatesEvaluated": 1,
+          "totalCandidateExecutions": 3,
+          "quantitySolutionsFound": 3,
+          "recommendedSolutionsFound": 0,
+          "bestEffortSolutionsFound": 1,
+          "rounds": [
+            {
+              "level": "STRICT",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 1
+            },
+            {
+              "level": "RELAX_STEP",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 2
+            },
+            {
+              "level": "RELAX_MIN",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 1
+            }
+          ],
+          "elapsedMs": 5
+        }
+      }
+    },
+    {
+      "id": "real-max-hard",
+      "intent": "Arroz real locked en 250 g excede max=200 y debe quedar NO_SOLUTION sin corrección silenciosa",
+      "status": "PASS",
+      "failures": [],
+      "elapsedMs": 2.6,
+      "result": {
+        "status": "NO_SOLUTION",
+        "classification": "NO_SOLUTION",
+        "code": "MEAL_TARGET_NOT_REACHABLE_WITH_PORTION_RULES",
+        "recommended": false,
+        "usable": false,
+        "relaxation": {
+          "level": "RELAX_MIN",
+          "portionRulesRelaxed": true,
+          "exhausted": true
+        },
+        "totals": null,
+        "difference": null,
+        "warning": null,
+        "foods": [],
+        "meta": {
+          "structuresEvaluated": 1,
+          "mealType": "lunch",
+          "mode": "ONLY_SELECTED_FOODS",
+          "recalculation": true,
+          "fixedFoods": 1,
+          "combinationCandidatesEvaluated": 1,
+          "totalCandidateExecutions": 3,
+          "quantitySolutionsFound": 0,
+          "recommendedSolutionsFound": 0,
+          "bestEffortSolutionsFound": 0,
+          "rounds": [
+            {
+              "level": "STRICT",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 0,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 1
+            },
+            {
+              "level": "RELAX_STEP",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 0,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 1
+            },
+            {
+              "level": "RELAX_MIN",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 0,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 1
+            }
+          ],
+          "elapsedMs": 3
+        }
+      }
+    },
+    {
+      "id": "round-strict",
+      "intent": "La primera ronda capaz de recomendar debe ser STRICT; MAX permanece intacto",
+      "status": "PASS",
+      "failures": [],
+      "elapsedMs": 1.91,
+      "result": {
+        "status": "SUCCESS",
+        "classification": "RECOMMENDED",
+        "code": null,
+        "recommended": true,
+        "usable": true,
+        "relaxation": {
+          "level": "STRICT",
+          "portionRulesRelaxed": false
+        },
+        "totals": {
+          "kcal": 200,
+          "proteina": 30,
+          "carbs": 20,
+          "grasas": 0
+        },
+        "difference": {
+          "kcal": 0,
+          "proteina": 0,
+          "carbs": 0,
+          "grasas": 0
+        },
+        "warning": null,
+        "foods": [
+          {
+            "id": "strict-chicken",
+            "name": "Pollo strict",
+            "quantity": 100,
+            "unit": "g",
+            "role": "P1"
+          },
+          {
+            "id": "strict-rice",
+            "name": "Arroz strict",
+            "quantity": 100,
+            "unit": "g",
+            "role": "C1"
+          }
+        ],
+        "meta": {
+          "structuresEvaluated": 32,
+          "mealType": "lunch",
+          "mode": "ONLY_SELECTED_FOODS",
+          "variantSeed": null,
+          "variantPoolSize": 1,
+          "combinationCandidatesEvaluated": 1,
+          "totalCandidateExecutions": 1,
+          "quantitySolutionsFound": 1,
+          "recommendedSolutionsFound": 1,
+          "bestEffortSolutionsFound": 0,
+          "rounds": [
+            {
+              "level": "STRICT",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 1,
+              "elapsedMs": 2
+            }
+          ],
+          "elapsedMs": 2
+        }
+      }
+    },
+    {
+      "id": "round-relax-step",
+      "intent": "La primera ronda capaz de recomendar debe ser RELAX_STEP; MAX permanece intacto",
+      "status": "PASS",
+      "failures": [],
+      "elapsedMs": 1.44,
+      "result": {
+        "status": "SUCCESS",
+        "classification": "RECOMMENDED",
+        "code": null,
+        "recommended": true,
+        "usable": true,
+        "relaxation": {
+          "level": "RELAX_STEP",
+          "portionRulesRelaxed": true
+        },
+        "totals": {
+          "kcal": 185,
+          "proteina": 105,
+          "carbs": 0,
+          "grasas": 0
+        },
+        "difference": {
+          "kcal": 0,
+          "proteina": -0.1,
+          "carbs": 0,
+          "grasas": 0
+        },
+        "warning": null,
+        "foods": [
+          {
+            "id": "step-chicken",
+            "name": "Pollo step",
+            "quantity": 105,
+            "unit": "g",
+            "role": "P1"
+          },
+          {
+            "id": "step-rice",
+            "name": "Arroz step",
+            "quantity": 80,
+            "unit": "g",
+            "role": "C1"
+          }
+        ],
+        "meta": {
+          "structuresEvaluated": 32,
+          "mealType": "lunch",
+          "mode": "ONLY_SELECTED_FOODS",
+          "variantSeed": null,
+          "variantPoolSize": 1,
+          "combinationCandidatesEvaluated": 1,
+          "totalCandidateExecutions": 2,
+          "quantitySolutionsFound": 2,
+          "recommendedSolutionsFound": 1,
+          "bestEffortSolutionsFound": 0,
+          "rounds": [
+            {
+              "level": "STRICT",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 1
+            },
+            {
+              "level": "RELAX_STEP",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 1,
+              "elapsedMs": 0
+            }
+          ],
+          "elapsedMs": 1
+        }
+      }
+    },
+    {
+      "id": "round-relax-min",
+      "intent": "La primera ronda capaz de recomendar debe ser RELAX_MIN; MAX permanece intacto",
+      "status": "PASS",
+      "failures": [],
+      "elapsedMs": 3.42,
+      "result": {
+        "status": "SUCCESS",
+        "classification": "RECOMMENDED",
+        "code": null,
+        "recommended": true,
+        "usable": true,
+        "relaxation": {
+          "level": "RELAX_MIN",
+          "portionRulesRelaxed": true
+        },
+        "totals": {
+          "kcal": 165,
+          "proteina": 26.5,
+          "carbs": 13,
+          "grasas": 0
+        },
+        "difference": {
+          "kcal": 0,
+          "proteina": 0,
+          "carbs": 0,
+          "grasas": 0
+        },
+        "warning": null,
+        "foods": [
+          {
+            "id": "min-chicken",
+            "name": "Pollo min",
+            "quantity": 100,
+            "unit": "g",
+            "role": "P1"
+          },
+          {
+            "id": "min-rice",
+            "name": "Arroz min",
+            "quantity": 65,
+            "unit": "g",
+            "role": "C1"
+          }
+        ],
+        "meta": {
+          "structuresEvaluated": 32,
+          "mealType": "lunch",
+          "mode": "ONLY_SELECTED_FOODS",
+          "variantSeed": null,
+          "variantPoolSize": 1,
+          "combinationCandidatesEvaluated": 1,
+          "totalCandidateExecutions": 3,
+          "quantitySolutionsFound": 3,
+          "recommendedSolutionsFound": 1,
+          "bestEffortSolutionsFound": 0,
+          "rounds": [
+            {
+              "level": "STRICT",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 0
+            },
+            {
+              "level": "RELAX_STEP",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 1
+            },
+            {
+              "level": "RELAX_MIN",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 1,
+              "elapsedMs": 2
+            }
+          ],
+          "elapsedMs": 4
+        }
+      }
+    },
+    {
+      "id": "minimum-discrete-overshoot",
+      "intent": "Mínimos físicos fuerzan +20 kcal: BEST_EFFORT usable, no falso NO_SOLUTION",
+      "status": "PASS",
+      "failures": [],
+      "elapsedMs": 2.67,
+      "result": {
+        "status": "SUCCESS",
+        "classification": "BEST_EFFORT",
+        "code": null,
+        "recommended": false,
+        "usable": true,
+        "relaxation": {
+          "level": "STRICT",
+          "portionRulesRelaxed": false,
+          "exhausted": true
+        },
+        "totals": {
+          "kcal": 120,
+          "proteina": 10,
+          "carbs": 20,
+          "grasas": 0
+        },
+        "difference": {
+          "kcal": 20,
+          "proteina": 0,
+          "carbs": 0,
+          "grasas": 0
+        },
+        "warning": {
+          "code": "MEAL_NUTRITION_BEST_EFFORT",
+          "category": "nutrition",
+          "severity": "warning",
+          "title": "Revisa esta alternativa",
+          "summary": "La mejor opcion queda a 20 kcal de la meta.",
+          "message": "La mejor opcion queda a 20 kcal de la meta. Calorias: sobran 20 kcal",
+          "reasons": [
+            "Calorias: sobran 20 kcal"
+          ],
+          "reasonCodes": [
+            "CALORIES_OUTSIDE_ACCEPTABLE_RANGE"
+          ]
+        },
+        "foods": [
+          {
+            "id": "overshoot-carb",
+            "name": "Carbo mínimo discreto",
+            "quantity": 1,
+            "unit": "unidad",
+            "role": "C1"
+          },
+          {
+            "id": "overshoot-protein",
+            "name": "Proteína mínima discreta",
+            "quantity": 1,
+            "unit": "unidad",
+            "role": "P1"
+          }
+        ],
+        "meta": {
+          "structuresEvaluated": 32,
+          "mealType": "lunch",
+          "mode": "ONLY_SELECTED_FOODS",
+          "variantSeed": null,
+          "variantPoolSize": 1,
+          "combinationCandidatesEvaluated": 1,
+          "totalCandidateExecutions": 3,
+          "quantitySolutionsFound": 3,
+          "recommendedSolutionsFound": 0,
+          "bestEffortSolutionsFound": 1,
+          "rounds": [
+            {
+              "level": "STRICT",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 1
+            },
+            {
+              "level": "RELAX_STEP",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 1
+            },
+            {
+              "level": "RELAX_MIN",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 0
+            }
+          ],
+          "elapsedMs": 2
+        }
+      }
+    },
+    {
+      "id": "discrete-next-step",
+      "intent": "Una unidad discreta elige 120 antes que 60 para target 100",
+      "status": "PASS",
+      "failures": [],
+      "elapsedMs": 1.7,
+      "result": {
+        "status": "SUCCESS",
+        "classification": "BEST_EFFORT",
+        "code": null,
+        "recommended": false,
+        "usable": true,
+        "relaxation": {
+          "level": "STRICT",
+          "portionRulesRelaxed": false,
+          "exhausted": true
+        },
+        "totals": {
+          "kcal": 120,
+          "proteina": 0,
+          "carbs": 0,
+          "grasas": 0
+        },
+        "difference": {
+          "kcal": 20,
+          "proteina": 0,
+          "carbs": 0,
+          "grasas": 0
+        },
+        "warning": {
+          "code": "MEAL_NUTRITION_BEST_EFFORT",
+          "category": "nutrition",
+          "severity": "warning",
+          "title": "Revisa esta alternativa",
+          "summary": "La mejor opcion queda a 20 kcal de la meta.",
+          "message": "La mejor opcion queda a 20 kcal de la meta. Calorias: sobran 20 kcal",
+          "reasons": [
+            "Calorias: sobran 20 kcal"
+          ],
+          "reasonCodes": [
+            "CALORIES_OUTSIDE_ACCEPTABLE_RANGE"
+          ]
+        },
+        "foods": [
+          {
+            "id": "discrete-60",
+            "name": "Unidad de 60 kcal",
+            "quantity": 2,
+            "unit": "unidad",
+            "role": null
+          }
+        ],
+        "meta": {
+          "structuresEvaluated": 1,
+          "mealType": "lunch",
+          "mode": "ONLY_SELECTED_FOODS",
+          "recalculation": true,
+          "fixedFoods": 0,
+          "variantSeed": null,
+          "variantPoolSize": 1,
+          "combinationCandidatesEvaluated": 1,
+          "totalCandidateExecutions": 3,
+          "quantitySolutionsFound": 3,
+          "recommendedSolutionsFound": 0,
+          "bestEffortSolutionsFound": 1,
+          "rounds": [
+            {
+              "level": "STRICT",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 0
+            },
+            {
+              "level": "RELAX_STEP",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 1
+            },
+            {
+              "level": "RELAX_MIN",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 0
+            }
+          ],
+          "elapsedMs": 2
+        }
+      }
+    },
+    {
+      "id": "milliliter-step",
+      "intent": "Unidad ml continua respeta min/max/step",
+      "status": "PASS",
+      "failures": [],
+      "elapsedMs": 0.59,
+      "result": {
+        "status": "SUCCESS",
+        "classification": "RECOMMENDED",
+        "code": null,
+        "recommended": true,
+        "usable": true,
+        "relaxation": {
+          "level": "STRICT",
+          "portionRulesRelaxed": false
+        },
+        "totals": {
+          "kcal": 150,
+          "proteina": 15,
+          "carbs": 0,
+          "grasas": 0
+        },
+        "difference": {
+          "kcal": 0,
+          "proteina": 0,
+          "carbs": 0,
+          "grasas": 0
+        },
+        "warning": null,
+        "foods": [
+          {
+            "id": "liquid-ml",
+            "name": "Líquido ml",
+            "quantity": 150,
+            "unit": "ml",
+            "role": null
+          }
+        ],
+        "meta": {
+          "structuresEvaluated": 1,
+          "mealType": "lunch",
+          "mode": "ONLY_SELECTED_FOODS",
+          "recalculation": true,
+          "fixedFoods": 0,
+          "variantSeed": null,
+          "variantPoolSize": 1,
+          "combinationCandidatesEvaluated": 1,
+          "totalCandidateExecutions": 1,
+          "quantitySolutionsFound": 1,
+          "recommendedSolutionsFound": 1,
+          "bestEffortSolutionsFound": 0,
+          "rounds": [
+            {
+              "level": "STRICT",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 1,
+              "elapsedMs": 1
+            }
+          ],
+          "elapsedMs": 1
+        }
+      }
+    },
+    {
+      "id": "explicit-only-configured-selected",
+      "intent": "EXPLICIT_ONLY con rol configurado entra cuando se selecciona explícitamente",
+      "status": "PASS",
+      "failures": [],
+      "elapsedMs": 4.58,
+      "result": {
+        "status": "SUCCESS",
+        "classification": "BEST_EFFORT",
+        "code": null,
+        "recommended": false,
+        "usable": true,
+        "relaxation": {
+          "level": "RELAX_STEP",
+          "portionRulesRelaxed": true,
+          "exhausted": true
+        },
+        "totals": {
+          "kcal": 600.5,
+          "proteina": 47.25,
+          "carbs": 87.5,
+          "grasas": 0
+        },
+        "difference": {
+          "kcal": 0.5,
+          "proteina": 2.25,
+          "carbs": 12.5,
+          "grasas": -10
+        },
+        "warning": {
+          "code": "MEAL_NUTRITION_BEST_EFFORT",
+          "category": "nutrition",
+          "severity": "warning",
+          "title": "Revisa esta alternativa",
+          "summary": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado.",
+          "message": "Las calorias estan alineadas, pero el reparto de macros queda desbalanceado. Carbohidratos: sobran 12.5 g Grasas: faltan 10 g",
+          "reasons": [
+            "Carbohidratos: sobran 12.5 g",
+            "Grasas: faltan 10 g"
+          ],
+          "reasonCodes": [
+            "CARBS_OUTSIDE_REASONABLE_RANGE",
+            "FAT_OUTSIDE_REASONABLE_RANGE"
+          ]
+        },
+        "foods": [
+          {
+            "id": "explicit-protein",
+            "name": "Proteína explicit",
+            "quantity": 205,
+            "unit": "g",
+            "role": "P1"
+          },
+          {
+            "id": "generic-carb",
+            "name": "Carbo generic",
+            "quantity": 125,
+            "unit": "g",
+            "role": "C1"
+          }
+        ],
+        "meta": {
+          "structuresEvaluated": 32,
+          "mealType": "lunch",
+          "mode": "ONLY_SELECTED_FOODS",
+          "variantSeed": null,
+          "variantPoolSize": 2,
+          "combinationCandidatesEvaluated": 1,
+          "totalCandidateExecutions": 3,
+          "quantitySolutionsFound": 3,
+          "recommendedSolutionsFound": 0,
+          "bestEffortSolutionsFound": 2,
+          "rounds": [
+            {
+              "level": "STRICT",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 1
+            },
+            {
+              "level": "RELAX_STEP",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 2
+            },
+            {
+              "level": "RELAX_MIN",
+              "candidatesProcessed": 1,
+              "quantitySolutionsFound": 1,
+              "recommendedSolutionsFound": 0,
+              "elapsedMs": 1
+            }
+          ],
+          "elapsedMs": 4
+        }
+      }
+    },
+    {
+      "id": "disabled-hard-block",
+      "intent": "DISABLED nunca es utilizable, ni siquiera requerido",
+      "status": "PASS",
+      "failures": [],
+      "elapsedMs": 0.18,
+      "caught": {
+        "code": "INVALID_FOOD_COMBINATION",
+        "message": "El alimento requerido disabled-protein esta DISABLED."
+      }
+    }
+  ],
+  "summary": {
+    "policyPassed": 2,
+    "policyTotal": 2,
+    "contractPassed": 14,
+    "contractTotal": 14,
+    "structureCoveragePassed": true,
+    "warningConsistencyPassed": true
+  }
+}

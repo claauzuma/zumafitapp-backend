@@ -528,7 +528,7 @@ test("menus automaticos estan disponibles en VIP y las funciones restantes sigue
   assert.equal(context.featureAvailability.nutrition.autoMenus.available, true);
   assert.equal(context.featureAvailability.nutrition.autoMenus.enabled, true);
   assert.equal(context.featureAvailability.nutrition.autoMenus.status, "available");
-  assert.equal(context.featureAvailability.nutrition.autoMenus.mode, "tracking_calorie_fill_v1");
+  assert.equal(context.featureAvailability.nutrition.autoMenus.mode, "meal_generation_balanced_v1");
   assert.equal(context.featureAvailability.training.routines.generate.status, "coming_soon");
   assert.equal(context.featureAvailability.progress.analytics.status, "coming_soon");
 });

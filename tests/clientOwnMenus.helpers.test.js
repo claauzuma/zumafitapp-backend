@@ -152,7 +152,7 @@ test("autoriza generación automática por capability, incluso con coach, y fall
   });
 
   assert.equal(authorized.authorized, true);
-  assert.equal(authorized.policy, "tracking_calorie_fill_v1");
+  assert.equal(authorized.policy, "meal_generation_balanced_v1");
   assert.equal(authorized.previewOnly, true);
 
   await assert.rejects(
