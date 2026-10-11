@@ -94,6 +94,15 @@ class ControladorFoodLogs {
     }
   };
 
+  deleteMeals = async (req, res) => {
+    try {
+      const data = await this.servicio.deleteMeals(req.user, req.body || {});
+      return res.json({ ok: true, ...data });
+    } catch (error) {
+      return sendError(res, error);
+    }
+  };
+
   updateLog = async (req, res) => {
     try {
       const data = await this.servicio.updateLog(req.user, req.params.logId, req.body || {});

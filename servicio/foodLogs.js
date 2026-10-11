@@ -146,6 +146,7 @@ function normalizeMealConfig(raw = {}, index = 0) {
     nombre: cleanText(raw.nombre || raw.label || mealTypeLabel(tipo), mealTypeLabel(tipo), 80),
     orden: Math.max(0, Number(raw.orden ?? raw.order ?? index) || index),
     meta: hasMealMeta(meta) ? meta : null,
+    metaConfirmed: raw.metaConfirmed === true,
     createdAt: raw.createdAt || new Date(),
     updatedAt: new Date(),
   };
@@ -301,6 +302,7 @@ function buildFoodSnapshot(food = {}, cantidad = 100, unidad = food?.unidad || "
 
 function snapshotFromSavedMealItem(item = {}) {
   const nombre = item.nombre || item.nombreSnapshot || item.name || "Alimento";
+  const quantitySource = normalizeToken(item.quantitySource || item.quantityMode);
   return {
     alimentoId: item.alimentoId || item.alimentoObjectId || null,
     nombreSnapshot: cleanText(nombre, "Alimento", 180),
@@ -315,6 +317,9 @@ function snapshotFromSavedMealItem(item = {}) {
     categoriaSnapshot: cleanString(item.categoriaSnapshot || item.categoria || item.category, 120),
     imagen: item.imagen || null,
     imagenUrl: item.imagenUrl || item.imageUrl || item.imagen?.url || "",
+    ...(quantitySource === "manual" || quantitySource === "automatic"
+      ? { quantitySource }
+      : {}),
   };
 }
 
@@ -383,6 +388,9 @@ function normalizeLog(doc = {}) {
     imagen: doc.imagen || null,
     imagenUrl: doc.imagenUrl || doc.imagen?.url || "",
     source: doc.source || "",
+    quantitySource: ["manual", "automatic"].includes(normalizeToken(doc.quantitySource))
+      ? normalizeToken(doc.quantitySource)
+      : "",
     writeRequestId: cleanString(doc.writeRequestId, 120),
     writeItemIndex: Number.isInteger(Number(doc.writeItemIndex)) ? Number(doc.writeItemIndex) : null,
     notas: doc.notas || "",
@@ -996,21 +1004,36 @@ class ServicioFoodLogs {
   }
 
   async deleteMeal(user, mealId, payload = {}) {
+    return await this.deleteMeals(user, {
+      ...payload,
+      mealIds: [mealId],
+    });
+  }
+
+  async deleteMeals(user, payload = {}) {
     const actor = await this._actor(user);
     const date = normalizeDate(payload.date);
     this._assertCanWriteTracking(actor, date);
-    const cleanMealId = normalizeMealId(mealId);
-    if (!cleanMealId) throw new Error("ID_INVALIDO");
+    const requestedMealIds = [...new Set(
+      (Array.isArray(payload.mealIds) ? payload.mealIds : [])
+        .map((mealId) => normalizeMealId(mealId))
+        .filter(Boolean)
+    )].slice(0, 24);
+    if (!requestedMealIds.length) throw new Error("ID_INVALIDO");
+    const requestedSet = new Set(requestedMealIds);
 
     const { objectiveInfo, day } = await this._dayForConfig(actor, date);
     const mealsConfig = normalizeMealsConfig(day.mealsConfig || []);
-    const currentMeal = mealsConfig.find((meal) => meal.mealId === cleanMealId);
-    const mealType = currentMeal?.tipo || (MEAL_TYPE_SET.has(cleanMealId) ? cleanMealId : "");
+    const currentMealsById = new Map(mealsConfig.map((meal) => [meal.mealId, meal]));
+    const targets = requestedMealIds.map((mealId) => ({
+      mealId,
+      mealType: currentMealsById.get(mealId)?.tipo || (MEAL_TYPE_SET.has(mealId) ? mealId : ""),
+    }));
     const currentLogs = await this.foodLogsModel.listLogsByUserDate(this._actorId(actor), date);
-    const mealLogs = currentLogs.filter((log) => (
-      normalizeMealId(log?.mealId || log?.mealConfigId || log?.mealKey) === cleanMealId ||
+    const mealLogs = currentLogs.filter((log) => targets.some(({ mealId, mealType }) => (
+      normalizeMealId(log?.mealId || log?.mealConfigId || log?.mealKey) === mealId ||
       (!log?.mealId && mealType && normalizeMealType(log?.mealType || log?.comida) === mealType)
-    ));
+    )));
     const allocationRequestIds = [...new Set(
       mealLogs
         .map((log) => cleanString(log?.writeRequestId, 120))
@@ -1020,21 +1043,39 @@ class ServicioFoodLogs {
       throw new Error("TRACKING_MEAL_NOT_EMPTY");
     }
 
-    await this.foodLogsModel.deleteLogsByMeal({
-      userId: this._actorId(actor),
-      date,
-      mealId: cleanMealId,
-      mealType,
-    });
+    const deleteResult = typeof this.foodLogsModel.deleteLogsByMeals === "function"
+      ? await this.foodLogsModel.deleteLogsByMeals({
+          userId: this._actorId(actor),
+          date,
+          meals: targets,
+        })
+      : await (async () => {
+          let deletedCount = 0;
+          for (const { mealId, mealType } of targets) {
+            const result = await this.foodLogsModel.deleteLogsByMeal({
+              userId: this._actorId(actor),
+              date,
+              mealId,
+              mealType,
+            });
+            deletedCount += Number(result?.deletedCount) || 0;
+          }
+          return { deletedCount };
+        })();
 
-    const nextConfig = normalizeMealsConfig(mealsConfig.filter((meal) => meal.mealId !== cleanMealId));
+    const nextConfig = normalizeMealsConfig(mealsConfig.filter((meal) => !requestedSet.has(meal.mealId)));
     const dayWithConfig = await this.foodLogsModel.updateDayMealsConfig(day._id, nextConfig);
     const logs = await this.foodLogsModel.listLogsByUserDate(this._actorId(actor), date);
     for (const writeRequestId of allocationRequestIds) {
       await this._reconcileAllocationGroup(actor, date, writeRequestId, logs);
     }
     const updatedDay = await this.foodLogsModel.updateDayTotals(dayWithConfig._id, totalLogs(logs));
-    return await this._buildResponse(actor, date, objectiveInfo, updatedDay, logs);
+    const response = await this._buildResponse(actor, date, objectiveInfo, updatedDay, logs);
+    return {
+      ...response,
+      deletedMealIds: requestedMealIds,
+      deletedLogsCount: Number(deleteResult?.deletedCount) || 0,
+    };
   }
 
   async addLog(user, payload = {}) {

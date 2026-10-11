@@ -38,6 +38,12 @@ function context(plan = "free") {
     },
     listLogsByUserDate: async () => logs,
     getLogById: async (logId) => logs.find((log) => String(log._id) === String(logId)) || null,
+    updateLogById: async (logId, patch) => {
+      const index = logs.findIndex((log) => String(log._id) === String(logId));
+      if (index < 0) return null;
+      logs[index] = { ...logs[index], ...patch, updatedAt: new Date() };
+      return logs[index];
+    },
     deleteLogById: async (logId) => {
       const index = logs.findIndex((log) => String(log._id) === String(logId));
       if (index < 0) return { deletedCount: 0 };
@@ -109,6 +115,63 @@ test("el batch manual funciona sin capability AUTO", async () => {
   const { actor, service } = context("free");
   const response = await service.addBatchLogs(actor, { ...payload, allocations: undefined });
   assert.equal(response.insertedCount, 1);
+});
+
+test("un lote mixto persiste procedencia individual y editar conserva origen y mealId", async () => {
+  const { actor, service, logs } = context("pro");
+  await service.addCalculatedLogs(actor, {
+    ...payload,
+    requestId: "tracking-allocation:mixed-origin",
+    allocations: undefined,
+    items: [
+      {
+        nombre: "Arroz",
+        cantidad: 100,
+        unidad: "g",
+        kcal: 338.5,
+        proteina: 8,
+        carbs: 75.5,
+        grasas: 0.5,
+        quantitySource: "manual",
+      },
+      {
+        nombre: "Pechuga",
+        cantidad: 130,
+        unidad: "g",
+        kcal: 143,
+        proteina: 28.6,
+        carbs: 0,
+        grasas: 3.9,
+        quantitySource: "automatic",
+      },
+    ],
+  });
+
+  assert.deepEqual(logs.map((log) => log.quantitySource), ["manual", "automatic"]);
+  assert.ok(logs.every((log) => log.source === "manual_completion_calculator"));
+
+  const riceId = logs[0]._id;
+  const afterRiceUpdate = await service.updateLog(actor, riceId, { cantidad: 120 });
+
+  assert.equal(logs[0].cantidad, 120);
+  assert.equal(logs[0].mealId, "menu_target_almuerzo");
+  assert.equal(logs[0].quantitySource, "manual");
+  assert.equal(logs[0].source, "manual_completion_calculator");
+  assert.equal(logs[0].kcal, 406.2);
+  assert.equal(afterRiceUpdate.meals.menu_target_almuerzo[0].cantidad, 120);
+  assert.equal(afterRiceUpdate.meals.menu_target_almuerzo[0].mealId, "menu_target_almuerzo");
+  assert.equal(afterRiceUpdate.meals.menu_target_almuerzo[0].quantitySource, "manual");
+
+  const chickenId = logs[1]._id;
+  await service.updateLog(actor, chickenId, { cantidad: 150 });
+  assert.equal(logs[1].mealId, "menu_target_almuerzo");
+  assert.equal(logs[1].quantitySource, "automatic");
+  await service.deleteLog(actor, chickenId);
+
+  assert.equal(logs.length, 1);
+  assert.equal(logs[0]._id, riceId);
+  assert.equal(logs[0].mealId, "menu_target_almuerzo");
+  assert.equal(logs[0].cantidad, 120);
 });
 
 test("backend rechaza allocations que no suman el consumo real", async () => {

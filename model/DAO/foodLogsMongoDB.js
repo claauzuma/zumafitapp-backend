@@ -274,6 +274,38 @@ class ModelMongoDBFoodLogs {
     });
   };
 
+  deleteLogsByMeals = async ({ userId, date, meals = [] }) => {
+    const values = idValues(userId);
+    const targets = (Array.isArray(meals) ? meals : [])
+      .map((meal) => ({
+        mealId: cleanId(meal?.mealId),
+        mealType: cleanId(meal?.mealType),
+      }))
+      .filter((meal) => meal.mealId);
+    if (!values.length || !date || !targets.length) return { deletedCount: 0 };
+
+    const or = targets.flatMap(({ mealId, mealType }) => {
+      const filters = [{ mealId }];
+      if (mealType && mealId === mealType) {
+        filters.push({
+          mealType,
+          $or: [
+            { mealId: { $exists: false } },
+            { mealId: null },
+            { mealId: "" },
+          ],
+        });
+      }
+      return filters;
+    });
+
+    return await this._logs().deleteMany({
+      userId: { $in: values },
+      date: String(date),
+      $or: or,
+    });
+  };
+
   async ensureIndexes() {
     const days = this._days();
     await days.createIndex({ userId: 1, date: 1 }, { unique: true });

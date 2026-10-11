@@ -58,6 +58,13 @@ class RouterFoodLogs {
       this.controladorFoodLogs.updateMealsConfig
     );
     this.router.delete(
+      "/day/meals/batch",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorFoodLogs.deleteMeals
+    );
+    this.router.delete(
       "/day/meals/:mealId",
       authMiddleware,
       denyWriteWhenReadOnlyImpersonation,
