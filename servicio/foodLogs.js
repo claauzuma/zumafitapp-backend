@@ -110,6 +110,13 @@ function normalizeMealId(value = "") {
   return raw.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 80);
 }
 
+function normalizeConsumptionSourceMealIds(value = [], primaryMealId = "") {
+  return [...new Set([
+    primaryMealId,
+    ...(Array.isArray(value) ? value : []),
+  ].map(normalizeMealId).filter(Boolean))].slice(0, 12);
+}
+
 function mealTypeLabel(value = "") {
   const labels = {
     desayuno: "Desayuno",
@@ -136,17 +143,42 @@ function hasMealMeta(meta = {}) {
   return Object.values(normalizeMealMeta(meta)).some((value) => value > 0);
 }
 
+function normalizeMealMetaConfirmation(raw = null, metaConfirmed = false) {
+  if (!metaConfirmed || raw?.mode !== "manual_consumption") return null;
+  const previousMeta = normalizeMealMeta(raw.previousMeta || raw.previousTarget || {});
+  const consumedMeta = normalizeMealMeta(raw.consumedMeta || raw.confirmedTarget || {});
+  if (!hasMealMeta(previousMeta) || !hasMealMeta(consumedMeta)) return null;
+  return {
+    mode: "manual_consumption",
+    previousMeta,
+    consumedMeta,
+  };
+}
+
 function normalizeMealConfig(raw = {}, index = 0) {
   const tipo = normalizeMealType(raw.tipo || raw.type || raw.mealType || "snack");
   const mealId = normalizeMealId(raw.mealId || raw.id) || generatedMealId();
   const meta = normalizeMealMeta(raw.meta || raw.target || {});
+  const metaConfirmed = raw.metaConfirmed === true;
+  const requestedTargetOrigin = cleanText(raw.targetOrigin || raw.metaOrigin, "", 20).toLowerCase();
+  const targetOrigin = ["auto", "manual", "coach"].includes(requestedTargetOrigin)
+    ? requestedTargetOrigin
+    : null;
   return {
     mealId,
     tipo,
     nombre: cleanText(raw.nombre || raw.label || mealTypeLabel(tipo), mealTypeLabel(tipo), 80),
     orden: Math.max(0, Number(raw.orden ?? raw.order ?? index) || index),
     meta: hasMealMeta(meta) ? meta : null,
-    metaConfirmed: raw.metaConfirmed === true,
+    metaConfirmed,
+    metaConfirmation: normalizeMealMetaConfirmation(raw.metaConfirmation, metaConfirmed),
+    targetOrigin,
+    targetLocked: raw.targetLocked === true,
+    personalTarget: raw.personalTarget === true || mealId.startsWith("menu_target_"),
+    consumptionSourceMealIds: normalizeConsumptionSourceMealIds(
+      raw.consumptionSourceMealIds,
+      mealId
+    ),
     createdAt: raw.createdAt || new Date(),
     updatedAt: new Date(),
   };
@@ -551,10 +583,11 @@ function extractUserGoals(user = {}) {
   ].filter(Boolean);
 
   for (const source of candidates) {
+    const macros = source?.macros || source?.macrosObjetivo || {};
     const kcal = toNumber(source.kcal ?? source.calorias ?? source.calories ?? source.kcalObjetivo, 0);
-    const proteina = toNumber(source.proteina ?? source.proteinas ?? source.protein, 0);
-    const carbs = toNumber(source.carbs ?? source.carbohidratos ?? source.carbohydrates, 0);
-    const grasas = toNumber(source.grasas ?? source.fat ?? source.fats, 0);
+    const proteina = toNumber(source.proteina ?? source.proteinas ?? source.protein ?? macros.p ?? macros.proteina, 0);
+    const carbs = toNumber(source.carbs ?? source.carbohidratos ?? source.carbohydrates ?? macros.c ?? macros.carbs, 0);
+    const grasas = toNumber(source.grasas ?? source.fat ?? source.fats ?? macros.g ?? macros.grasas, 0);
     if (kcal > 0 || proteina > 0 || carbs > 0 || grasas > 0) {
       return {
         objective: {

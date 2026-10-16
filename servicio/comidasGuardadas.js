@@ -35,7 +35,7 @@ import {
   professionalTemplateSource,
 } from "./professionalLibraryCapabilities.js";
 
-const MEAL_TYPES = new Set(["desayuno", "almuerzo", "merienda", "cena", "snack", "preEntreno", "postEntreno", "otro"]);
+const MEAL_TYPES = new Set(["desayuno", "almuerzo", "merienda", "cena", "picoteo", "snack", "preEntreno", "postEntreno", "otro"]);
 const VISIBILITIES = new Set(["privada", "asignada", "clientesAsignados", "gimnasio", "global", "premium"]);
 const ORIGINS = new Set(["creadaManual", "guardadaDesdeMenu", "guardadaDesdeTracking", "menuPropioEquivalente", "plantillaCoach", "plantillaGym", "plantillaGlobal"]);
 
@@ -591,6 +591,16 @@ class ServicioComidasGuardadas {
         });
     if (isClient(actor)) {
       requireQuota(actor, "ownMeals", ownCount);
+      if (payload.favorita === true) {
+        const currentFavorites = await this.model.count({
+          query: {
+            ownerId: { $in: idValues(this._actorId(actor)) },
+            favorita: true,
+            activo: { $ne: false },
+          },
+        });
+        requireQuota(actor, "favorites", currentFavorites);
+      }
     } else if (isCoach(actor)) {
       await this._assertCoachOwnedMealCapacity(actor, ownCount);
     } else if (!canCreateSavedMeal(actor, ownCount)) {
@@ -780,6 +790,7 @@ class ServicioComidasGuardadas {
     return await this.foodLogs.addSnapshotLogs({ id: this._actorId(actor) }, {
       date: payload.date,
       mealType,
+      mealId: comida.tipoComida === "picoteo" ? "picoteo" : mealType,
       items: comida.items,
       savedMealId: comida.id,
       savedMealName: comida.nombre,

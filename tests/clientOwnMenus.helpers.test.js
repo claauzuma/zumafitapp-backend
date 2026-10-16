@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   default as ServicioClientOwnMenus,
   hasValidMenuContent,
+  isAutomaticGeneratedMenuPayload,
   nextUniqueName,
   normalizeMealType,
   validateRawMenuPayload,
@@ -44,6 +45,20 @@ test("detecta menu activable con alimentos en comidas o dias", () => {
     }),
     true
   );
+});
+
+test("distingue intención automática de un borrador manual vacío", () => {
+  assert.equal(isAutomaticGeneratedMenuPayload({ comidas: [] }), false);
+  assert.equal(isAutomaticGeneratedMenuPayload({
+    generationMeta: { source: "autonomous" },
+    comidas: [],
+  }), true);
+  assert.equal(isAutomaticGeneratedMenuPayload({
+    comidas: [{ targetOrigin: "auto", items: [] }],
+  }), true);
+  assert.equal(isAutomaticGeneratedMenuPayload({
+    comidas: [{ compositionOrigin: "manual", items: [] }],
+  }), false);
 });
 
 test("valida payload crudo antes de normalizar silenciosamente", () => {
@@ -243,4 +258,184 @@ test("rechaza un alimento requerido y evitado al mismo tiempo", async () => {
     }),
     (error) => error.code === "VALIDATION_ERROR" && error.details.some((item) => item.includes("requerido y evitado"))
   );
+});
+
+function configuredCreateService({ activationFails = false } = {}) {
+  const servicio = new ServicioClientOwnMenus();
+  const actor = {
+    _id: "cliente-1",
+    role: "cliente",
+    personalPlan: "pro",
+    menu: { activeSource: "none" },
+  };
+  const calls = { create: 0, delete: 0, activate: 0 };
+  servicio._actor = async () => actor;
+  servicio._capabilitiesFromAccessContext = () => ({
+    plan: "pro",
+    canCreateOwnMenu: true,
+    canActivateOwnMenu: true,
+    canActivateOwnMenuOverCoachPlan: true,
+    limits: { clientMenuDays: 7, ownMenus: 50 },
+  });
+  servicio._assertLimit = async () => {};
+  servicio._assertLimitAfterWrite = async () => {};
+  servicio._hasCoachMenuActive = async () => false;
+  servicio._uniqueNameForUser = async (_actor, name) => name;
+  servicio._validateMenuPayload = async () => {};
+  servicio.capabilities = async () => ({});
+  servicio.menusModel = {
+    createBase: async (doc) => {
+      calls.create += 1;
+      return { ...doc, _id: "menu-created" };
+    },
+    deleteBaseById: async (id) => {
+      calls.delete += 1;
+      calls.deletedId = id;
+    },
+  };
+  servicio.usuariosModel = {
+    updateById: async () => {
+      calls.activate += 1;
+      if (activationFails) throw new Error("ACTIVATION_FAILED");
+      return actor;
+    },
+  };
+  return { servicio, calls, actor };
+}
+
+test("create + activate rechaza un menú sin comidas físicas antes de persistir", async () => {
+  const { servicio, calls, actor } = configuredCreateService();
+
+  await assert.rejects(
+    () => servicio.create(actor, {
+      nombre: "Vacío",
+      activate: true,
+      comidas: [{ nombre: "Desayuno", tipoComida: "desayuno", items: [] }],
+    }),
+    (error) => error.code === "INVALID_MENU"
+  );
+  assert.equal(calls.create, 0);
+  assert.equal(calls.activate, 0);
+});
+
+test("create rechaza un menú automático vacío antes de persistir aunque no se active", async () => {
+  const { servicio, calls, actor } = configuredCreateService();
+
+  await assert.rejects(
+    () => servicio.create(actor, {
+      nombre: "Automático vacío",
+      generationMeta: { source: "autonomous", previewOnly: true },
+      comidas: [{
+        nombre: "Desayuno",
+        tipoComida: "desayuno",
+        targetOrigin: "auto",
+        compositionOrigin: "auto",
+        items: [],
+      }],
+    }),
+    (error) => error.code === "INVALID_MENU"
+  );
+  assert.equal(calls.create, 0);
+  assert.equal(calls.activate, 0);
+});
+
+test("create conserva un borrador manual vacío legítimo cuando no se activa", async () => {
+  const { servicio, calls, actor } = configuredCreateService();
+
+  const result = await servicio.create(actor, {
+    nombre: "Borrador manual",
+    estado: "borrador",
+    source: "manual",
+    comidas: [{
+      nombre: "Desayuno",
+      tipoComida: "desayuno",
+      targetOrigin: "manual",
+      compositionOrigin: "manual",
+      items: [],
+    }],
+  });
+
+  assert.equal(calls.create, 1);
+  assert.equal(calls.activate, 0);
+  assert.equal(result.menu.nombre, "Borrador manual");
+});
+
+test("create + activate hace rollback seguro si falla la activación", async () => {
+  const { servicio, calls, actor } = configuredCreateService({ activationFails: true });
+
+  await assert.rejects(
+    () => servicio.create(actor, {
+      nombre: "Con comida",
+      activate: true,
+      comidas: [{
+        id: "meal-1",
+        nombre: "Desayuno",
+        tipoComida: "desayuno",
+        items: [{
+          id: "food-1",
+          alimentoId: "food-1",
+          nombreSnapshot: "Avena",
+          cantidad: 80,
+          unidad: "g",
+          kcal: 300,
+        }],
+      }],
+    }),
+    /ACTIVATION_FAILED/
+  );
+  assert.equal(calls.create, 1);
+  assert.equal(calls.activate, 1);
+  assert.equal(calls.delete, 1);
+  assert.equal(calls.deletedId, "menu-created");
+});
+
+test("update rechaza vaciar un menú automático y exige eliminarlo", async () => {
+  const servicio = new ServicioClientOwnMenus();
+  const actor = {
+    _id: "cliente-1",
+    role: "cliente",
+    personalPlan: "pro",
+    menu: { activeSource: "own", activeOwnMenuId: "menu-auto" },
+  };
+  const current = {
+    _id: "menu-auto",
+    nombre: "Automático",
+    ownerType: "cliente",
+    ownerId: "cliente-1",
+    source: "autonomous",
+    selectedDays: ["monday"],
+    comidas: [{
+      id: "meal-1",
+      nombre: "Desayuno",
+      tipoComida: "desayuno",
+      compositionOrigin: "auto",
+      items: [{ id: "food-1", nombreSnapshot: "Avena", cantidad: 60, kcal: 220 }],
+    }],
+  };
+  let updates = 0;
+  servicio._actor = async () => actor;
+  servicio._capabilitiesFromAccessContext = () => ({
+    plan: "pro",
+    canEditOwnMenu: true,
+    limits: { clientMenuDays: 7 },
+  });
+  servicio._getOwnedMenu = async () => current;
+  servicio._validateMenuPayload = async () => {};
+  servicio._ownMenusRaw = async () => [current];
+  servicio.menusModel = {
+    updateBaseById: async () => {
+      updates += 1;
+      return current;
+    },
+  };
+
+  await assert.rejects(
+    () => servicio.update(actor, "menu-auto", {
+      nombre: "Automático",
+      selectedDays: ["monday"],
+      comidas: [],
+    }),
+    (error) => error.code === "INVALID_MENU" && /Eliminalo/.test(error.publicMessage)
+  );
+  assert.equal(updates, 0);
 });

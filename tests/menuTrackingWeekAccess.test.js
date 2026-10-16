@@ -2,12 +2,42 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { requireTrackingHistoryRange } from "../servicio/accessGates.js";
-import ServicioUsuarios from "../servicio/usuarios.js";
+import ServicioUsuarios, { normalizeWeeklyMenuSnapshot } from "../servicio/usuarios.js";
 
 const CLIENT_ID = "507f1f77bcf86cd799439011";
 const COACH_ID = "507f1f77bcf86cd799439012";
 const SUNDAY_NIGHT_IN_ARGENTINA = "2026-08-03T01:30:00.000Z";
 const CURRENT_WEEK_START = "2026-07-27";
+
+test("el snapshot semanal conserva el origen de una composición automática", () => {
+  const snapshot = normalizeWeeklyMenuSnapshot({
+    id: "auto-menu-1",
+    name: "Menú automático",
+    source: "autonomous",
+    meals: [{
+      id: "breakfast-1",
+      name: "Desayuno",
+      type: "desayuno",
+      target: { kcal: 630, proteina: 42, carbs: 83, grasas: 14 },
+      targetOrigin: "auto",
+      compositionOrigin: "auto",
+      generationSource: "meal_generation_balanced_v1",
+      plannerSlotIndex: 0,
+      items: [{ nombre: "Avena", cantidad: 60, kcal: 220 }],
+    }],
+  });
+
+  assert.equal(snapshot.source, "autonomous");
+  assert.equal(snapshot.meals[0].compositionOrigin, "auto");
+  assert.equal(snapshot.meals[0].generationSource, "meal_generation_balanced_v1");
+  assert.equal(snapshot.meals[0].plannerSlotIndex, 0);
+  assert.deepEqual(snapshot.meals[0].target, {
+    kcal: 630,
+    proteina: 42,
+    carbs: 83,
+    grasas: 14,
+  });
+});
 
 function assignedSunday({ alternatives = [] } = {}) {
   return {
@@ -147,6 +177,32 @@ test("C: Coach Pro conserva las alternativas del menu asignado", async () => {
 
     assert.equal(result.days[6].assignment.alternatives.length, 1);
     assert.equal(result.days[6].assignment.alternatives[0].menuSnapshot.name, "Alternativa del coach");
+  });
+});
+
+test("un día guardado prevalece sólo en su fecha y no mezcla alternativas del menú global", async () => {
+  await withFixedNow(SUNDAY_NIGHT_IN_ARGENTINA, async () => {
+    const assignments = { sunday: assignedSunday({ alternatives: [{ menuId: "alt", menuSnapshot: { id: "alt", name: "Alternativa" } }] }) };
+    const service = serviceFor(coachClient({ assignments }), assignments);
+    service.menuTrackingModel.listByUserDateRange = async () => [{
+      date: "2026-08-02",
+      dayPlanOverride: {
+        source: "day_favorite",
+        favoriteId: "favorite-1",
+        favoriteName: "Mi domingo",
+        menuSnapshot: {
+          id: "favorite-sunday",
+          name: "Mi domingo",
+          totals: { kcal: 2200, proteina: 150, carbs: 260, grasas: 62 },
+          meals: [{ id: "fav-lunch", name: "Almuerzo favorito", totals: { kcal: 700 } }],
+        },
+      },
+    }];
+    const result = await service.getMyMenuTrackingWeek({ id: CLIENT_ID }, { start: CURRENT_WEEK_START });
+    assert.equal(result.days[6].assignment.primaryMenu.source, "day_favorite");
+    assert.equal(result.days[6].assignment.primaryMenu.menuSnapshot.name, "Mi domingo");
+    assert.equal(result.days[6].assignment.alternatives.length, 0);
+    assert.equal(result.days[5].assignment.primaryMenu, null);
   });
 });
 

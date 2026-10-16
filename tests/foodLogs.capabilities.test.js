@@ -150,7 +150,18 @@ test("la configuracion normal permite persistir seis metas personales sin marcar
     tipo: "snack",
     nombre: `Comida ${index + 1}`,
     meta: { kcal: 300 + index, proteina: 20, carbs: 30, grasas: 10 },
+    targetOrigin: index === 0 ? "manual" : "auto",
+    targetLocked: index === 2,
+    personalTarget: true,
     metaConfirmed: index === 1,
+    metaConfirmation: index === 1 ? {
+      mode: "manual_consumption",
+      previousMeta: { kcal: 400, proteina: 30, carbs: 40, grasas: 12 },
+      consumedMeta: { kcal: 301, proteina: 20, carbs: 30, grasas: 10 },
+    } : null,
+    consumptionSourceMealIds: index === 1
+      ? ["saved_breakfast", "legacy_breakfast", "saved_breakfast"]
+      : [],
   }));
 
   const response = await servicio.updateMealsConfig({ id: "client-pro" }, {
@@ -162,6 +173,20 @@ test("la configuracion normal permite persistir seis metas personales sin marcar
   assert.ok(response.mealsConfig.every((meal) => meal.mealId.startsWith("menu_target_")));
   assert.ok(response.mealsConfig.every((meal) => response.meals[meal.mealId].length === 0));
   assert.deepEqual(response.mealsConfig.map((meal) => meal.metaConfirmed), [false, true, false, false, false, false]);
+  assert.deepEqual(response.mealsConfig.map((meal) => meal.targetOrigin), ["manual", "auto", "auto", "auto", "auto", "auto"]);
+  assert.equal(response.mealsConfig[2].targetLocked, true);
+  assert.ok(response.mealsConfig.every((meal) => meal.personalTarget === true));
+  assert.deepEqual(response.mealsConfig[1].metaConfirmation, {
+    mode: "manual_consumption",
+    previousMeta: { kcal: 400, proteina: 30, carbs: 40, grasas: 12 },
+    consumedMeta: { kcal: 301, proteina: 20, carbs: 30, grasas: 10 },
+  });
+  assert.equal(response.mealsConfig[0].metaConfirmation, null);
+  assert.deepEqual(response.mealsConfig[1].consumptionSourceMealIds, [
+    "menu_target_slot_2",
+    "saved_breakfast",
+    "legacy_breakfast",
+  ]);
 });
 
 test("backend no elimina una comida con food_logs sin confirmacion explicita", async () => {
@@ -194,6 +219,65 @@ test("backend no elimina una comida con food_logs sin confirmacion explicita", a
     /TRACKING_MEAL_NOT_EMPTY/
   );
   assert.equal(deleted, false);
+});
+
+test("quitar sólo la meta conserva FoodLogs y rehidrata el mismo mealId al recargar", async () => {
+  const servicio = new ServicioFoodLogs();
+  const actor = { _id: "client-pro", id: "client-pro", role: "cliente", plan: "pro" };
+  const logs = [{
+    id: "rice-log",
+    userId: actor.id,
+    date: today,
+    mealId: "target-lunch",
+    mealType: "almuerzo",
+    nombreSnapshot: "Arroz",
+    kcal: 300,
+    proteina: 6,
+    carbs: 66,
+    grasas: 1,
+  }];
+  const state = {
+    mealsConfig: [{
+      mealId: "target-lunch",
+      tipo: "almuerzo",
+      nombre: "Almuerzo",
+      personalTarget: true,
+      targetOrigin: "manual",
+      meta: { kcal: 700, proteina: 45, carbs: 80, grasas: 20 },
+      metaConfirmed: true,
+      metaConfirmation: { mode: "manual_consumption", previousMeta: { kcal: 700 } },
+    }],
+  };
+
+  servicio._actor = async () => actor;
+  servicio._assertCanWriteTracking = () => {};
+  servicio._dayForConfig = async () => ({
+    objectiveInfo: { objetivo: { kcal: 2100 }, source: "metasActuales" },
+    day: { _id: "day-target", date: today, mealsConfig: state.mealsConfig },
+  });
+  servicio.foodLogsModel = {
+    updateDayMealsConfig: async (_dayId, mealsConfig) => {
+      state.mealsConfig = mealsConfig;
+      return { _id: "day-target", date: today, mealsConfig };
+    },
+    listLogsByUserDate: async () => logs,
+  };
+
+  const response = await servicio.updateMealsConfig(actor, { date: today, mealsConfig: [] });
+  assert.deepEqual(state.mealsConfig, []);
+  assert.equal(response.meals["target-lunch"].length, 1);
+  assert.equal(response.meals["target-lunch"][0].id, "rice-log");
+  assert.equal(response.mealsConfig.find((meal) => meal.mealId === "target-lunch")?.meta, null);
+
+  const reloaded = await servicio._buildResponse(
+    actor,
+    today,
+    { objetivo: { kcal: 2100 }, source: "metasActuales" },
+    { _id: "day-target", date: today, mealsConfig: state.mealsConfig },
+    logs
+  );
+  assert.equal(reloaded.meals["target-lunch"][0].mealId, "target-lunch");
+  assert.equal(reloaded.mealsConfig.find((meal) => meal.mealId === "target-lunch")?.meta, null);
 });
 
 test("el borrado batch elimina metas personales en una sola pasada y conserva las demas comidas", async () => {

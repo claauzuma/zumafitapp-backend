@@ -207,6 +207,10 @@ function normalizeMeal(raw = {}, index = 0) {
   const items = itemsSource.slice(0, 80).map(normalizeItem);
   const totals = mealTotals(items);
   const rawName = cleanString(raw.nombre || raw.name, 160);
+  const requestedCompositionOrigin = token(raw.compositionOrigin);
+  const compositionOrigin = ["auto", "manual", "coach"].includes(requestedCompositionOrigin)
+    ? requestedCompositionOrigin
+    : raw.generationSource ? "auto" : "manual";
   return {
     id: cleanString(raw.id || raw._id || `meal-${index + 1}`, 80) || `meal-${index + 1}`,
     nombre: rawName || (items.length ? "" : `Comida ${index + 1}`),
@@ -215,6 +219,15 @@ function normalizeMeal(raw = {}, index = 0) {
     items,
     totales: totals,
     target: normalizeMealTarget(raw.target || raw.meta || raw.objetivo),
+    targetMealId: cleanString(raw.targetMealId, 100) || null,
+    targetOrigin: ["auto", "manual", "coach"].includes(token(raw.targetOrigin))
+      ? token(raw.targetOrigin)
+      : null,
+    compositionOrigin,
+    generationSource: cleanString(raw.generationSource, 100),
+    plannerSlotIndex: Number.isInteger(Number(raw.plannerSlotIndex))
+      ? Number(raw.plannerSlotIndex)
+      : null,
     notas: cleanString(raw.notas || raw.notes, 1000),
   };
 }
@@ -302,6 +315,36 @@ function hasValidMenuContent(menu = {}) {
   const days = Object.values(menu.dias || {});
   const meals = days.length ? days.flatMap((day) => day.comidas || []) : menu.comidas || [];
   return meals.some((meal) => meal?.items?.length);
+}
+
+function menuMealsForIntent(menu = {}) {
+  const direct = Array.isArray(menu?.comidas)
+    ? menu.comidas
+    : Array.isArray(menu?.meals) ? menu.meals : [];
+  const days = Object.values(menu?.dias || menu?.days || {});
+  return [
+    ...direct,
+    ...days.flatMap((day) => (
+      Array.isArray(day?.comidas) ? day.comidas : Array.isArray(day?.meals) ? day.meals : []
+    )),
+  ];
+}
+
+export function isAutomaticGeneratedMenuPayload(menu = {}) {
+  const topLevelSource = token(menu?.source || menu?.generationSource);
+  const generationMeta = menu?.generationMeta;
+  if (
+    /^(auto|generat)/.test(topLevelSource)
+    || topLevelSource === "autonomous"
+    || (generationMeta && typeof generationMeta === "object" && Object.keys(generationMeta).length > 0)
+  ) return true;
+
+  return menuMealsForIntent(menu).some((meal) => (
+    token(meal?.compositionOrigin) === "auto"
+    || token(meal?.targetOrigin) === "auto"
+    || cleanString(meal?.generationSource, 100) !== ""
+    || (meal?.plannerSlotIndex !== undefined && meal?.plannerSlotIndex !== null)
+  ));
 }
 
 function allMealsWithContext(menu = {}) {
@@ -1020,12 +1063,39 @@ class ServicioClientOwnMenus {
     doc.createdAt = new Date();
     requireMenuDaysLimit(actor, doc);
     await this._validateMenuPayload(doc);
+    if (
+      !hasValidMenuContent(doc)
+      && (payload.activate === true || isAutomaticGeneratedMenuPayload(payload) || isAutomaticGeneratedMenuPayload(doc))
+    ) {
+      throw serviceError(
+        "INVALID_MENU",
+        payload.activate === true
+          ? "El menu necesita al menos una comida con alimentos para activarse"
+          : "Un menu automatico necesita al menos una comida con alimentos antes de guardarse"
+      );
+    }
 
     const created = await this.menusModel.createBase(doc);
     await this._assertLimitAfterWrite(actor, created._id);
     let nextUser = actor;
     if (payload.activate === true) {
-      nextUser = await this._activate(actor, created, capabilities);
+      try {
+        nextUser = await this._activate(actor, created, capabilities);
+      } catch (activationError) {
+        let deleted = false;
+        if (typeof this.menusModel.deleteBaseById === "function") {
+          try {
+            await this.menusModel.deleteBaseById(created._id || created.id);
+            deleted = true;
+          } catch (rollbackError) {
+            activationError.rollbackError = rollbackError;
+          }
+        }
+        if (!deleted) {
+          await this._rollbackCreatedMenu(created._id || created.id, "ACTIVATION_FAILED");
+        }
+        throw activationError;
+      }
     }
     return {
       menu: normalizeDoc(created, nextUser),
@@ -1048,6 +1118,19 @@ class ServicioClientOwnMenus {
     }
     delete patch.createdAt;
     await this._validateMenuPayload(patch);
+    if (
+      !hasValidMenuContent(patch)
+      && (
+        isAutomaticGeneratedMenuPayload(payload)
+        || isAutomaticGeneratedMenuPayload(current)
+        || isAutomaticGeneratedMenuPayload(patch)
+      )
+    ) {
+      throw serviceError(
+        "INVALID_MENU",
+        "Un menu automatico no puede guardarse sin comidas con alimentos. Eliminalo para volver a cero."
+      );
+    }
     const updated = await this.menusModel.updateBaseById(menuId, patch);
     return { menu: normalizeDoc(updated, actor) };
   }

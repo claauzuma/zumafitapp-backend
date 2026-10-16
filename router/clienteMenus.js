@@ -95,6 +95,32 @@ class RouterClienteMenus {
       denyWriteWhenReadOnlyImpersonation,
       this.controladorClientOwnMenus.authorizeAutomaticGeneration
     );
+    this.router.get(
+      "/me/day-favorites",
+      authMiddleware,
+      this.controladorClientOwnMenus.listDayFavorites
+    );
+    this.router.post(
+      "/me/day-favorites",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientOwnMenus.createDayFavorite
+    );
+    this.router.post(
+      "/me/day-favorites/:favoriteId/apply",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientOwnMenus.applyDayFavorite
+    );
+    this.router.delete(
+      "/me/day-favorites/:favoriteId",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientOwnMenus.deleteDayFavorite
+    );
     this.router.post(
       "/me/menus/automatic-meal/generate",
       authMiddleware,

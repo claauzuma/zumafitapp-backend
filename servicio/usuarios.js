@@ -622,6 +622,14 @@ function normalizeWeeklyMenuMeal(meal = {}, index = 0) {
     nombre: cleanString(meal.nombre || meal.name, 140) || `Comida ${index + 1}`,
     orden: numberOrNull(meal.orden ?? meal.order, { min: 1, max: 20 }) || index + 1,
     tipoComida: cleanString(meal.tipoComida || meal.type, 60) || "otro",
+    target: isPlainObject(meal.target) ? weeklyMenuTotalsPayload(meal.target) : null,
+    targetMealId: cleanString(meal.targetMealId, 120) || null,
+    targetOrigin: cleanString(meal.targetOrigin, 40) || null,
+    compositionOrigin: cleanString(meal.compositionOrigin, 40) || null,
+    generationSource: cleanString(meal.generationSource, 120) || "",
+    plannerSlotIndex: Number.isInteger(Number(meal.plannerSlotIndex))
+      ? Number(meal.plannerSlotIndex)
+      : null,
     totales: weeklyMenuTotalsPayload(totals),
     items,
   };
@@ -664,6 +672,8 @@ function normalizeWeeklyMenuSnapshot(snapshot = {}) {
     baseId: cleanString(snapshot.baseId || snapshot.menuBaseId || snapshot.id || snapshot._id, 80) || null,
     name: cleanString(snapshot.name || snapshot.nombre, 180) || "Menu sin nombre",
     description: cleanString(snapshot.description || snapshot.descripcion, 1200),
+    source: cleanString(snapshot.source || snapshot.generationSource, 80),
+    generationSource: cleanString(snapshot.generationSource, 120),
     kcal: numberOrNull(totals.kcal, { min: 0, max: 20000 }),
     protein: numberOrNull(totals.proteina ?? totals.protein, { min: 0, max: 1000 }),
     carbs: numberOrNull(totals.carbs, { min: 0, max: 2000 }),
@@ -1346,6 +1356,21 @@ function hasValidMetas(metas = {}) {
     hasNumber(normalized.macros?.c) ||
     hasNumber(normalized.macros?.g)
   );
+}
+
+function nutritionTargetFromOnboardingGoal(goal = {}) {
+  const macros = isPlainObject(goal?.targetMacros) ? goal.targetMacros : {};
+  const kcal = Number(goal?.initialBudgetKcal ?? goal?.maintenanceKcal);
+  const p = Number(macros?.p);
+  const c = Number(macros?.c);
+  const g = Number(macros?.g);
+  const complete =
+    Number.isFinite(kcal) && kcal >= 800 && kcal <= 7000 &&
+    Number.isFinite(p) && p > 0 && p <= 500 &&
+    Number.isFinite(c) && c > 0 && c <= 900 &&
+    Number.isFinite(g) && g > 0 && g <= 400;
+
+  return complete ? { kcal, macros: { p, c, g } } : null;
 }
 
 function buildSelfGoalsBackup(currentMetas = {}) {
@@ -2100,14 +2125,116 @@ function effectiveFoodsForEquivalentMeal(snapshot = {}, mealInfo = null, mealRep
   });
 }
 
-function trackingTotalsByDate(entries = []) {
-  return (Array.isArray(entries) ? entries : []).reduce((totalsByDate, entry) => {
-    if (entry?.source === "menu_equivalent_consumption") return totalsByDate;
+function trackingLogsByDate(entries = []) {
+  return (Array.isArray(entries) ? entries : []).reduce((logsByDate, entry) => {
     const date = String(entry?.date || "");
-    if (!date) return totalsByDate;
-    totalsByDate.set(date, addTrackingTotals(totalsByDate.get(date), entry));
-    return totalsByDate;
+    if (!date) return logsByDate;
+    const current = logsByDate.get(date) || [];
+    current.push(entry);
+    logsByDate.set(date, current);
+    return logsByDate;
   }, new Map());
+}
+
+function trackingEntryMealIdentity(entry = {}) {
+  const mealId = cleanString(
+    entry?.mealId || entry?.mealConfigId || entry?.mealKey,
+    100
+  );
+  const mealType = cleanString(
+    entry?.mealType || entry?.tipo || entry?.type || entry?.comida,
+    60
+  ).toLowerCase();
+  return { mealId, mealType };
+}
+
+function isGenericTrackingMealId(mealId = "", mealType = "") {
+  const id = String(mealId || "").toLowerCase();
+  const type = String(mealType || "").toLowerCase();
+  return !id || id === type || id === "otra" || id === "picoteo";
+}
+
+function trackingMealIdentitiesMatch(left = {}, right = {}) {
+  const a = trackingEntryMealIdentity(left);
+  const b = trackingEntryMealIdentity(right);
+  if (a.mealId && b.mealId && a.mealId === b.mealId) return true;
+  if (!a.mealType || !b.mealType || a.mealType !== b.mealType) return false;
+  return isGenericTrackingMealId(a.mealId, a.mealType)
+    || isGenericTrackingMealId(b.mealId, b.mealType);
+}
+
+/**
+ * Lectura canónica del consumo del día. Los FoodLogs reales ganan por slot;
+ * completedMenuMeals queda únicamente como fallback para cierres históricos.
+ * Los logs espejo creados por equivalencias se omiten porque el snapshot
+ * cerrado ya representa ese mismo consumo.
+ */
+export function resolveDailyConsumedNutrition(doc = null, foodLogs = []) {
+  const canonicalLogs = (Array.isArray(foodLogs) ? foodLogs : [])
+    .filter((entry) => entry?.source !== "menu_equivalent_consumption");
+  const completedMeals = Array.isArray(doc?.completedMenuMeals) ? doc.completedMenuMeals : [];
+  const canonicalBySlot = new Map();
+
+  canonicalLogs.forEach((entry) => {
+    const identity = trackingEntryMealIdentity(entry);
+    const key = identity.mealId || identity.mealType || "sin_slot";
+    const current = canonicalBySlot.get(key) || {
+      mealId: identity.mealId || identity.mealType || "sin_slot",
+      mealType: identity.mealType || "otra",
+      source: "food_logs",
+      totals: emptyTrackingTotals(),
+      entries: [],
+    };
+    current.totals = addTrackingTotals(current.totals, entry);
+    current.entries.push(entry);
+    canonicalBySlot.set(key, current);
+  });
+
+  const fallbackMeals = completedMeals
+    .filter((meal) => !canonicalLogs.some((entry) => trackingMealIdentitiesMatch(meal, entry)))
+    .map((meal) => ({
+      mealId: cleanString(meal?.mealId || meal?.id, 100),
+      mealType: cleanString(meal?.mealType || meal?.tipo || meal?.type, 60) || "otro",
+      source: "completed_menu_fallback",
+      totals: roundTrackingTotals(meal?.totals || meal),
+      entries: [],
+    }));
+
+  const completedTotals = sumTrackingEntryTotals(completedMeals);
+  const storedTotals = roundTrackingTotals(doc?.consumedTotals || {});
+  const legacyOtherTotals = subtractTrackingTotals(storedTotals, completedTotals);
+  const hasLegacyOther = Object.values(legacyOtherTotals).some((value) => Math.abs(Number(value) || 0) > 0.0001);
+  const meals = [
+    ...canonicalBySlot.values(),
+    ...fallbackMeals,
+    ...(hasLegacyOther ? [{
+      mealId: "legacy_other",
+      mealType: "otra",
+      source: "legacy_tracking_fallback",
+      totals: legacyOtherTotals,
+      entries: [],
+    }] : []),
+  ];
+  const totals = meals.reduce(
+    (sum, meal) => addTrackingTotals(sum, meal.totals),
+    emptyTrackingTotals()
+  );
+  const picoteo = meals
+    .filter((meal) => String(meal.mealId).toLowerCase() === "picoteo")
+    .reduce((sum, meal) => addTrackingTotals(sum, meal.totals), emptyTrackingTotals());
+
+  return {
+    totals,
+    picoteo,
+    meals,
+    foodLogTotals: canonicalLogs.reduce(
+      (sum, entry) => addTrackingTotals(sum, entry),
+      emptyTrackingTotals()
+    ),
+    legacyFallbackTotals: meals
+      .filter((meal) => meal.source !== "food_logs")
+      .reduce((sum, meal) => addTrackingTotals(sum, meal.totals), emptyTrackingTotals()),
+  };
 }
 
 function calculateDietAdherence(consumedTotals = {}, targetTotals = {}) {
@@ -2232,7 +2359,14 @@ function assignedMenuPublic(entry = null) {
   };
 }
 
-function trackingPublic(doc = null, manualTrackingTotals = null) {
+function trackingPublic(doc = null, manualTrackingInput = null) {
+  const suppliedFoodLogs = Array.isArray(manualTrackingInput) ? manualTrackingInput : null;
+  const normalizedConsumption = suppliedFoodLogs === null
+    ? null
+    : resolveDailyConsumedNutrition(doc, suppliedFoodLogs);
+  const manualTrackingTotals = suppliedFoodLogs === null
+    ? manualTrackingInput
+    : normalizedConsumption.foodLogTotals;
   if (!doc) {
     return {
       status: "pending",
@@ -2243,6 +2377,7 @@ function trackingPublic(doc = null, manualTrackingTotals = null) {
       completedMenuMealIds: [],
       completedMenuMeals: [],
       targetMealIds: [],
+      suppressedMenuMealIds: [],
       manualEntries: [],
 
 
@@ -2251,7 +2386,11 @@ function trackingPublic(doc = null, manualTrackingTotals = null) {
       foodReplacements: [],
       consumedTotals: emptyTrackingTotals(),
       manualTrackingTotals: manualTrackingTotals ? roundTrackingTotals(manualTrackingTotals) : null,
-      totalConsumedTotals: manualTrackingTotals ? roundTrackingTotals(manualTrackingTotals) : null,
+      totalConsumedTotals: normalizedConsumption
+        ? normalizedConsumption.totals
+        : manualTrackingTotals ? roundTrackingTotals(manualTrackingTotals) : null,
+      normalizedConsumedTotals: normalizedConsumption?.totals || null,
+      normalizedConsumption,
       remainingTotals: null,
       menuAdherencePercent: null,
       nutritionAdherencePercent: null,
@@ -2278,6 +2417,7 @@ function trackingPublic(doc = null, manualTrackingTotals = null) {
   const totalConsumedTotals = hydratedManualTotals === null
     ? null
     : addTrackingTotals(consumedTotals, hydratedManualTotals);
+  const resolvedTotalConsumedTotals = normalizedConsumption?.totals || totalConsumedTotals;
   const targetTotals = roundTrackingTotals(doc.target || {});
   const completion = manualCompletionPublic(doc);
   return {
@@ -2291,8 +2431,8 @@ function trackingPublic(doc = null, manualTrackingTotals = null) {
     menuAdherencePercent: totalMealsCount > 0
       ? roundTrackingNumber((completedMealsCount / totalMealsCount) * 100)
       : null,
-    nutritionAdherencePercent: totalConsumedTotals
-      ? ratioPercent(totalConsumedTotals.kcal, targetTotals.kcal)
+    nutritionAdherencePercent: resolvedTotalConsumedTotals
+      ? ratioPercent(resolvedTotalConsumedTotals.kcal, targetTotals.kcal)
       : null,
     reason: cleanString(nutrition.reason || "", 120),
     note: cleanString(nutrition.note || "", 1000),
@@ -2316,6 +2456,14 @@ targetMealIds: Array.isArray(doc.targetMealIds)
     )].slice(0, 20)
   : [],
 
+suppressedMenuMealIds: Array.isArray(doc.suppressedMenuMealIds)
+  ? [...new Set(
+      doc.suppressedMenuMealIds
+        .map((id) => cleanString(id, 100).trim())
+        .filter(Boolean)
+    )].slice(0, 20)
+  : [],
+
 manualEntries: Array.isArray(doc.manualEntries)
   ? doc.manualEntries
   : [],
@@ -2330,7 +2478,9 @@ manualEntries: Array.isArray(doc.manualEntries)
     foodReplacements: Array.isArray(doc.foodReplacements) ? doc.foodReplacements : [],
     consumedTotals,
     manualTrackingTotals: hydratedManualTotals,
-    totalConsumedTotals,
+    totalConsumedTotals: resolvedTotalConsumedTotals,
+    normalizedConsumedTotals: normalizedConsumption?.totals || null,
+    normalizedConsumption,
     remainingTotals: doc.remainingTotals ? roundTrackingTotals(doc.remainingTotals) : null,
     ...completion,
     updatedAt: doc.updatedAt || null,
@@ -7519,16 +7669,18 @@ class ServicioUsuarios {
       this.foodLogsModel.listLogsByUserDateRange(userId, start, end),
     ]);
     const trackingByDate = new Map((docs || []).map((doc) => [String(doc.date), doc]));
-    const manualTotalsByDate = trackingTotalsByDate(foodLogs);
+    const trackingLogsByDay = trackingLogsByDate(foodLogs);
     const nutritionWeek = resolveClientNutritionWeek(user);
     const activePlan = await this._resolveClientMenuPlan(user);
     const assignments = normalizeAssignedMenusByDay(activePlan.assignments || {});
 
     const days = WEEKLY_MENU_DAY_META.map((day, index) => {
       const date = addDaysIso(start, index);
+      const storedTracking = trackingByDate.get(date);
       const assignment = assignments[day.key] || null;
-      const primary = assignedMenuPublic(assignment?.primaryMenu || assignment || null);
-      const alternatives = Array.isArray(assignment?.alternatives)
+      const dayOverride = storedTracking?.dayPlanOverride || null;
+      const primary = assignedMenuPublic(dayOverride || assignment?.primaryMenu || assignment || null);
+      const alternatives = !dayOverride && Array.isArray(assignment?.alternatives)
         ? assignment.alternatives.map(assignedMenuPublic).filter(Boolean).slice(0, 10)
         : [];
       const menuTotals = primary?.menuSnapshot?.totals || { kcal: 0, proteina: 0, carbs: 0, grasas: 0 };
@@ -7555,7 +7707,7 @@ class ServicioUsuarios {
           proteinDiff,
           kcalPercent: kcalTarget > 0 ? Math.round(((menuTotals.kcal || 0) / kcalTarget) * 100) : 0,
         },
-        tracking: trackingPublic(trackingByDate.get(date), manualTotalsByDate.get(date) || emptyTrackingTotals()),
+        tracking: trackingPublic(storedTracking, trackingLogsByDay.get(date) || []),
       };
     });
 
@@ -7609,7 +7761,7 @@ class ServicioUsuarios {
       this.menuTrackingModel.listByUserDateRange(userId, from, to),
       this.foodLogsModel.listLogsByUserDateRange(userId, from, to),
     ]);
-    const manualTotalsByDate = trackingTotalsByDate(foodLogs);
+    const trackingLogsByDay = trackingLogsByDate(foodLogs);
     return {
       from,
       to,
@@ -7620,7 +7772,7 @@ class ServicioUsuarios {
         target: doc.target || null,
         menuTotals: doc.menuTotals || null,
         menuSnapshotSummary: doc.menuSnapshotSummary || null,
-        tracking: trackingPublic(doc, manualTotalsByDate.get(String(doc.date)) || emptyTrackingTotals()),
+        tracking: trackingPublic(doc, trackingLogsByDay.get(String(doc.date)) || []),
       })),
     };
   };
@@ -7633,7 +7785,7 @@ class ServicioUsuarios {
       this.menuTrackingModel.listByUserDateRange(clientId, from, to),
       this.foodLogsModel.listLogsByUserDateRange(clientId, from, to),
     ]);
-    const manualTotalsByDate = trackingTotalsByDate(foodLogs);
+    const trackingLogsByDay = trackingLogsByDate(foodLogs);
 
     return {
       client: {
@@ -7649,7 +7801,7 @@ class ServicioUsuarios {
         target: doc.target || null,
         menuTotals: doc.menuTotals || null,
         menuSnapshotSummary: doc.menuSnapshotSummary || null,
-        tracking: trackingPublic(doc, manualTotalsByDate.get(String(doc.date)) || emptyTrackingTotals()),
+        tracking: trackingPublic(doc, trackingLogsByDay.get(String(doc.date)) || []),
       })),
     };
   };
@@ -7982,6 +8134,7 @@ class ServicioUsuarios {
 
     const nutritionWeek = resolveClientNutritionWeek(user);
     const target = nutritionWeek.targets[dayKey] || null;
+    const existingTracking = await this.menuTrackingModel.getByUserDate(userId, date);
     const activePlan = await this._resolveClientMenuPlan(user);
     const assignments = normalizeAssignedMenusByDay(activePlan.assignments || {});
     const assignment = assignments[dayKey] || null;
@@ -7995,7 +8148,7 @@ class ServicioUsuarios {
 
 
 const selectedMenu =
-  selectedAlternative || primary;
+  existingTracking?.dayPlanOverride || selectedAlternative || primary;
 
 const selectedSnapshot =
   selectedMenu?.menuSnapshot || {};
@@ -8029,13 +8182,6 @@ const totalMealsCount =
  * actualización del día no vuelva a mandar el campo.
  */
 
-const existingTracking =
-  await this.menuTrackingModel.getByUserDate(
-    userId,
-    date
-  );
-
-
 /*
  * =====================================================
  * IDS VÁLIDOS DEL MENÚ ACTUAL
@@ -8058,6 +8204,21 @@ const validSnapshotMealIds =
         )
     )
   );
+
+const sourceSuppressedMenuMealIds =
+  requestedStatus === "missed"
+    ? []
+    : Array.isArray(payload.suppressedMenuMealIds)
+      ? payload.suppressedMenuMealIds
+      : Array.isArray(existingTracking?.suppressedMenuMealIds)
+        ? existingTracking.suppressedMenuMealIds
+        : [];
+
+const suppressedMenuMealIds = [
+  ...new Set(cleanStringArray(sourceSuppressedMenuMealIds, 20, 100)),
+].filter((id) => validSnapshotMealIds.has(id));
+
+const suppressedMenuMealIdSet = new Set(suppressedMenuMealIds);
 
 /*
  * =====================================================
@@ -8103,7 +8264,7 @@ const targetMealIds =
         (id) =>
           validSnapshotMealIds.has(
             id
-          )
+          ) && !suppressedMenuMealIdSet.has(id)
       );
 
 const targetMealIdSet =
@@ -8147,7 +8308,7 @@ const completedMenuMeals =
           meal?.mealId,
           100
         )
-      )
+      ) && !suppressedMenuMealIdSet.has(cleanString(meal?.mealId, 100))
   );
 
 
@@ -8300,6 +8461,7 @@ completedMenuMeals,
  * mediante Por meta.
  */
 targetMealIds,
+suppressedMenuMealIds,
 
 manualEntries,
 generatedRemainingMeals,
@@ -8848,6 +9010,25 @@ remainingTotals,
 
       const isFinalV2 = isWizardV2 && data?.__final === true;
 
+      if (isFinalV2 && !hasValidMetas(current?.metasActuales || {})) {
+        const confirmedTarget = nutritionTargetFromOnboardingGoal(current?.goal || {});
+        if (confirmedTarget) {
+          patch.metasActuales = {
+            ...(current?.metasActuales || {}),
+            kcal: confirmedTarget.kcal,
+            macros: {
+              ...(current?.metasActuales?.macros || {}),
+              ...confirmedTarget.macros,
+            },
+            source: "self",
+            sourceCoachId: null,
+            needsReview: false,
+            updatedAt: now,
+            updatedByClientId: toMongoIdOrString(current._id || current.id || userId),
+          };
+        }
+      }
+
       patch.onboarding = {
         ...onboarding,
         step: 3,
@@ -8876,6 +9057,7 @@ export {
   buildNutritionAssignmentImpact,
   buildSelfGoalsBackup,
   moveInvalidatedAssignments,
+  normalizeWeeklyMenuSnapshot,
   normalizeWeeklyMealTargetsByDay,
   resolveClientNutritionWeek,
   resetCoachDerivedClientPermissions,

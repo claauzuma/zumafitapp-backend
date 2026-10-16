@@ -115,6 +115,37 @@ test("Por meta persiste targetMealIds y excluye la misma comida de Hechas", asyn
   assert.deepEqual(context.getStored().targetMealIds, []);
 });
 
+test("las comidas reemplazadas por Por meta quedan suprimidas aunque luego se borren las metas", async () => {
+  const context = replacementService("free");
+  const basePayload = {
+    date: context.date,
+    dayKey: dayKey(context.date),
+    status: "pending",
+    completedMenuMealIds: [],
+    targetMealIds: [],
+    suppressedMenuMealIds: ["meal-1", "meal-1", "unknown-meal"],
+    mealReplacements: [],
+    foodReplacements: [],
+    manualEntries: [],
+    generatedRemainingMeals: [],
+  };
+
+  await context.service.upsertMyMenuTrackingDay({ id: context.user.id }, basePayload);
+  assert.deepEqual(context.getStored().suppressedMenuMealIds, ["meal-1"]);
+
+  await context.service.upsertMyMenuTrackingDay(
+    { id: context.user.id },
+    { ...basePayload, suppressedMenuMealIds: undefined }
+  );
+  assert.deepEqual(context.getStored().suppressedMenuMealIds, ["meal-1"]);
+
+  await context.service.upsertMyMenuTrackingDay(
+    { id: context.user.id },
+    { ...basePayload, suppressedMenuMealIds: [] }
+  );
+  assert.deepEqual(context.getStored().suppressedMenuMealIds, []);
+});
+
 test("Free autogestionado no crea equivalentes y Pro/VIP respetan 6/10 alimentos", () => {
   const free = clientMenuTrackingPermissions({ role: "cliente", personalPlan: "free" });
   const pro = clientMenuTrackingPermissions({ role: "cliente", personalPlan: "pro" });

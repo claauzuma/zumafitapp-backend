@@ -54,6 +54,38 @@ class ModelMongoDBClientMenuTracking {
       .toArray();
   };
 
+  setDayPlanOverride = async ({ clientId: rawClientId, date, dayPlanOverride = null, planningState } = {}) => {
+    const clientId = toMongoIdOrString(rawClientId);
+    const normalizedDate = String(date || "").trim();
+    if (!clientId || !normalizedDate) throw new Error("INVALID_DATE");
+    const now = new Date();
+    const set = { dayPlanOverride, updatedAt: now };
+    if (planningState && typeof planningState === "object") {
+      set.completedMenuMeals = Array.isArray(planningState.completedMenuMeals) ? planningState.completedMenuMeals : [];
+      set.targetMealIds = Array.isArray(planningState.targetMealIds) ? planningState.targetMealIds : [];
+      set.suppressedMenuMealIds = Array.isArray(planningState.suppressedMenuMealIds) ? planningState.suppressedMenuMealIds : [];
+      set.generatedRemainingMeals = Array.isArray(planningState.generatedRemainingMeals) ? planningState.generatedRemainingMeals : [];
+      set.mealReplacements = Array.isArray(planningState.mealReplacements) ? planningState.mealReplacements : [];
+      set.foodReplacements = Array.isArray(planningState.foodReplacements) ? planningState.foodReplacements : [];
+    }
+    await this._col().updateOne(
+      { clientId, date: normalizedDate },
+      {
+        $setOnInsert: { clientId, date: normalizedDate, createdAt: now },
+        $set: set,
+      },
+      { upsert: true }
+    );
+    return await this.getByUserDate(clientId, normalizedDate);
+  };
+
+  deleteDayByUserDate = async (userId, date) => {
+    const values = idValues(userId);
+    if (!values.length || !date) return false;
+    const result = await this._col().deleteOne({ clientId: { $in: values }, date: String(date) });
+    return result.deletedCount > 0;
+  };
+
   upsertDay = async (doc = {}) => {
     const clientId = toMongoIdOrString(doc.clientId);
     const date = String(doc.date || "").trim();
@@ -79,6 +111,14 @@ class ModelMongoDBClientMenuTracking {
 targetMealIds: Array.isArray(doc.targetMealIds)
   ? [...new Set(
       doc.targetMealIds
+        .map((id) => String(id || "").trim())
+        .filter(Boolean)
+    )]
+  : [],
+
+suppressedMenuMealIds: Array.isArray(doc.suppressedMenuMealIds)
+  ? [...new Set(
+      doc.suppressedMenuMealIds
         .map((id) => String(id || "").trim())
         .filter(Boolean)
     )]
@@ -152,6 +192,7 @@ manualEntries: Array.isArray(doc.manualEntries)
 
 completedMenuMeals: [],
 targetMealIds: [],
+suppressedMenuMealIds: [],
 manualEntries: [],
 
 
