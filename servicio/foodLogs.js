@@ -11,6 +11,12 @@ import ServiciosAlimentos, {
 import { requireCapability, requireTrackingHistoryRange } from "./accessGates.js";
 import { filterEquivalentCandidateFoods, isEquivalentFoodAllowed } from "./trackingEquivalences.js";
 import { normalizeFoodGenerationForRead } from "./foodGenerationMetadata.js";
+import {
+  UNRESTRICTED_WEEKLY_MODE,
+  addIsoDays,
+  mondayOfIsoWeek,
+  resolveUnrestrictedTarget,
+} from "./unrestrictedWeeklyBalance.js";
 
 const MEAL_TYPES = ["desayuno", "almuerzo", "merienda", "cena", "snack", "otra"];
 const MEAL_TYPE_SET = new Set(MEAL_TYPES);
@@ -604,6 +610,25 @@ function extractUserGoals(user = {}) {
   return null;
 }
 
+function hasWeeklyBalance(user = {}) {
+  const weeklyPlan = user?.menu?.weeklyPlan || {};
+  return weeklyPlan.balanceEnabled === true || weeklyPlan.mode === UNRESTRICTED_WEEKLY_MODE;
+}
+
+function weeklyBalanceBaseTargets(user = {}, weekStart, fallback = {}) {
+  const weeklyPlan = user?.menu?.weeklyPlan || {};
+  const dayKeys = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+  return new Map(dayKeys.map((dayKey, index) => {
+    const macros = weeklyPlan?.macrosByDay?.[dayKey] || {};
+    return [addIsoDays(weekStart, index), {
+      kcal: weeklyPlan?.caloriesByDay?.[dayKey] ?? fallback.kcal,
+      proteina: macros.p ?? macros.proteina ?? fallback.proteina,
+      carbs: macros.c ?? macros.carbs ?? fallback.carbs,
+      grasas: macros.g ?? macros.grasas ?? fallback.grasas,
+    }];
+  }));
+}
+
 function totalsFromAssignedMenu(menu = null) {
   if (!menu) return null;
   const macros = menu.macrosObjetivo || {};
@@ -659,7 +684,7 @@ class ServicioFoodLogs {
     if (date !== todayString() && permissions.canEditPastDays === false) throw new Error("PAST_DAYS_NOT_ALLOWED");
   }
 
-  async _resolveObjective(actor) {
+  async _resolveObjective(actor, date = todayString()) {
     const clientId = this._actorId(actor);
     const currentCoachId = currentCoachIdForUser(actor);
     const activeMenuCandidate = currentCoachId
@@ -687,6 +712,43 @@ class ServicioFoodLogs {
 
     const userGoals = extractUserGoals(actor);
     if (userGoals) {
+      if (hasWeeklyBalance(actor)) {
+        const weekStart = mondayOfIsoWeek(date);
+        const baseTargetByDate = weeklyBalanceBaseTargets(actor, weekStart, userGoals.objective);
+        const baseTarget = baseTargetByDate.get(date) || userGoals.objective;
+        const priorLogs = weekStart && date > weekStart
+          ? await this.foodLogsModel.listLogsByUserDateRange(clientId, weekStart, date)
+          : [];
+        const logsByDate = priorLogs.reduce((map, log) => {
+          const logDate = String(log?.date || "");
+          if (!logDate || logDate >= date) return map;
+          const current = map.get(logDate) || [];
+          current.push(log);
+          map.set(logDate, current);
+          return map;
+        }, new Map());
+        const consumptionByDate = new Map(
+          [...logsByDate.entries()].map(([logDate, logs]) => [
+            logDate,
+            { tracked: logs.length > 0, ...totalLogs(logs) },
+          ])
+        );
+        const unrestricted = resolveUnrestrictedTarget({
+          date,
+          baseTarget,
+          baseTargetByDate,
+          consumptionByDate,
+          closedBeforeDate: date > todayString() ? todayString() : date,
+        });
+        return {
+          objetivo: unrestricted.objective,
+          source: UNRESTRICTED_WEEKLY_MODE,
+          weeklyBalance: unrestricted.balance,
+          planificado: null,
+          menuAsignadoId: null,
+          coachId: currentCoachId || null,
+        };
+      }
       return {
         objetivo: userGoals.objective,
         source: userGoals.source,
@@ -811,7 +873,7 @@ class ServicioFoodLogs {
   }
 
   async _dayForConfig(actor, date) {
-    const objectiveInfo = await this._resolveObjective(actor);
+    const objectiveInfo = await this._resolveObjective(actor, date);
     const day = await this.foodLogsModel.upsertDayBase({
       userId: this._actorId(actor),
       date,
@@ -844,6 +906,7 @@ class ServicioFoodLogs {
       date,
       objetivo,
       objetivoSource: objectiveInfo?.source || "missing",
+      weeklyBalance: objectiveInfo?.weeklyBalance || null,
       totals,
       remaining: remainingTotals(objetivo, totals),
       planificado: objectiveInfo?.planificado || null,
@@ -912,7 +975,7 @@ class ServicioFoodLogs {
     this._assertClient(actor);
     const date = normalizeDate(query.date);
     requireTrackingHistoryRange(actor, { date });
-    const objectiveInfo = await this._resolveObjective(actor);
+    const objectiveInfo = await this._resolveObjective(actor, date);
     return await this._buildResponse(actor, date, objectiveInfo);
   }
 
@@ -968,7 +1031,7 @@ class ServicioFoodLogs {
       trackingQuantityMode,
       ...(menuGenerationPolicy ? { enforceQuantityConstraints: true } : {}),
     };
-    const selectedResult = await this.alimentosService.generarCantidades(basePayload, internalContext);
+    const selectedResult = await this.alimentosService.generarCantidades(basePayload, internalContext, actor);
     if (!assisted || selectedResult?.status === "error") return selectedResult;
 
     const diff = selectedResult?.diff || {};
@@ -1022,7 +1085,7 @@ class ServicioFoodLogs {
     }, {
       ...internalContext,
       candidateRoles,
-    });
+    }, actor);
     const added = (assistedResult?.foods || []).filter((food) => food?.source === "addedCandidate").length;
     return {
       ...assistedResult,
@@ -1118,7 +1181,7 @@ class ServicioFoodLogs {
 
     const mealType = normalizeMealType(payload.mealType || payload.comida);
     const mealId = normalizeMealId(payload.mealId || payload.mealConfigId || payload.mealKey) || mealType;
-    const objectiveInfo = await this._resolveObjective(actor);
+    const objectiveInfo = await this._resolveObjective(actor, date);
     const day = await this.foodLogsModel.upsertDayBase({
       userId: this._actorId(actor),
       date,
@@ -1157,7 +1220,7 @@ class ServicioFoodLogs {
     const writeRequestId = cleanString(payload.requestId || payload.writeRequestId, 120);
     if (requireRequestId && !writeRequestId) throw new Error("REQUEST_ID_REQUIRED");
 
-    const objectiveInfo = await this._resolveObjective(actor);
+    const objectiveInfo = await this._resolveObjective(actor, date);
     const day = await this.foodLogsModel.upsertDayBase({
       userId: this._actorId(actor),
       date,
@@ -1262,7 +1325,7 @@ class ServicioFoodLogs {
 
     await this.foodLogsModel.updateLogById(logId, patch);
 
-    const objectiveInfo = await this._resolveObjective(actor);
+    const objectiveInfo = await this._resolveObjective(actor, date);
     const logs = await this.foodLogsModel.listLogsByUserDate(this._actorId(actor), date);
     await this._reconcileAllocationGroup(actor, date, cleanString(current.writeRequestId, 120), logs);
     const day = await this.foodLogsModel.getDayByUserDate(this._actorId(actor), date);
@@ -1283,7 +1346,7 @@ class ServicioFoodLogs {
     this._assertCanWriteTracking(actor, date);
     await this.foodLogsModel.deleteLogById(logId);
 
-    const objectiveInfo = await this._resolveObjective(actor);
+    const objectiveInfo = await this._resolveObjective(actor, date);
     const logs = await this.foodLogsModel.listLogsByUserDate(this._actorId(actor), date);
     await this._reconcileAllocationGroup(actor, date, cleanString(current.writeRequestId, 120), logs);
     const day = await this.foodLogsModel.getDayByUserDate(this._actorId(actor), date);

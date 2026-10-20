@@ -8,7 +8,7 @@ class ControladorAlimentos {
     // GET /api/alimentos/
     obtenerAlimentos = async (req, res) => {
         try {
-            const alimentos = await this.servicio.obtenerAlimentos(req.query || {});
+            const alimentos = await this.servicio.obtenerAlimentos(req.query || {}, req.user || null);
             res.json(alimentos);
         } catch (error) {
             console.error('Error al obtener alimentos:', error);
@@ -62,13 +62,58 @@ class ControladorAlimentos {
 
     generarCantidades = async (req, res) => {
         try {
-            const resultado = await this.servicio.generarCantidades(req.body || {});
+            const resultado = await this.servicio.generarCantidades(req.body || {}, null, req.user || null);
             const statusCode = resultado.status === "error" ? 400 : 200;
             res.status(statusCode).json(resultado);
         } catch (error) {
             console.error("Error al generar cantidades:", error);
             res.status(500).json({ status: "error", message: "No se pudieron generar cantidades" });
         }
+    };
+
+    listarPersonalizados = async (req, res) => {
+        try {
+            res.json(await this.servicio.customFoodsService.list(req.user));
+        } catch (error) {
+            this.responderErrorPersonalizado(res, error);
+        }
+    };
+
+    crearPersonalizado = async (req, res) => {
+        try {
+            const alimento = await this.servicio.customFoodsService.create(req.user, req.body || {});
+            res.status(201).json({ alimento });
+        } catch (error) {
+            this.responderErrorPersonalizado(res, error);
+        }
+    };
+
+    actualizarPersonalizado = async (req, res) => {
+        try {
+            const alimento = await this.servicio.customFoodsService.update(req.user, req.params.id, req.body || {});
+            res.json({ alimento });
+        } catch (error) {
+            this.responderErrorPersonalizado(res, error);
+        }
+    };
+
+    eliminarPersonalizado = async (req, res) => {
+        try {
+            res.json(await this.servicio.customFoodsService.remove(req.user, req.params.id));
+        } catch (error) {
+            this.responderErrorPersonalizado(res, error);
+        }
+    };
+
+    responderErrorPersonalizado = (res, error) => {
+        const status = Number(error?.status) || 500;
+        if (status >= 500) console.error("Error en alimentos personalizados:", error);
+        res.status(status).json({
+            error: error?.code || "CUSTOM_FOOD_ERROR",
+            message: status >= 500 ? "No se pudo completar la operacion." : error.message,
+            ...(error?.usage !== undefined ? { usage: error.usage } : {}),
+            ...(error?.limit !== undefined ? { limit: error.limit } : {}),
+        });
     };
 
         obtenerComidasEquivalentes = async (req, res) => {

@@ -35,6 +35,7 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     autoCalculateTrackingQuantities: false,
     manualEquivalentMeals: false,
     equivalentMealFoodsLimit: 0,
+    customFoodsLimit: 0,
     exportPdf: false,
   },
   pro: {
@@ -62,6 +63,7 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     autoCalculateTrackingQuantities: true,
     manualEquivalentMeals: true,
     equivalentMealFoodsLimit: 6,
+    customFoodsLimit: 30,
     exportPdf: false,
   },
   vip: {
@@ -89,6 +91,7 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     autoCalculateTrackingQuantities: true,
     manualEquivalentMeals: true,
     equivalentMealFoodsLimit: 10,
+    customFoodsLimit: 30,
     exportPdf: false,
   },
 };
@@ -199,6 +202,7 @@ export function getClientNutritionCapabilities(user = {}, options = {}) {
     canPlanRemainingIntake: config.planRemainingIntake === true,
     canAutoCalculateTrackingQuantities: config.autoCalculateTrackingQuantities === true,
     canUseEquivalences: config.manualEquivalentMeals === true || hasCoach,
+    canCreateCustomFoods: role === "cliente" && Number(config.customFoodsLimit) > 0,
     canViewCoachAdherenceBreakdown: hasCoach,
     canExportMenuPdf: !!config.exportPdf,
     limits: {
@@ -212,6 +216,7 @@ export function getClientNutritionCapabilities(user = {}, options = {}) {
       equivalentMealFoods: hasCoach
         ? 6
         : Number(config.equivalentMealFoodsLimit) || 0,
+      customFoods: Number(config.customFoodsLimit) || 0,
     },
     activeMenuSource: ["own", "coach"].includes(activeSource) ? activeSource : "none",
   };

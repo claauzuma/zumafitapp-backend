@@ -64,9 +64,13 @@ class ModelMongoDBClientMenuTracking {
       set.completedMenuMeals = Array.isArray(planningState.completedMenuMeals) ? planningState.completedMenuMeals : [];
       set.targetMealIds = Array.isArray(planningState.targetMealIds) ? planningState.targetMealIds : [];
       set.suppressedMenuMealIds = Array.isArray(planningState.suppressedMenuMealIds) ? planningState.suppressedMenuMealIds : [];
+      if (Array.isArray(planningState.manualEntries)) set.manualEntries = planningState.manualEntries;
       set.generatedRemainingMeals = Array.isArray(planningState.generatedRemainingMeals) ? planningState.generatedRemainingMeals : [];
       set.mealReplacements = Array.isArray(planningState.mealReplacements) ? planningState.mealReplacements : [];
       set.foodReplacements = Array.isArray(planningState.foodReplacements) ? planningState.foodReplacements : [];
+      if (planningState.consumedTotals !== undefined) set.consumedTotals = planningState.consumedTotals;
+      if (planningState.remainingTotals !== undefined) set.remainingTotals = planningState.remainingTotals;
+      if (planningState.nutrition !== undefined) set.nutrition = planningState.nutrition;
     }
     await this._col().updateOne(
       { clientId, date: normalizedDate },

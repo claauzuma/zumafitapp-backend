@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import ModelMongoDBAlimentos from "../model/DAO/alimentosMongoDB.js";
 import ModelMongoDBMenus from "../model/DAO/menusMongoDB.js";
 import ModelMongoDBUsuarios from "../model/DAO/usuariosMongoDB.js";
+import ModelMongoDBClientMenuTracking from "../model/DAO/clientMenuTrackingMongoDB.js";
 import {
   clientHasCoach,
   getClientNutritionCapabilities,
@@ -248,9 +249,110 @@ function menuTotals(comidas = []) {
   });
 }
 
+function trackingTotals(value = {}) {
+  const source = value?.totals || value || {};
+  return {
+    kcal: number(source.kcal ?? source.calorias, { decimals: 1 }),
+    proteina: number(source.proteina ?? source.proteinas ?? source.p, { decimals: 1 }),
+    carbs: number(source.carbs ?? source.carbohidratos ?? source.c, { decimals: 1 }),
+    grasas: number(source.grasas ?? source.g, { decimals: 1 }),
+  };
+}
+
+function sumTrackingEntries(entries = []) {
+  return (Array.isArray(entries) ? entries : []).reduce(
+    (totals, entry) => addTotals(totals, trackingTotals(entry)),
+    { kcal: 0, proteina: 0, carbs: 0, grasas: 0 }
+  );
+}
+
+function resetMenuPlanningState(previousTracking = {}) {
+  const manualEntries = Array.isArray(previousTracking?.manualEntries)
+    ? previousTracking.manualEntries
+    : [];
+  const consumedTotals = sumTrackingEntries(manualEntries);
+  const target = trackingTotals(previousTracking?.target || {});
+  const remainingTotals = {
+    kcal: number(target.kcal - consumedTotals.kcal, { decimals: 1 }),
+    proteina: number(target.proteina - consumedTotals.proteina, { decimals: 1 }),
+    carbs: number(target.carbs - consumedTotals.carbs, { decimals: 1 }),
+    grasas: number(target.grasas - consumedTotals.grasas, { decimals: 1 }),
+  };
+  const hasManualConsumption = Object.values(consumedTotals).some((value) => value > 0);
+  const targetKcal = Number(target.kcal) || 0;
+  const kcalDifference = consumedTotals.kcal - targetKcal;
+  const status = !hasManualConsumption
+    ? "pending"
+    : targetKcal > 0 && kcalDifference > 10
+      ? "exceeded"
+      : targetKcal > 0 && Math.abs(kcalDifference) <= 10
+        ? "completed"
+        : "partial";
+
+  return {
+    completedMenuMeals: [],
+    targetMealIds: [],
+    suppressedMenuMealIds: [],
+    manualEntries,
+    generatedRemainingMeals: [],
+    mealReplacements: [],
+    foodReplacements: [],
+    consumedTotals,
+    remainingTotals,
+    nutrition: {
+      ...(previousTracking?.nutrition || {}),
+      status,
+      adherencePercent: targetKcal > 0 && hasManualConsumption
+        ? number((consumedTotals.kcal / targetKcal) * 100, { min: 0, max: 100, decimals: 1 })
+        : null,
+      completedMealsCount: 0,
+      totalMealsCount: 0,
+      selectedAlternative: null,
+    },
+  };
+}
+
 function dayMetaFromKey(value = "") {
   const raw = token(value);
   return MENU_DAYS.find((day) => day.key === raw || day.aliases.map(token).includes(raw)) || null;
+}
+
+function activationDateFromPayload(payload = {}, fallback = "") {
+  const value = cleanString(payload.activationDate || payload.fechaInicio || fallback, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+}
+
+function dayMetaFromDate(value = "") {
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const day = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))).getUTCDay();
+  return MENU_DAYS[(day + 6) % 7] || null;
+}
+
+function dailyMenuOverride(menu = {}, date = "") {
+  const menuId = idToString(menu._id || menu.id);
+  const dayMeta = dayMetaFromDate(date);
+  const day = dayMeta ? menu?.dias?.[dayMeta.key] : null;
+  const meals = Array.isArray(day?.comidas)
+    ? day.comidas
+    : Array.isArray(menu.comidas) ? menu.comidas : [];
+  const totals = day?.macrosTotales || menuTotals(meals);
+  return {
+    menuId: toMongoIdOrString(menuId),
+    source: menu.source || "autonomous",
+    assignedAt: new Date(),
+    activationDate: date,
+    menuSnapshot: {
+      id: `${menuId}-${date}`,
+      baseId: menuId,
+      name: day?.nombre || menu.nombre || "Menu del dia",
+      description: menu.descripcion || "",
+      source: menu.source || "autonomous",
+      totals,
+      meals,
+      mealsCount: meals.length,
+    },
+  };
 }
 
 function normalizeDays(payload = {}, fallbackMeals = [], selectedDays = []) {
@@ -497,6 +599,7 @@ class ServicioClientOwnMenus {
     this.menusModel = new ModelMongoDBMenus();
     this.usuariosModel = new ModelMongoDBUsuarios();
     this.alimentosModel = new ModelMongoDBAlimentos();
+    this.menuTrackingModel = new ModelMongoDBClientMenuTracking();
     this.mealAlternativeGenerator = generateMealAlternative;
     this.mealAlternativeQuantityRecalculator = recalculateMealAlternativeQuantities;
   }
@@ -696,6 +799,8 @@ class ServicioClientOwnMenus {
       fechaInicio: /^\d{4}-\d{2}-\d{2}$/.test(cleanString(payload.fechaInicio || current?.fechaInicio || "", 10))
         ? cleanString(payload.fechaInicio || current?.fechaInicio, 10)
         : null,
+      activationScope: token(payload.activationScope || current?.activationScope) === "date" ? "date" : "weekly",
+      activationDate: activationDateFromPayload(payload, current?.activationDate || current?.fechaInicio || "") || null,
       estrategiaObjetivo: ["current", "custom"].includes(token(payload.estrategiaObjetivo || current?.estrategiaObjetivo))
         ? token(payload.estrategiaObjetivo || current?.estrategiaObjetivo)
         : "current",
@@ -1080,7 +1185,28 @@ class ServicioClientOwnMenus {
     let nextUser = actor;
     if (payload.activate === true) {
       try {
-        nextUser = await this._activate(actor, created, capabilities);
+        if (token(payload.activationScope) === "date") {
+          const activationDate = activationDateFromPayload(payload, created?.fechaInicio);
+          if (!activationDate) throw serviceError("INVALID_DATE", "La fecha del menu diario no es valida");
+          const previousTracking = await this.menuTrackingModel.getByUserDate(this._userId(actor), activationDate);
+          await this.menuTrackingModel.setDayPlanOverride({
+            clientId: this._userId(actor),
+            date: activationDate,
+            dayPlanOverride: dailyMenuOverride(created, activationDate),
+            planningState: previousTracking?.dayPlanOverride
+              ? {
+                  completedMenuMeals: previousTracking.completedMenuMeals,
+                  targetMealIds: previousTracking.targetMealIds,
+                  suppressedMenuMealIds: previousTracking.suppressedMenuMealIds,
+                  generatedRemainingMeals: previousTracking.generatedRemainingMeals,
+                  mealReplacements: previousTracking.mealReplacements,
+                  foodReplacements: previousTracking.foodReplacements,
+                }
+              : resetMenuPlanningState(previousTracking),
+          });
+        } else {
+          nextUser = await this._activate(actor, created, capabilities);
+        }
       } catch (activationError) {
         let deleted = false;
         if (typeof this.menusModel.deleteBaseById === "function") {
@@ -1132,6 +1258,25 @@ class ServicioClientOwnMenus {
       );
     }
     const updated = await this.menusModel.updateBaseById(menuId, patch);
+    if (token(patch.activationScope) === "date") {
+      const activationDate = activationDateFromPayload(patch, updated?.fechaInicio);
+      if (activationDate) {
+        const previousTracking = await this.menuTrackingModel.getByUserDate(this._userId(actor), activationDate);
+        await this.menuTrackingModel.setDayPlanOverride({
+          clientId: this._userId(actor),
+          date: activationDate,
+          dayPlanOverride: dailyMenuOverride(updated, activationDate),
+          planningState: {
+            completedMenuMeals: previousTracking?.completedMenuMeals,
+            targetMealIds: previousTracking?.targetMealIds,
+            suppressedMenuMealIds: previousTracking?.suppressedMenuMealIds,
+            generatedRemainingMeals: previousTracking?.generatedRemainingMeals,
+            mealReplacements: previousTracking?.mealReplacements,
+            foodReplacements: previousTracking?.foodReplacements,
+          },
+        });
+      }
+    }
     return { menu: normalizeDoc(updated, actor) };
   }
 
@@ -1154,6 +1299,20 @@ class ServicioClientOwnMenus {
       activo: false,
       deletedAt: new Date(),
     });
+    if (token(current.activationScope) === "date") {
+      const activationDate = activationDateFromPayload(current, current?.fechaInicio);
+      if (activationDate) {
+        const previousTracking = await this.menuTrackingModel.getByUserDate(this._userId(actor), activationDate);
+        if (idToString(previousTracking?.dayPlanOverride?.menuId) === idToString(current._id)) {
+          await this.menuTrackingModel.setDayPlanOverride({
+            clientId: this._userId(actor),
+            date: activationDate,
+            dayPlanOverride: null,
+            planningState: resetMenuPlanningState(previousTracking),
+          });
+        }
+      }
+    }
     return { deleted: true, user: nextUser };
   }
 

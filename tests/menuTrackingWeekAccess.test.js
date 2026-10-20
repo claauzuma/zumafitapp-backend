@@ -39,6 +39,36 @@ test("el snapshot semanal conserva el origen de una composición automática", (
   });
 });
 
+test("un menu automatico diario no se replica al resto de la semana ni a la siguiente", async () => {
+  await withFixedNow(SUNDAY_NIGHT_IN_ARGENTINA, async () => {
+    const user = selfManagedClient("pro");
+    user.menu = { activeSource: "own", activeOwnMenuId: "auto-day", weeklyPlan: { assignedMenusByDay: {} } };
+    const repeatedAssignments = Object.fromEntries([
+      "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+    ].map((day) => [day, assignedSunday()]));
+    const service = serviceFor(user);
+    service._resolveClientMenuPlan = async () => ({
+      activeSource: "own",
+      assignments: repeatedAssignments,
+      activeMenu: {
+        _id: "auto-day",
+        source: "autonomous",
+        activationScope: "date",
+        activationDate: "2026-08-02",
+        fechaInicio: "2026-08-02",
+      },
+    });
+
+    const currentWeek = await service.getMyMenuTrackingWeek({ id: CLIENT_ID }, { start: "2026-07-27" });
+    assert.equal(currentWeek.days.filter((day) => day.assignment.primaryMenu).length, 1);
+    assert.equal(currentWeek.days[6].date, "2026-08-02");
+    assert.ok(currentWeek.days[6].assignment.primaryMenu);
+
+    const nextWeek = await service.getMyMenuTrackingWeek({ id: CLIENT_ID }, { start: "2026-08-03" });
+    assert.equal(nextWeek.days.filter((day) => day.assignment.primaryMenu).length, 0);
+  });
+});
+
 function assignedSunday({ alternatives = [] } = {}) {
   return {
     primaryMenu: {
@@ -203,6 +233,39 @@ test("un día guardado prevalece sólo en su fecha y no mezcla alternativas del 
     assert.equal(result.days[6].assignment.primaryMenu.menuSnapshot.name, "Mi domingo");
     assert.equal(result.days[6].assignment.alternatives.length, 0);
     assert.equal(result.days[5].assignment.primaryMenu, null);
+  });
+});
+
+test("ignora consumos residuales de una planificacion que ya fue eliminada", async () => {
+  await withFixedNow(SUNDAY_NIGHT_IN_ARGENTINA, async () => {
+    const service = serviceFor(selfManagedClient("pro"));
+    service.menuTrackingModel.listByUserDateRange = async () => [{
+      date: "2026-08-02",
+      dayKey: "sunday",
+      dayPlanOverride: null,
+      target: { kcal: 2000, proteina: 130, carbs: 240, grasas: 58 },
+      completedMenuMeals: [
+        { mealId: "breakfast", name: "Desayuno", totals: { kcal: 800, proteina: 40 } },
+        { mealId: "dinner", name: "Cena", totals: { kcal: 700, proteina: 35 } },
+      ],
+      generatedRemainingMeals: [{ id: "generated", totals: { kcal: 400, proteina: 20 } }],
+      consumedTotals: { kcal: 1900, proteina: 95, carbs: 220, grasas: 50 },
+      remainingTotals: { kcal: 100, proteina: 35, carbs: 20, grasas: 8 },
+      nutrition: { status: "partial", completedMealsCount: 2, totalMealsCount: 3 },
+    }];
+
+    const result = await service.getMyMenuTrackingWeek(
+      { id: CLIENT_ID },
+      { start: CURRENT_WEEK_START }
+    );
+    const sunday = result.days[6];
+
+    assert.equal(sunday.assignment.primaryMenu, null);
+    assert.deepEqual(sunday.tracking.completedMenuMeals, []);
+    assert.deepEqual(sunday.tracking.generatedRemainingMeals, []);
+    assert.equal(sunday.tracking.consumedTotals.kcal, 0);
+    assert.equal(sunday.tracking.totalConsumedTotals.kcal, 0);
+    assert.equal(sunday.tracking.status, "pending");
   });
 });
 

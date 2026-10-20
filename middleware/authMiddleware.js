@@ -98,3 +98,12 @@ export function authMiddleware(req, res, next) {
     return res.status(401).json({ error: msg });
   }
 }
+
+// Adjunta el usuario cuando hay una sesion valida, pero conserva los endpoints
+// de catalogo publico para clientes antiguos que todavia consultan sin token.
+export function optionalAuthMiddleware(req, res, next) {
+  const cookieToken = getCookieToken(req);
+  const headerToken = getBearerToken(req);
+  if (!cookieToken && !headerToken) return next();
+  return authMiddleware(req, res, next);
+}

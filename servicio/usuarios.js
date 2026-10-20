@@ -21,6 +21,7 @@ import ModelMongoDBComidasGuardadas from "../model/DAO/comidasGuardadasMongoDB.j
 import ModelMongoDBCoachClientCapacity from "../model/DAO/coachClientCapacityMongoDB.js";
 import ModelMongoDBClientCoachBlocks from "../model/DAO/clientCoachBlocksMongoDB.js";
 import ModelMongoDBRutinas from "../model/DAO/rutinasMongoDB.js";
+import ModelMongoDBClientCustomFoods from "../model/DAO/clientCustomFoodsMongoDB.js";
 import {
   getGoalsChangeStatus,
   goalsMetadataPatch,
@@ -31,6 +32,10 @@ import {
 } from "./accessGates.js";
 import { recordAccessAuditEvent } from "./accessAuditEvents.js";
 import ServicioFoodLogs from "./foodLogs.js";
+import {
+  UNRESTRICTED_WEEKLY_MODE,
+  resolveUnrestrictedTarget,
+} from "./unrestrictedWeeklyBalance.js";
 import {
   equivalentApprovalRequired,
   equivalentNotificationVisibility,
@@ -847,9 +852,23 @@ function normalizeOwnMenuDayEntry(menu = {}, day = {}) {
 
 function singleOwnMenuDayKey(menu = {}, source = "own") {
   if (source !== "own") return "";
+  if (
+    String(menu?.activationScope || "").toLowerCase() === "date" ||
+    String(menu?.source || "").toLowerCase() === "autonomous"
+  ) return "";
   const days = isPlainObject(menu.dias || menu.days) ? menu.dias || menu.days : {};
   const validDayKeys = Object.keys(days).filter((key) => getWeekDayMeta(key));
   return validDayKeys.length === 1 ? validDayKeys[0] : "";
+}
+
+function activePlanAssignmentForDate(activePlan = {}, assignments = {}, dayKey = "", date = "") {
+  const activeMenu = activePlan?.activeMenu || {};
+  const source = String(activeMenu?.source || "").trim().toLowerCase();
+  const scope = String(activeMenu?.activationScope || "").trim().toLowerCase();
+  const activationDate = String(activeMenu?.activationDate || activeMenu?.fechaInicio || "").slice(0, 10);
+  const dateScoped = activePlan?.activeSource === "own" && (scope === "date" || source === "autonomous");
+  if (dateScoped && activationDate && activationDate !== date) return null;
+  return assignments[dayKey] || null;
 }
 
 function normalizeOwnMenuFallbackDayEntry(menu = {}, fallbackDayKey = "") {
@@ -1160,6 +1179,10 @@ function weeklyPlanHasValues(weeklyPlan = {}) {
   );
 }
 
+function weeklyBalanceEnabled(weeklyPlan = {}) {
+  return weeklyPlan?.balanceEnabled === true || weeklyPlan?.mode === UNRESTRICTED_WEEKLY_MODE;
+}
+
 function normalizeWeeklyMealTargetsByDay(value = {}, nutritionWeek = null) {
   if (!isPlainObject(value)) throw new Error("MEAL_TARGETS_BY_DAY_INVALID");
   const normalized = {};
@@ -1222,18 +1245,23 @@ function normalizeWeeklyMealTargetsByDay(value = {}, nutritionWeek = null) {
 function isSelfGeneratedWeeklyPlan(user = {}) {
   const weeklyPlan = user?.menu?.weeklyPlan || {};
   const source = normalizeDayName(weeklyPlan.source || user?.menu?.weeklyPlanSource || "");
-  return ["self", "client", "cliente"].includes(source) && weeklyPlanHasValues(weeklyPlan);
+  return ["self", "client", "cliente"].includes(source) && (
+    weeklyBalanceEnabled(weeklyPlan) || weeklyPlanHasValues(weeklyPlan)
+  );
 }
 
 function normalizeWeeklyGoalsPayload(weeklyPlan = {}) {
   if (!isPlainObject(weeklyPlan)) return null;
-  const mode = cleanString(weeklyPlan.mode || "same_all_days", 60) || "same_all_days";
+  const requestedMode = cleanString(weeklyPlan.mode || "same_all_days", 60) || "same_all_days";
+  const mode = requestedMode === UNRESTRICTED_WEEKLY_MODE ? "same_all_days" : requestedMode;
+  const balanceEnabled = weeklyPlan.balanceEnabled === true || requestedMode === UNRESTRICTED_WEEKLY_MODE;
   if (mode === "same_all_days") {
     return {
       mode,
       caloriesByDay: {},
       macrosByDay: {},
       trainingDays: [],
+      balanceEnabled,
     };
   }
 
@@ -1271,6 +1299,7 @@ function normalizeWeeklyGoalsPayload(weeklyPlan = {}) {
     trainingDays: cleanStringArray(weeklyPlan.trainingDays, 7, 24)
       .map((day) => getWeekDayMeta(day)?.key)
       .filter(Boolean),
+    balanceEnabled,
   };
 }
 
@@ -1286,6 +1315,7 @@ function weeklyGoalsSignature(weeklyPlan = {}) {
     caloriesByDay: normalized.caloriesByDay || {},
     macrosByDay: normalized.macrosByDay || {},
     trainingDays: [...new Set(normalized.trainingDays || [])].sort(),
+    balanceEnabled: normalized.balanceEnabled === true,
   });
 }
 
@@ -1571,6 +1601,8 @@ function resolveClientNutritionWeek(user = {}) {
 
   const currentWeeklyKcal = Object.values(targets).reduce((sum, target) => sum + (hasNumber(target.kcal) ? Number(target.kcal) : 0), 0);
   return {
+    mode: weeklyPlan?.mode || "same_all_days",
+    balanceEnabled: weeklyBalanceEnabled(weeklyPlan),
     base,
     targets,
     days: WEEKLY_MENU_DAY_META.map((day) => targets[day.key]),
@@ -2352,6 +2384,7 @@ function assignedMenuPublic(entry = null) {
     menuId: idToString(entry.menuId),
     source: entry.source || "base",
     assignedAt: entry.assignedAt || null,
+    activationDate: entry.activationDate || null,
     menuSnapshot: {
       ...snapshot,
       totals: menuSnapshotTotals(snapshot),
@@ -2484,6 +2517,39 @@ manualEntries: Array.isArray(doc.manualEntries)
     remainingTotals: doc.remainingTotals ? roundTrackingTotals(doc.remainingTotals) : null,
     ...completion,
     updatedAt: doc.updatedAt || null,
+  };
+}
+
+function trackingWithoutOrphanedMenuPlan(doc = null) {
+  if (!doc) return doc;
+  const manualEntries = Array.isArray(doc.manualEntries) ? doc.manualEntries : [];
+  const consumedTotals = sumTrackingEntryTotals(manualEntries);
+  const targetTotals = roundTrackingTotals(doc.target || {});
+  const hasManualConsumption = Object.values(consumedTotals).some((value) => value > 0);
+  const nutrition = doc.nutrition || {};
+
+  return {
+    ...doc,
+    completedMenuMeals: [],
+    targetMealIds: [],
+    suppressedMenuMealIds: [],
+    generatedRemainingMeals: [],
+    mealReplacements: [],
+    foodReplacements: [],
+    consumedTotals,
+    remainingTotals: subtractTrackingTotals(targetTotals, consumedTotals),
+    nutrition: {
+      ...nutrition,
+      status: hasManualConsumption
+        ? deriveDailyTrackingStatus(consumedTotals, targetTotals, "pending")
+        : "pending",
+      adherencePercent: hasManualConsumption
+        ? calculateDietAdherence(consumedTotals, targetTotals)
+        : null,
+      completedMealsCount: 0,
+      totalMealsCount: 0,
+      selectedAlternative: null,
+    },
   };
 }
 
@@ -2642,6 +2708,7 @@ class ServicioUsuarios {
     }
 
     this.rutinasModel = new ModelMongoDBRutinas();
+    this.clientCustomFoodsModel = new ModelMongoDBClientCustomFoods();
   }
 
   // -------------------------
@@ -5819,11 +5886,17 @@ class ServicioUsuarios {
     if (typeof this.model.borrarUsuario !== "function") {
       throw new Error("El modelo no implementa borrarUsuario");
     }
+    // Los alimentos privados no se transfieren ni quedan huerfanos: pertenecen
+    // exclusivamente al cliente que los creo.
+    const customFoodsDeleted = normalizeRole(user.role) === "cliente"
+      ? await this.clientCustomFoodsModel.deleteByOwner(id)
+      : { deletedCount: 0 };
     const result = await this.model.borrarUsuario(id);
     return {
       deleted: true,
       role: user.role,
       unassignedClients,
+      customFoodsDeleted: Number(customFoodsDeleted?.deletedCount) || 0,
       result,
     };
   };
@@ -6485,7 +6558,11 @@ class ServicioUsuarios {
 
     const hasWeeklyPayload = isPlainObject(incoming?.weeklyPlan);
     const normalizedWeeklyPlan = hasWeeklyPayload ? normalizeWeeklyGoalsPayload(incoming.weeklyPlan) : null;
-    const weeklyPlanUsesAdvancedTargets = normalizedWeeklyPlan && weeklyPlanHasValues(normalizedWeeklyPlan);
+    const weeklyPlanUsesAdvancedTargets = normalizedWeeklyPlan && (
+      normalizedWeeklyPlan.mode !== "same_all_days" ||
+      normalizedWeeklyPlan.balanceEnabled === true ||
+      weeklyPlanHasValues(normalizedWeeklyPlan)
+    );
     if (weeklyPlanUsesAdvancedTargets) {
       requireCapability(user, "nutrition.weeklyPlanning");
     }
@@ -7653,6 +7730,44 @@ class ServicioUsuarios {
     return { coach, client: updated };
   };
 
+  _resolveClientNutritionTargetForDate = async (user, date) => {
+    const nutritionWeek = resolveClientNutritionWeek(user);
+    const dayKey = dayKeyFromDate(date);
+    const baseTarget = nutritionWeek.targets[dayKey] || null;
+    if (!nutritionWeek.balanceEnabled || !baseTarget) {
+      return { target: baseTarget, baseTarget: null, weeklyBalance: null };
+    }
+    const weekStart = mondayOfWeek(date);
+    const baseTargetByDate = new Map(WEEKLY_MENU_DAY_META.map((day, index) => [
+      addDaysIso(weekStart, index),
+      nutritionWeek.targets[day.key],
+    ]));
+    const logs = date > weekStart
+      ? await this.foodLogsModel.listLogsByUserDateRange(user?._id || user?.id, weekStart, date)
+      : [];
+    const byDate = trackingLogsByDate(logs);
+    const consumptionByDate = new Map(
+      [...byDate.entries()]
+        .filter(([logDate, entries]) => logDate < date && entries.length > 0)
+        .map(([logDate, entries]) => [
+          logDate,
+          { tracked: true, ...resolveDailyConsumedNutrition(null, entries).totals },
+        ])
+    );
+    const unrestricted = resolveUnrestrictedTarget({
+      date,
+      baseTarget,
+      baseTargetByDate,
+      consumptionByDate,
+      closedBeforeDate: date > localDateKey() ? localDateKey() : date,
+    });
+    return {
+      target: unrestricted.target,
+      baseTarget,
+      weeklyBalance: unrestricted.balance,
+    };
+  };
+
   getMyMenuTrackingWeek = async (actor, query = {}) => {
     const userId = actor?.id || actor?._id;
     if (!userId) throw new Error("NO_AUTENTICADO");
@@ -7664,27 +7779,71 @@ class ServicioUsuarios {
     const start = mondayOfWeek(query.start || query.date || new Date().toISOString().slice(0, 10));
     const end = addDaysIso(start, 6);
     requireTrackingHistoryRange(user, { start, end });
-    const [docs, foodLogs] = await Promise.all([
+    const [docs, foodLogs, activePlan] = await Promise.all([
       this.menuTrackingModel.listByUserDateRange(userId, start, end),
       this.foodLogsModel.listLogsByUserDateRange(userId, start, end),
+      this._resolveClientMenuPlan(user),
     ]);
     const trackingByDate = new Map((docs || []).map((doc) => [String(doc.date), doc]));
     const trackingLogsByDay = trackingLogsByDate(foodLogs);
     const nutritionWeek = resolveClientNutritionWeek(user);
-    const activePlan = await this._resolveClientMenuPlan(user);
     const assignments = normalizeAssignedMenusByDay(activePlan.assignments || {});
+    const publicTrackingByDate = new Map();
+    const consumptionByDate = new Map();
+    WEEKLY_MENU_DAY_META.forEach((day, index) => {
+      const date = addDaysIso(start, index);
+      const storedTracking = trackingByDate.get(date);
+      const dayLogs = trackingLogsByDay.get(date) || [];
+      const assignment = activePlanAssignmentForDate(activePlan, assignments, day.key, date);
+      const assignedMenu = assignment?.primaryMenu || assignment || null;
+      const hasAvailableMenuPlan = Boolean(
+        storedTracking?.dayPlanOverride?.menuSnapshot || assignedMenu?.menuSnapshot
+      );
+      const visibleTrackingDoc = hasAvailableMenuPlan
+        ? storedTracking
+        : trackingWithoutOrphanedMenuPlan(storedTracking);
+      const tracking = trackingPublic(visibleTrackingDoc, dayLogs);
+      const tracked = dayLogs.length > 0 || (
+        Boolean(visibleTrackingDoc) && (
+          tracking.status !== "pending" ||
+          tracking.completedMenuMeals?.length > 0 ||
+          tracking.manualEntries?.length > 0
+        )
+      );
+      publicTrackingByDate.set(date, tracking);
+      if (tracked) {
+        consumptionByDate.set(date, {
+          tracked: true,
+          ...(tracking.totalConsumedTotals || tracking.consumedTotals || emptyTrackingTotals()),
+        });
+      }
+    });
+    const baseTargetByDate = new Map(WEEKLY_MENU_DAY_META.map((day, index) => [
+      addDaysIso(start, index),
+      nutritionWeek.targets[day.key],
+    ]));
 
     const days = WEEKLY_MENU_DAY_META.map((day, index) => {
       const date = addDaysIso(start, index);
       const storedTracking = trackingByDate.get(date);
-      const assignment = assignments[day.key] || null;
+      const assignment = activePlanAssignmentForDate(activePlan, assignments, day.key, date);
       const dayOverride = storedTracking?.dayPlanOverride || null;
       const primary = assignedMenuPublic(dayOverride || assignment?.primaryMenu || assignment || null);
       const alternatives = !dayOverride && Array.isArray(assignment?.alternatives)
         ? assignment.alternatives.map(assignedMenuPublic).filter(Boolean).slice(0, 10)
         : [];
       const menuTotals = primary?.menuSnapshot?.totals || { kcal: 0, proteina: 0, carbs: 0, grasas: 0 };
-      const target = nutritionWeek.targets[day.key] || null;
+      const baseTarget = nutritionWeek.targets[day.key] || null;
+      const unrestricted = nutritionWeek.balanceEnabled
+        ? resolveUnrestrictedTarget({
+            date,
+            baseTarget,
+            baseTargetByDate,
+            consumptionByDate,
+            closedBeforeDate: date > localDateKey() ? localDateKey() : date,
+          })
+        : null;
+      const target = unrestricted?.target || baseTarget;
       const mealTargetPlan = user?.menu?.weeklyPlan?.mealTargetsByDay?.[day.key] || null;
       const kcalTarget = hasNumber(target?.kcal) ? Number(target.kcal) : 0;
       const proteinTarget = hasNumber(target?.p) ? Number(target.p) : 0;
@@ -7696,6 +7855,8 @@ class ServicioUsuarios {
         dayKey: day.key,
         dayLabel: day.label,
         target,
+        baseTarget: unrestricted ? baseTarget : null,
+        weeklyBalance: unrestricted?.balance || null,
         mealTargetPlan,
         assignment: {
           primaryMenu: primary,
@@ -7707,7 +7868,7 @@ class ServicioUsuarios {
           proteinDiff,
           kcalPercent: kcalTarget > 0 ? Math.round(((menuTotals.kcal || 0) / kcalTarget) * 100) : 0,
         },
-        tracking: trackingPublic(storedTracking, trackingLogsByDay.get(date) || []),
+        tracking: publicTrackingByDate.get(date),
       };
     });
 
@@ -8132,12 +8293,11 @@ class ServicioUsuarios {
     const dayKey = getWeekDayMeta(payload.dayKey)?.key || dayKeyFromDate(date);
     const requestedStatus = MENU_TRACKING_STATUS.has(String(payload.status || "")) ? String(payload.status) : "pending";
 
-    const nutritionWeek = resolveClientNutritionWeek(user);
-    const target = nutritionWeek.targets[dayKey] || null;
+    const { target } = await this._resolveClientNutritionTargetForDate(user, date);
     const existingTracking = await this.menuTrackingModel.getByUserDate(userId, date);
     const activePlan = await this._resolveClientMenuPlan(user);
     const assignments = normalizeAssignedMenusByDay(activePlan.assignments || {});
-    const assignment = assignments[dayKey] || null;
+    const assignment = activePlanAssignmentForDate(activePlan, assignments, dayKey, date);
     const primary = assignment?.primaryMenu || assignment || null;
     const alternatives = Array.isArray(assignment?.alternatives) ? assignment.alternatives : [];
     const selectedIndex = hasNumber(payload?.selectedAlternative?.index) ? Number(payload.selectedAlternative.index) : null;
@@ -8562,7 +8722,7 @@ remainingTotals,
     const dayKey = dayKeyFromDate(date);
     const activePlan = await this._resolveClientMenuPlan(user);
     const assignments = normalizeAssignedMenusByDay(activePlan.assignments || {});
-    const assignment = assignments[dayKey] || null;
+    const assignment = activePlanAssignmentForDate(activePlan, assignments, dayKey, date);
     const primary = assignment?.primaryMenu || assignment || null;
     const alternatives = Array.isArray(assignment?.alternatives) ? assignment.alternatives : [];
     const existing = await this.menuTrackingModel.getByUserDate(userId, date);
@@ -8598,7 +8758,7 @@ remainingTotals,
       ? (payload.plan ? normalizeManualCompletionPlan(payload.plan, previousPlan) : null)
       : previousPlan;
     const now = new Date();
-    const target = resolveClientNutritionWeek(user).targets[dayKey] || null;
+    const { target } = await this._resolveClientNutritionTargetForDate(user, date);
     const menuTotals = menuSnapshotTotals(selectedSnapshot);
     const manualCompletion = {
       startedAt: previousCompletion.startedAt || now,

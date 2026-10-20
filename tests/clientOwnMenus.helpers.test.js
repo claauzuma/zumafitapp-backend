@@ -268,7 +268,7 @@ function configuredCreateService({ activationFails = false } = {}) {
     personalPlan: "pro",
     menu: { activeSource: "none" },
   };
-  const calls = { create: 0, delete: 0, activate: 0 };
+  const calls = { create: 0, delete: 0, activate: 0, dailyActivate: 0, dailyActivation: null };
   servicio._actor = async () => actor;
   servicio._capabilitiesFromAccessContext = () => ({
     plan: "pro",
@@ -298,6 +298,14 @@ function configuredCreateService({ activationFails = false } = {}) {
       calls.activate += 1;
       if (activationFails) throw new Error("ACTIVATION_FAILED");
       return actor;
+    },
+  };
+  servicio.menuTrackingModel = {
+    getByUserDate: async () => null,
+    setDayPlanOverride: async (activation) => {
+      calls.dailyActivate += 1;
+      calls.dailyActivation = activation;
+      return activation;
     },
   };
   return { servicio, calls, actor };
@@ -389,6 +397,93 @@ test("create + activate hace rollback seguro si falla la activación", async () 
   assert.equal(calls.deletedId, "menu-created");
 });
 
+test("create + activate por fecha guarda un override diario y no activa el menu para toda la semana", async () => {
+  const { servicio, calls, actor } = configuredCreateService();
+
+  await servicio.create(actor, {
+    nombre: "Menu de hoy",
+    source: "autonomous",
+    activate: true,
+    activationScope: "date",
+    activationDate: "2026-10-18",
+    fechaInicio: "2026-10-18",
+    selectedDays: ["sunday"],
+    comidas: [{
+      id: "meal-1",
+      nombre: "Cena",
+      tipoComida: "cena",
+      items: [{
+        id: "food-1",
+        alimentoId: "food-1",
+        nombreSnapshot: "Pescado",
+        cantidad: 180,
+        unidad: "g",
+        kcal: 320,
+      }],
+    }],
+  });
+
+  assert.equal(calls.activate, 0);
+  assert.equal(calls.dailyActivate, 1);
+  assert.equal(calls.dailyActivation.date, "2026-10-18");
+  assert.equal(calls.dailyActivation.dayPlanOverride.activationDate, "2026-10-18");
+  assert.equal(calls.dailyActivation.dayPlanOverride.menuSnapshot.meals.length, 1);
+});
+
+test("update refresca el override diario de un menu limitado a una fecha", async () => {
+  const servicio = new ServicioClientOwnMenus();
+  const actor = { _id: "cliente-1", role: "cliente", personalPlan: "pro", menu: { activeSource: "none" } };
+  const current = {
+    _id: "menu-diario",
+    nombre: "Plan libre - Almuerzo - 2026-10-18",
+    ownerType: "cliente",
+    ownerId: "cliente-1",
+    source: "manual",
+    activationScope: "date",
+    activationDate: "2026-10-18",
+    fechaInicio: "2026-10-18",
+    selectedDays: ["sunday"],
+    comidas: [{
+      id: "meal-1",
+      nombre: "Almuerzo",
+      tipoComida: "almuerzo",
+      compositionOrigin: "manual",
+      items: [{ id: "food-1", alimentoId: "food-1", nombreSnapshot: "Arroz", cantidad: 100, kcal: 130 }],
+    }],
+  };
+  let dailyActivation = null;
+  servicio._actor = async () => actor;
+  servicio._capabilitiesFromAccessContext = () => ({ plan: "pro", canEditOwnMenu: true, limits: { clientMenuDays: 7 } });
+  servicio._getOwnedMenu = async () => current;
+  servicio._validateMenuPayload = async () => {};
+  servicio._ownMenusRaw = async () => [current];
+  servicio.menusModel = {
+    updateBaseById: async (_id, patch) => ({ ...patch, _id: "menu-diario" }),
+  };
+  servicio.menuTrackingModel = {
+    getByUserDate: async () => ({ completedMenuMeals: ["meal-anterior"] }),
+    setDayPlanOverride: async (payload) => {
+      dailyActivation = payload;
+      return payload;
+    },
+  };
+
+  await servicio.update(actor, "menu-diario", {
+    ...current,
+    comidas: [{
+      ...current.comidas[0],
+      items: [
+        ...current.comidas[0].items,
+        { id: "food-2", alimentoId: "food-2", nombreSnapshot: "Pollo", cantidad: 150, kcal: 250 },
+      ],
+    }],
+  });
+
+  assert.equal(dailyActivation.date, "2026-10-18");
+  assert.equal(dailyActivation.dayPlanOverride.menuSnapshot.meals[0].items.length, 2);
+  assert.deepEqual(dailyActivation.planningState.completedMenuMeals, ["meal-anterior"]);
+});
+
 test("update rechaza vaciar un menú automático y exige eliminarlo", async () => {
   const servicio = new ServicioClientOwnMenus();
   const actor = {
@@ -438,4 +533,65 @@ test("update rechaza vaciar un menú automático y exige eliminarlo", async () =
     (error) => error.code === "INVALID_MENU" && /Eliminalo/.test(error.publicMessage)
   );
   assert.equal(updates, 0);
+});
+
+test("eliminar un menu diario limpia su override y el consumo derivado de esa planificacion", async () => {
+  const servicio = new ServicioClientOwnMenus();
+  const actor = { _id: "cliente-1", role: "cliente", personalPlan: "pro", menu: { activeSource: "none" } };
+  const current = {
+    _id: "menu-diario",
+    ownerType: "cliente",
+    ownerId: "cliente-1",
+    source: "manual",
+    activationScope: "date",
+    activationDate: "2026-10-18",
+    fechaInicio: "2026-10-18",
+  };
+  let removedMenuPatch = null;
+  let dailyActivation = null;
+  servicio._actor = async () => actor;
+  servicio._capabilitiesFromAccessContext = () => ({ canDeleteOwnMenu: true });
+  servicio._getOwnedMenu = async () => current;
+  servicio.menusModel = {
+    updateBaseById: async (_id, patch) => {
+      removedMenuPatch = patch;
+      return { ...current, ...patch };
+    },
+  };
+  servicio.menuTrackingModel = {
+    getByUserDate: async () => ({
+      dayPlanOverride: { menuId: "menu-diario" },
+      target: { kcal: 2000, proteina: 150, carbs: 220, grasas: 60 },
+      completedMenuMeals: [{ mealId: "meal-1", totals: { kcal: 500 } }],
+      targetMealIds: ["meal-2"],
+      generatedRemainingMeals: [{ id: "generated-1", totals: { kcal: 600 } }],
+      manualEntries: [{ id: "manual-1", totals: { kcal: 180, proteina: 12, carbs: 20, grasas: 5 } }],
+      consumedTotals: { kcal: 1280, proteina: 80, carbs: 120, grasas: 30 },
+      nutrition: { status: "partial", completedMealsCount: 1, totalMealsCount: 3 },
+    }),
+    setDayPlanOverride: async (payload) => {
+      dailyActivation = payload;
+      return payload;
+    },
+  };
+
+  await servicio.remove(actor, "menu-diario", { confirmActiveDelete: true });
+
+  assert.equal(removedMenuPatch.estado, "inactivo");
+  assert.equal(dailyActivation.date, "2026-10-18");
+  assert.equal(dailyActivation.dayPlanOverride, null);
+  assert.deepEqual(dailyActivation.planningState.completedMenuMeals, []);
+  assert.deepEqual(dailyActivation.planningState.targetMealIds, []);
+  assert.deepEqual(dailyActivation.planningState.generatedRemainingMeals, []);
+  assert.deepEqual(dailyActivation.planningState.manualEntries, [
+    { id: "manual-1", totals: { kcal: 180, proteina: 12, carbs: 20, grasas: 5 } },
+  ]);
+  assert.deepEqual(dailyActivation.planningState.consumedTotals, {
+    kcal: 180,
+    proteina: 12,
+    carbs: 20,
+    grasas: 5,
+  });
+  assert.equal(dailyActivation.planningState.remainingTotals.kcal, 1820);
+  assert.equal(dailyActivation.planningState.nutrition.completedMealsCount, 0);
 });

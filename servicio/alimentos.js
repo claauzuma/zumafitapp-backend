@@ -5,6 +5,7 @@ import menu, {
 } from "../menu2.js";
 import { normalizeFoodGenerationForRead } from "./foodGenerationMetadata.js";
 import { MEAL_NUTRITION_POLICY } from "./mealNutritionPolicy.js";
+import ServicioClientCustomFoods from "./clientCustomFoods.js";
 
 // Un Symbol no puede llegar desde JSON. El modo calorie_fill se habilita
 // solamente cuando el servicio especifico de Tracking entrega este contexto.
@@ -735,11 +736,27 @@ function messageForResult(result = {}, mode = "", generationType = "") {
 class ServicioAlimentos {
   constructor(persistencia) {
     this.model = ModelFactory.get(persistencia);
+    this.customFoodsService = new ServicioClientCustomFoods();
   }
 
-  obtenerAlimentos = async (filters = {}) => {
+  _catalogForActor = async (actor = null) => {
+    const globalFoods = await this.model.obtenerAlimentos();
+    if (!actor?.id && !actor?._id && !actor?.targetUserId) return globalFoods;
+    let customFoods = [];
     try {
-      const alimentosTotales = await this.model.obtenerAlimentos();
+      customFoods = await this.customFoodsService.visibleFoods(actor);
+    } catch (error) {
+      // Los tests unitarios del motor reemplazan el catalogo global por un
+      // adapter en memoria sin abrir Mongo. En produccion, si Mongo cae, la
+      // lectura global anterior ya falla y no se oculta el error real.
+      if (!/No hay conexion a la base de datos/i.test(String(error?.message || ""))) throw error;
+    }
+    return [...globalFoods, ...customFoods];
+  };
+
+  obtenerAlimentos = async (filters = {}, actor = null) => {
+    try {
+      const alimentosTotales = await this._catalogForActor(actor);
       return filterAlimentos(preferStructuredFoodRecords(alimentosTotales), filters);
     } catch (error) {
       console.error("Error al obtener alimentos:", error);
@@ -815,7 +832,7 @@ class ServicioAlimentos {
     }
   };
 
-  generarCantidades = async (payload = {}, internalContext = null) => {
+  generarCantidades = async (payload = {}, internalContext = null, actor = null) => {
     const mode = normalizeMode(payload.mode || payload.modo);
     const generationType = normalizeGenerationType(payload.generationType || payload.alcance);
     const target = normalizeTarget(payload.target || payload.mealTarget || {}, mode);
@@ -847,7 +864,7 @@ class ServicioAlimentos {
     const fixedFoods = Array.isArray(payload.fixedFoods) ? payload.fixedFoods : [];
     const pendingFoods = Array.isArray(payload.pendingFoods) ? payload.pendingFoods : [];
     const explicitCandidates = Array.isArray(payload.candidateFoods) ? payload.candidateFoods : [];
-    const allFoods = await this.model.obtenerAlimentos();
+    const allFoods = await this._catalogForActor(actor);
     generationDebug("\n========================================");
 generationDebug("🍽️ ZUMAFIT - GENERACIÓN DE COMIDA");
 generationDebug("========================================");
@@ -1010,7 +1027,10 @@ if (menuGenerationPolicy) {
       if (!groups.carbohidratos.length) neededRoles.push("carbohidratos");
       if (!groups.grasas.length) neededRoles.push("grasas");
 
-      const rawCandidates = explicitCandidates.length ? explicitCandidates : allFoods;
+      // Los alimentos privados nunca se sugieren ni completan automaticamente.
+      // Solamente entran al motor cuando el cliente ya los mando como fixed/pending.
+      const rawCandidates = (explicitCandidates.length ? explicitCandidates : allFoods)
+        .filter((food) => food?.customFood !== true && food?.privateFood !== true);
       const candidatesSource = menuGenerationPolicy
         ? rawCandidates.filter((food) => {
             const generation = normalizeFoodGenerationForRead(food?.generation);

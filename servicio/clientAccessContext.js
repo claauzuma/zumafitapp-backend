@@ -54,6 +54,7 @@ export const PERSONAL_PLAN_CATALOG = {
       manualObjectiveChangeDays: 30,
       manualObjectiveChangesPerWindow: 2,
       equivalentMealFoods: 0,
+      customFoods: 0,
     },
     library: "basic",
     nutrition: {
@@ -93,6 +94,7 @@ export const PERSONAL_PLAN_CATALOG = {
       manualObjectiveChangeDays: null,
       manualObjectiveChangesPerWindow: null,
       equivalentMealFoods: 6,
+      customFoods: 30,
     },
     library: "global",
     nutrition: {
@@ -132,6 +134,7 @@ export const PERSONAL_PLAN_CATALOG = {
       manualObjectiveChangeDays: null,
       manualObjectiveChangesPerWindow: null,
       equivalentMealFoods: 10,
+      customFoods: 30,
     },
     library: "premium",
     nutrition: {
@@ -257,6 +260,7 @@ function personalPlanConfigFor(plan = "free") {
       manualObjectiveChangeDays: setting.limits.goalChangesWindowDays,
       manualObjectiveChangesPerWindow: setting.limits.goalChangesPerWindow,
       equivalentMealFoods: base.limits.equivalentMealFoods,
+      customFoods: base.limits.customFoods,
     },
     library: setting.libraryAccess,
   };
@@ -588,6 +592,7 @@ function capabilityFromCatalog(planConfig = {}, baseCapabilities = {}) {
       manualObjectiveChangeDays: planConfig.limits?.manualObjectiveChangeDays,
       manualObjectiveChangesPerWindow: planConfig.limits?.manualObjectiveChangesPerWindow,
       equivalentMealFoods: planConfig.limits?.equivalentMealFoods,
+      customFoods: planConfig.limits?.customFoods,
     },
     canUseBasicLibrary: ["basic", "global", "premium"].includes(planConfig.library),
     canUseGlobalLibrary: ["global", "premium"].includes(planConfig.library),
