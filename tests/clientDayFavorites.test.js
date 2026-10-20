@@ -33,6 +33,7 @@ function serviceFor({ actor = user(), stored = favorite() } = {}) {
     listByUser: async () => [],
     getByIdForUser: async () => stored,
     create: async (doc) => ({ _id: "66d000000000000000000009", ...doc }),
+    updateByUser: async (_id, _userId, patch) => ({ ...stored, ...patch }),
     softDelete: async () => true,
   };
   service.tracking = {
@@ -90,6 +91,26 @@ test("usar 2625 kcal en un día de 2800 informa 175 kcal libres sin crear consum
   assert.equal(receivedConfig.mealsConfig.length, 1);
   assert.equal(receivedConfig.mealsConfig[0].meta.kcal, 700);
   assert.equal(receivedConfig.logs, undefined);
+});
+
+test("el dueño puede modificar su día y los totales se recalculan", async () => {
+  const service = serviceFor();
+  const result = await service.update({ id: "client-favorites" }, "66d000000000000000000001", {
+    name: "Día ajustado",
+    targetMeals: [{ name: "Cena", type: "cena", target: { kcal: 600, proteina: 40, carbs: 70, grasas: 18 } }],
+  });
+  assert.equal(result.favorite.name, "Día ajustado");
+  assert.equal(result.favorite.plannedTotals.kcal, 600);
+  assert.equal(result.favorite.targetMeals[0].target.proteina, 40);
+});
+
+test("no permite modificar un día que no pertenece al cliente", async () => {
+  const service = serviceFor();
+  service.model.getByIdForUser = async () => null;
+  await assert.rejects(
+    service.update({ id: "otro-cliente" }, "66d000000000000000000001", { name: "Ajeno" }),
+    (failure) => failure.code === "DAY_FAVORITE_NOT_FOUND"
+  );
 });
 
 test("si falla la segunda escritura restaura planificación y metas anteriores", async () => {

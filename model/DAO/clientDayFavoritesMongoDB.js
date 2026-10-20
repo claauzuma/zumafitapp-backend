@@ -60,6 +60,20 @@ export default class ModelMongoDBClientDayFavorites {
     return { ...record, _id: result.insertedId };
   }
 
+  async updateByUser(id, userId, patch = {}) {
+    const _id = ObjectId.isValid(cleanId(id)) ? new ObjectId(cleanId(id)) : null;
+    if (!_id) return null;
+    const result = await this._col().findOneAndUpdate({
+      _id,
+      ownerId: { $in: idValues(userId) },
+      deletedAt: null,
+    }, {
+      $set: { ...patch, updatedAt: new Date() },
+    }, { returnDocument: "after" });
+    if (result && Object.prototype.hasOwnProperty.call(result, "value")) return result.value || null;
+    return result || null;
+  }
+
   async softDelete(id, userId) {
     const _id = ObjectId.isValid(cleanId(id)) ? new ObjectId(cleanId(id)) : null;
     if (!_id) return false;

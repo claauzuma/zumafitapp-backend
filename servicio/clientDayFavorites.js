@@ -187,6 +187,46 @@ export default class ServicioClientDayFavorites {
     return { ok: true };
   }
 
+  async update(actor, favoriteId, payload = {}) {
+    const user = await this._actor(actor);
+    const userId = id(user._id || user.id);
+    const current = await this.model.getByIdForUser(favoriteId, userId);
+    if (!current) throw error("DAY_FAVORITE_NOT_FOUND", "No encontramos ese día guardado.");
+
+    const nextPhysicalMeals = Object.prototype.hasOwnProperty.call(payload, "physicalMeals")
+      ? (Array.isArray(payload.physicalMeals) ? payload.physicalMeals : []).slice(0, 16).map(physicalMeal).filter((meal) => meal.items.length)
+      : (current.physicalMeals || []);
+    const nextTargetMeals = Object.prototype.hasOwnProperty.call(payload, "targetMeals")
+      ? (Array.isArray(payload.targetMeals) ? payload.targetMeals : []).slice(0, 16).map(targetMeal).filter((meal) => meal.target.kcal > 0)
+      : (current.targetMeals || []);
+    if (!nextPhysicalMeals.length && !nextTargetMeals.length) {
+      throw error("EMPTY_DAY_FAVORITE", "El día guardado debe conservar al menos una comida.");
+    }
+
+    const physicalTotals = nextPhysicalMeals.reduce((sum, meal) => addTotals(sum, meal.totals), totals());
+    const targetTotals = nextTargetMeals.reduce((sum, meal) => addTotals(sum, meal.target), totals());
+    const plannedTotals = addTotals(physicalTotals, targetTotals);
+    const sourceType = nextTargetMeals.length && nextPhysicalMeals.length
+      ? "mixed"
+      : nextTargetMeals.length
+        ? "target"
+        : text(current.sourceType || "manual", 30);
+    const name = Object.prototype.hasOwnProperty.call(payload, "name")
+      ? text(payload.name, 80)
+      : text(current.name, 80);
+    if (!name) throw error("VALIDATION_ERROR", "Escribí un nombre para el día guardado.");
+
+    const updated = await this.model.updateByUser(favoriteId, userId, {
+      name,
+      sourceType,
+      plannedTotals,
+      physicalMeals: nextPhysicalMeals,
+      targetMeals: nextTargetMeals,
+    });
+    if (!updated) throw error("DAY_FAVORITE_NOT_FOUND", "No encontramos ese día guardado.");
+    return { favorite: favoritePublic(updated) };
+  }
+
   async apply(actor, favoriteId, payload = {}) {
     const user = await this._actor(actor);
     const userId = id(user._id || user.id);

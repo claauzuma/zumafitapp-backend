@@ -114,6 +114,13 @@ class RouterClienteMenus {
       writeLimiter,
       this.controladorClientOwnMenus.applyDayFavorite
     );
+    this.router.patch(
+      "/me/day-favorites/:favoriteId",
+      authMiddleware,
+      denyWriteWhenReadOnlyImpersonation,
+      writeLimiter,
+      this.controladorClientOwnMenus.updateDayFavorite
+    );
     this.router.delete(
       "/me/day-favorites/:favoriteId",
       authMiddleware,

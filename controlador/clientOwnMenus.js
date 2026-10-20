@@ -66,6 +66,11 @@ class ControladorClientOwnMenus {
     catch (error) { return sendError(res, error); }
   };
 
+  updateDayFavorite = async (req, res) => {
+    try { return res.json(await this.dayFavorites.update(req.user, req.params.favoriteId, req.body || {})); }
+    catch (error) { return sendError(res, error); }
+  };
+
   applyDayFavorite = async (req, res) => {
     try { return res.json(await this.dayFavorites.apply(req.user, req.params.favoriteId, req.body || {})); }
     catch (error) { return sendError(res, error); }
