@@ -1,5 +1,9 @@
 import { ObjectId } from "mongodb";
 import CnxMongoDB from "../DBMongo.js";
+import globalFoodCatalogCache, {
+    globalFoodCatalogCacheInfo,
+    invalidateGlobalFoodCatalogCache,
+} from "../../servicio/foodCatalogCache.js";
 
 export const ALIMENTOS_COLLECTION = "fooddatabase2";
 
@@ -18,13 +22,20 @@ class ModelMongoDBAlimentos {
         ]);
     }
 
-    obtenerAlimentos = async () => {
+    obtenerAlimentos = async ({ cache = false, forceRefresh = false } = {}) => {
         if (!CnxMongoDB.connection) {
             throw new Error("No hay conexion a la base de datos");
         }
 
-        return await this.collection().find({}).toArray();
+        if (!cache) return await this.collection().find({}).toArray();
+
+        return await globalFoodCatalogCache.get(
+            () => this.collection().find({}).toArray(),
+            { forceRefresh }
+        );
     }
+
+    obtenerEstadoCache = () => globalFoodCatalogCacheInfo()
 
     obtenerAlimentoPorId = async (id) => {
         if (!CnxMongoDB.connection) {
@@ -66,29 +77,34 @@ class ModelMongoDBAlimentos {
     crearAlimento = async (documento) => {
         if (!CnxMongoDB.connection) throw new Error("No hay conexion a la base de datos");
         const result = await this.collection().insertOne(documento);
-        return await this.collection().findOne({ _id: result.insertedId });
+        const created = await this.collection().findOne({ _id: result.insertedId });
+        invalidateGlobalFoodCatalogCache();
+        return created;
     }
 
     actualizarGenerationPorId = async (id, generation) => {
         if (!CnxMongoDB.connection) throw new Error("No hay conexion a la base de datos");
         const value = String(id || "").trim();
         if (!ObjectId.isValid(value)) return null;
-        return await this.collection().findOneAndUpdate(
+        const updated = await this.collection().findOneAndUpdate(
             { _id: new ObjectId(value) },
             { $set: { generation, updatedAt: new Date() } },
             { returnDocument: "after" }
         );
+        if (updated) invalidateGlobalFoodCatalogCache();
+        return updated;
     }
 
     obtenerAlimentosGeneracionAutomatica = async ({ mealType, roles = [] } = {}) => {
         if (!CnxMongoDB.connection) throw new Error("No hay conexion a la base de datos");
         if (!mealType || !roles.length) return [];
-        return await this.collection().find({
-            activo: { $ne: false },
-            "generation.mode": "GENERIC",
-            [`generation.mealTypes.${mealType}`]: true,
-            $or: roles.map((role) => ({ [`generation.roles.${role}`]: true })),
-        }).toArray();
+        const foods = await this.obtenerAlimentos({ cache: true });
+        return foods.filter((food) => (
+            food?.activo !== false &&
+            food?.generation?.mode === "GENERIC" &&
+            food?.generation?.mealTypes?.[mealType] === true &&
+            roles.some((role) => food?.generation?.roles?.[role] === true)
+        ));
     }
 }
 

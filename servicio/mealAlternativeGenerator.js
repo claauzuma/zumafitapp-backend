@@ -874,7 +874,7 @@ export async function generateMealAlternative(input = {}, dependencies = {}) {
     };
   }
 
-  const catalog = await model.obtenerAlimentos();
+  const catalog = await model.obtenerAlimentos({ cache: true });
   const quantityService = dependencies.quantityService || new ServicioAlimentos("MONGO");
   const result = await solveCandidatesWithRelaxation({
     candidates,
@@ -921,7 +921,7 @@ export async function recalculateMealAlternativeQuantities(input = {}, dependenc
       .filter(([id, quantity]) => id && selectedFoodIds.includes(id) && Number.isFinite(quantity) && quantity > 0)
   );
   const model = dependencies.model || new ModelMongoDBAlimentos();
-  const catalog = await model.obtenerAlimentos();
+  const catalog = await model.obtenerAlimentos({ cache: true });
   if (selectedFoodIds.some((id) => !catalog.some((food) => foodAliases(food).has(id)))) {
     throw generationError("FOOD_NOT_FOUND", "Uno de los alimentos ya no esta disponible.", "selectedFoodIds");
   }

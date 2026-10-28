@@ -1,3 +1,5 @@
+import { TRACKING_DETAIL_RETENTION_DAYS } from "../utils/trackingRetention.js";
+
 export const CLIENT_PLAN_SETTING_CODES = Object.freeze(["free", "pro", "vip"]);
 
 export const BASE_CLIENT_PLAN_SETTINGS = Object.freeze({
@@ -9,7 +11,7 @@ export const BASE_CLIENT_PLAN_SETTINGS = Object.freeze({
       maxDaysPerMenu: 1,
       maxSavedMeals: 5,
       maxFavorites: 3,
-      trackingHistoryDays: 7,
+      trackingHistoryDays: TRACKING_DETAIL_RETENTION_DAYS,
       goalChangesPerWindow: 2,
       goalChangesWindowDays: 30,
     }),
@@ -23,7 +25,7 @@ export const BASE_CLIENT_PLAN_SETTINGS = Object.freeze({
       maxDaysPerMenu: 7,
       maxSavedMeals: 100,
       maxFavorites: 20,
-      trackingHistoryDays: null,
+      trackingHistoryDays: TRACKING_DETAIL_RETENTION_DAYS,
       goalChangesPerWindow: null,
       goalChangesWindowDays: null,
     }),
@@ -37,7 +39,7 @@ export const BASE_CLIENT_PLAN_SETTINGS = Object.freeze({
       maxDaysPerMenu: 7,
       maxSavedMeals: 500,
       maxFavorites: 100,
-      trackingHistoryDays: null,
+      trackingHistoryDays: TRACKING_DETAIL_RETENTION_DAYS,
       goalChangesPerWindow: null,
       goalChangesWindowDays: null,
     }),
@@ -54,7 +56,7 @@ const CLIENT_LIMIT_RULES = Object.freeze({
   maxDaysPerMenu: { min: 1, max: 7 },
   maxSavedMeals: { min: 0, max: 250000 },
   maxFavorites: { min: 0, max: 100000 },
-  trackingHistoryDays: { min: 1, max: 36500, nullable: true },
+  trackingHistoryDays: { min: 1, max: TRACKING_DETAIL_RETENTION_DAYS },
   goalChangesPerWindow: { min: 0, max: 1000, nullable: true },
   goalChangesWindowDays: { min: 1, max: 3650, nullable: true },
 });
@@ -98,7 +100,7 @@ export function normalizeClientPlanSetting(docOrCode) {
       maxDaysPerMenu: nullableInteger(limits.maxDaysPerMenu ?? limits.menuDays, base.limits.maxDaysPerMenu),
       maxSavedMeals: nullableInteger(limits.maxSavedMeals ?? limits.ownMeals, base.limits.maxSavedMeals),
       maxFavorites: nullableInteger(limits.maxFavorites ?? limits.favorites, base.limits.maxFavorites),
-      trackingHistoryDays: nullableInteger(limits.trackingHistoryDays, base.limits.trackingHistoryDays),
+      trackingHistoryDays: TRACKING_DETAIL_RETENTION_DAYS,
       goalChangesPerWindow: nullableInteger(
         limits.goalChangesPerWindow ?? limits.manualObjectiveChangesPerWindow,
         base.limits.goalChangesPerWindow

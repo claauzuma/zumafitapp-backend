@@ -83,6 +83,9 @@ function adminError(res, error) {
 
   if (isAccessGateError(error)) {
     const code = error?.code || msg;
+    if (code === "TRACKING_HISTORY_EXPIRED") {
+      return res.status(410).json(accessErrorPayload(error));
+    }
     const conflictCodes = new Set([
       "PLAN_LIMIT_REACHED",
       "GOALS_CHANGE_COOLDOWN",

@@ -40,11 +40,14 @@ import ModelMongoDBComidasGuardadas from "./model/DAO/comidasGuardadasMongoDB.js
 import ModelMongoDBProfessionalApplications from "./model/DAO/professionalApplicationsMongoDB.js";
 import ModelMongoDBCoachSubscriptionRequests from "./model/DAO/coachSubscriptionRequestsMongoDB.js";
 import ModelMongoDBAccessAuditEvents from "./model/DAO/accessAuditEventsMongoDB.js";
+import ModelMongoDBImpersonationAudit from "./model/DAO/impersonationAuditMongoDB.js";
 import ModelMongoDBCoachClientCapacity from "./model/DAO/coachClientCapacityMongoDB.js";
 import ModelMongoDBCoachPlanConfigs from "./model/DAO/coachPlanConfigsMongoDB.js";
 import ModelMongoDBClientPlanConfigs from "./model/DAO/clientPlanConfigsMongoDB.js";
 import ModelMongoDBClientDayFavorites from "./model/DAO/clientDayFavoritesMongoDB.js";
 import ModelMongoDBClientCustomFoods from "./model/DAO/clientCustomFoodsMongoDB.js";
+import ModelMongoDBAlimentos from "./model/DAO/alimentosMongoDB.js";
+import { startTrackingRetentionMaintenance } from "./servicio/trackingRetention.js";
 
 function getLanIPv4s() {
   const nets = os.networkInterfaces();
@@ -64,6 +67,7 @@ class Server {
     this.persistencia = persistencia;
     this.app = express();
     this.server = null;
+    this.trackingRetentionMaintenance = null;
   }
 
   async start() {
@@ -88,29 +92,40 @@ class Server {
       if (!CnxMongoDB.connection) throw new Error("MongoDB no conectó");
 
       // ✅ Índices
-      try {
-        await new ModelMongoDBUsuarios().ensureIndexes();
-        await new ModelMongoDBPendingUsers().ensureIndexes();
-        await new ModelMongoDBPasswordResets().ensureIndexes();
-        await new ModelMongoDBEjercicios().ensureIndexes();
-        await new ModelMongoDBRutinas().ensureIndexes();
-        await new ModelMongoDBMenus().ensureIndexes();
-        await new ModelMongoDBFoodLogs().ensureIndexes();
-        await new ModelMongoDBClientMenuTracking().ensureIndexes();
-        await new ModelMongoDBComidas().ensureIndexes();
-        await new ModelMongoDBComidasGuardadas().ensureIndexes();
-        await new ModelMongoDBProfessionalApplications().ensureIndexes();
-        await new ModelMongoDBCoachSubscriptionRequests().ensureIndexes();
-        await new ModelMongoDBAccessAuditEvents().ensureIndexes();
-        await new ModelMongoDBCoachClientCapacity().ensureIndexes();
-        await new ModelMongoDBCoachPlanConfigs().ensureSeedDefaults();
-        await new ModelMongoDBClientPlanConfigs().ensureSeedDefaults();
-        await new ModelMongoDBClientDayFavorites().ensureIndexes();
-        await new ModelMongoDBClientCustomFoods().ensureIndexes();
-        console.log("Indices asegurados (usuarios + pending + resets + rutinas + menus + tracking + comidas + comidasGuardadas + profesionales)");
-      } catch (e) {
-        console.log("⚠️ No se pudieron asegurar índices:", e?.message || e);
+      // Un indice conflictivo no debe impedir crear los indices siguientes.
+      const indexInitializers = [
+        ["alimentos", () => new ModelMongoDBAlimentos().asegurarIndices()],
+        ["usuarios", () => new ModelMongoDBUsuarios().ensureIndexes()],
+        ["usuarios pendientes", () => new ModelMongoDBPendingUsers().ensureIndexes()],
+        ["resets de clave", () => new ModelMongoDBPasswordResets().ensureIndexes()],
+        ["ejercicios", () => new ModelMongoDBEjercicios().ensureIndexes()],
+        ["rutinas", () => new ModelMongoDBRutinas().ensureIndexes()],
+        ["menus", () => new ModelMongoDBMenus().ensureIndexes()],
+        ["food logs", () => new ModelMongoDBFoodLogs().ensureIndexes()],
+        ["tracking de menus", () => new ModelMongoDBClientMenuTracking().ensureIndexes()],
+        ["comidas", () => new ModelMongoDBComidas().ensureIndexes()],
+        ["comidas guardadas", () => new ModelMongoDBComidasGuardadas().ensureIndexes()],
+        ["solicitudes profesionales", () => new ModelMongoDBProfessionalApplications().ensureIndexes()],
+        ["suscripciones de coaches", () => new ModelMongoDBCoachSubscriptionRequests().ensureIndexes()],
+        ["auditoria de acceso", () => new ModelMongoDBAccessAuditEvents().ensureIndexes()],
+        ["auditoria de suplantacion", () => new ModelMongoDBImpersonationAudit().ensureIndexes()],
+        ["capacidad de coaches", () => new ModelMongoDBCoachClientCapacity().ensureIndexes()],
+        ["planes de coaches", () => new ModelMongoDBCoachPlanConfigs().ensureSeedDefaults()],
+        ["planes de clientes", () => new ModelMongoDBClientPlanConfigs().ensureSeedDefaults()],
+        ["favoritos diarios", () => new ModelMongoDBClientDayFavorites().ensureIndexes()],
+        ["alimentos personalizados", () => new ModelMongoDBClientCustomFoods().ensureIndexes()],
+      ];
+      const failedInitializers = [];
+      for (const [name, initialize] of indexInitializers) {
+        try {
+          await initialize();
+        } catch (error) {
+          failedInitializers.push(name);
+          console.log(`No se pudieron asegurar indices de ${name}:`, error?.message || error);
+        }
       }
+      console.log(`Indices verificados: ${indexInitializers.length - failedInitializers.length}/${indexInitializers.length}.`);
+      this.trackingRetentionMaintenance = startTrackingRetentionMaintenance();
     }
 
     // ✅ CORS robusto
@@ -127,7 +142,8 @@ class Server {
         return cb(new Error("CORS origin no permitido -> " + origin), false);
       },
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization", "Cache-Control", "Pragma"],
+      allowedHeaders: ["Content-Type", "Authorization", "Cache-Control", "Pragma", "If-None-Match"],
+      exposedHeaders: ["ETag", "X-Catalog-Cache", "X-Catalog-Items"],
       credentials: true,
     };
 
@@ -189,6 +205,8 @@ class Server {
   }
 
   async stop() {
+    this.trackingRetentionMaintenance?.stop?.();
+    this.trackingRetentionMaintenance = null;
     if (this.server) {
       this.server.close(() => console.log("Servidor cerrado"));
       if (this.persistencia === "MONGODB") await CnxMongoDB.desconectar();

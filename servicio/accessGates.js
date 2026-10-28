@@ -1,5 +1,6 @@
 import { resolveClientAccessContext } from "./clientAccessContext.js";
 import { normalizeClientRole } from "./clientNutritionCapabilities.js";
+import { TRACKING_DETAIL_RETENTION_DAYS } from "../utils/trackingRetention.js";
 
 const MS_DAY = 24 * 60 * 60 * 1000;
 const FREE_GOALS_CHANGE_LIMIT = 2;
@@ -15,7 +16,6 @@ const RESOURCE_LIMIT_KEYS = {
 };
 
 const FEATURE_REQUIRED_PLAN = {
-  "nutrition.tracking.fullHistory": "pro",
   "nutrition.equivalences": "pro",
   "nutrition.plannedVsConsumed": "pro",
   "nutrition.autoMenus": "pro",
@@ -78,6 +78,7 @@ export function isAccessGateError(error = {}) {
   return error instanceof AccessGateError || Boolean(error?.code && [
     "PLAN_CAPABILITY_REQUIRED",
     "PLAN_LIMIT_REACHED",
+    "TRACKING_HISTORY_EXPIRED",
     "GOALS_CHANGE_COOLDOWN",
     "GOALS_CHANGE_LIMIT_REACHED",
     "COACH_SERVICE_IS_PRIMARY",
@@ -102,6 +103,9 @@ export function accessContextFor(userOrContext = {}) {
 function numericLimit(context = {}, resource = "") {
   const key = RESOURCE_LIMIT_KEYS[resource] || resource;
   const value = context?.capabilities?.limits?.[key] ?? context?.limits?.[key];
+  if (key === "trackingHistoryDays") {
+    return TRACKING_DETAIL_RETENTION_DAYS;
+  }
   if (value === null || value === undefined || value === Number.POSITIVE_INFINITY) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
@@ -304,14 +308,17 @@ export function requireTrackingHistoryRange(userOrContext = {}, {
   const minAllowed = new Date(today.getTime() - (limit - 1) * MS_DAY);
   const oldestRequested = startDate && endDate && startDate.getTime() <= endDate.getTime() ? startDate : endDate || startDate;
   if (requestedDays > limit || (oldestRequested && oldestRequested.getTime() < minAllowed.getTime())) {
-    throw accessError("PLAN_CAPABILITY_REQUIRED", "Tu plan permite ver historial limitado de tracking", {
-      feature: "nutrition.tracking.fullHistory",
-      requiredPlan: "pro",
+    throw accessError(
+      "TRACKING_HISTORY_EXPIRED",
+      `Solo se conserva el detalle de los ultimos ${TRACKING_DETAIL_RETENTION_DAYS} dias de tracking`,
+      {
+      feature: "nutrition.tracking.retention",
       plan: context.effectivePersonalPlan || "free",
       resource: "trackingHistoryDays",
       current: requestedDays,
       limit,
-    });
+      }
+    );
   }
   return context;
 }

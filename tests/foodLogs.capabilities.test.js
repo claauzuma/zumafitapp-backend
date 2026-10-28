@@ -189,6 +189,47 @@ test("la configuracion normal permite persistir seis metas personales sin marcar
   ]);
 });
 
+test("persiste el overlay de ejecucion de una meta del coach sin volverlo personal", async () => {
+  const servicio = new ServicioFoodLogs();
+  servicio.usuariosModel = {
+    obtenerPorId: async () => ({
+      _id: "client-coach",
+      role: "cliente",
+      personalPlan: "free",
+      coachAccess: { status: "active", coachId: "coach-1", servicePackage: "service_pro" },
+    }),
+  };
+  servicio._dayForConfig = async () => ({
+    objectiveInfo: { objetivo: { kcal: 2000 }, source: "metasActuales" },
+    day: { _id: "day-coach-target", date: today, mealsConfig: [] },
+  });
+  servicio.foodLogsModel = {
+    updateDayMealsConfig: async (_dayId, mealsConfig) => ({ _id: "day-coach-target", date: today, mealsConfig }),
+    listLogsByUserDate: async () => [],
+  };
+  const response = await servicio.updateMealsConfig({ id: "client-coach" }, {
+    date: today,
+    mealsConfig: [{
+      mealId: "coach_lunch",
+      tipo: "almuerzo",
+      nombre: "Almuerzo",
+      meta: { kcal: 500, proteina: 40, carbs: 55, grasas: 13 },
+      metaConfirmed: true,
+      metaConfirmation: {
+        mode: "manual_consumption",
+        previousMeta: { kcal: 600, proteina: 45, carbs: 70, grasas: 18 },
+        consumedMeta: { kcal: 500, proteina: 40, carbs: 55, grasas: 13 },
+      },
+      targetOrigin: "coach",
+      targetLocked: true,
+      coachTargetExecution: true,
+    }],
+  });
+  assert.equal(response.mealsConfig[0].coachTargetExecution, true);
+  assert.equal(response.mealsConfig[0].personalTarget, false);
+  assert.equal(response.mealsConfig[0].metaConfirmed, true);
+});
+
 test("backend no elimina una comida con food_logs sin confirmacion explicita", async () => {
   const servicio = new ServicioFoodLogs();
   servicio.usuariosModel = {

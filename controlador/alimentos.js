@@ -1,4 +1,48 @@
 import ServiciosAlimentos from '../servicio/alimentos.js';
+import { createHash } from 'node:crypto';
+
+function header(req, name) {
+    if (typeof req?.get === "function") return req.get(name) || "";
+    return req?.headers?.[String(name).toLowerCase()] || "";
+}
+
+function setHeader(res, name, value) {
+    if (typeof res?.set === "function") res.set(name, value);
+    else if (typeof res?.setHeader === "function") res.setHeader(name, value);
+}
+
+function etagMatches(requestValue = "", etag = "") {
+    return String(requestValue || "")
+        .split(",")
+        .map((value) => value.trim())
+        .some((value) => value === "*" || value === etag);
+}
+
+export function sendCatalogJson(req, res, payload, { publicCache = false, cacheInfo = null } = {}) {
+    const body = JSON.stringify(payload);
+    const digest = createHash("sha256").update(body).digest("base64url").slice(0, 27);
+    const etag = `W/\"foods-${digest}\"`;
+
+    setHeader(res, "Cache-Control", publicCache
+        ? "public, max-age=300, s-maxage=1800, stale-while-revalidate=86400"
+        : "private, max-age=0, must-revalidate");
+    if (publicCache && typeof res?.removeHeader === "function") res.removeHeader("Pragma");
+    setHeader(res, "Vary", publicCache ? "Accept-Encoding" : "Authorization, Cookie, Accept-Encoding");
+    setHeader(res, "ETag", etag);
+    if (cacheInfo) {
+        setHeader(res, "X-Catalog-Cache", cacheInfo.cached ? "MEMORY" : "EMPTY");
+        setHeader(res, "X-Catalog-Items", String(cacheInfo.count || 0));
+    }
+
+    if (etagMatches(header(req, "if-none-match"), etag)) {
+        return res.status(304).end();
+    }
+
+    if (typeof res.type === "function" && typeof res.send === "function") {
+        return res.type("application/json").send(body);
+    }
+    return res.json(payload);
+}
 
 class ControladorAlimentos {
     constructor() {
@@ -9,10 +53,26 @@ class ControladorAlimentos {
     obtenerAlimentos = async (req, res) => {
         try {
             const alimentos = await this.servicio.obtenerAlimentos(req.query || {}, req.user || null);
-            res.json(alimentos);
+            return sendCatalogJson(req, res, alimentos, {
+                publicCache: false,
+                cacheInfo: this.servicio.obtenerEstadoCache(),
+            });
         } catch (error) {
             console.error('Error al obtener alimentos:', error);
             res.status(500).json({ message: 'Error al obtener los alimentos' });
+        }
+    };
+
+    obtenerCatalogoGlobal = async (req, res) => {
+        try {
+            const alimentos = await this.servicio.obtenerCatalogoGlobal(req.query || {});
+            return sendCatalogJson(req, res, alimentos, {
+                publicCache: true,
+                cacheInfo: this.servicio.obtenerEstadoCache(),
+            });
+        } catch (error) {
+            console.error('Error al obtener el catalogo global:', error);
+            return res.status(500).json({ message: 'Error al obtener el catalogo global' });
         }
     };
 

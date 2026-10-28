@@ -1,4 +1,5 @@
 import CnxMongoDB from "../DBMongo.js";
+import { impersonationAuditExpiresAt } from "../../utils/dataRetention.js";
 
 class ModelMongoDBImpersonationAudit {
   _col() {
@@ -10,11 +11,10 @@ class ModelMongoDBImpersonationAudit {
 
   async ensureIndexes() {
     const col = this._col();
-    await col.createIndex({ sessionId: 1 });
-    await col.createIndex({ adminId: 1, createdAt: -1 });
-    await col.createIndex({ actorType: 1, actorId: 1, createdAt: -1 });
-    await col.createIndex({ targetUserId: 1, createdAt: -1 });
-    await col.createIndex({ action: 1, createdAt: -1 });
+    await col.createIndex(
+      { expiresAt: 1 },
+      { expireAfterSeconds: 0, name: "impersonation_audit_logs_ttl" }
+    );
   }
 
   async record(event = {}) {
@@ -30,6 +30,7 @@ class ModelMongoDBImpersonationAudit {
       startedAt: event.startedAt || null,
       endedAt: event.endedAt || null,
       createdAt: now,
+      expiresAt: event.expiresAt || impersonationAuditExpiresAt(now),
     };
 
     await this._col().insertOne(doc);

@@ -219,8 +219,6 @@ manualEntries: [],
   async ensureIndexes() {
     const col = this._col();
     await col.createIndex({ clientId: 1, date: 1 }, { unique: true });
-    await col.createIndex({ clientId: 1, date: -1 });
-    await col.createIndex({ coachId: 1, date: -1 });
   }
 }
 

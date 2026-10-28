@@ -1,6 +1,7 @@
 import ModelMongoDBClientCustomFoods from "../model/DAO/clientCustomFoodsMongoDB.js";
 import ModelMongoDBUsuarios from "../model/DAO/usuariosMongoDB.js";
-import { getClientNutritionCapabilities, normalizeClientRole } from "./clientNutritionCapabilities.js";
+import { normalizeClientRole } from "./clientNutritionCapabilities.js";
+import { resolveClientAccessContext } from "./clientAccessContext.js";
 
 export const CLIENT_CUSTOM_FOODS_LIMIT = 30;
 
@@ -138,15 +139,19 @@ export default class ServicioClientCustomFoods {
     }
     const actorHasPlanContext = ["personalPlan", "plan", "personalSubscription", "subscription", "personalTrial", "trial"]
       .some((field) => Object.prototype.hasOwnProperty.call(actor || {}, field));
-    const user = actorHasPlanContext ? actor : await this.userModel.obtenerPorId(id);
+    const storedUser = typeof this.userModel?.obtenerPorId === "function"
+      ? await this.userModel.obtenerPorId(id)
+      : null;
+    const user = storedUser || (actorHasPlanContext ? actor : null);
     if (!user) throw serviceError("USER_NOT_FOUND", "El usuario no existe.", 404);
-    const capabilities = getClientNutritionCapabilities(user);
+    const accessContext = resolveClientAccessContext(user);
+    const capabilities = accessContext.capabilities || {};
     return {
       id,
       role,
       canCreate: capabilities.canCreateCustomFoods === true,
       limit: Number(capabilities?.limits?.customFoods) || 0,
-      plan: capabilities.plan,
+      plan: capabilities.plan || accessContext.coachService?.id || accessContext.personalPlan,
     };
   }
 

@@ -25,6 +25,7 @@ this.router.post('/personalizados', authMiddleware, (req, res) => this.controlad
 this.router.patch('/personalizados/:id', authMiddleware, (req, res) => this.controladorAlimentos.actualizarPersonalizado(req, res));
 this.router.delete('/personalizados/:id', authMiddleware, (req, res) => this.controladorAlimentos.eliminarPersonalizado(req, res));
 
+this.router.get('/catalogo', (req, res) => this.controladorAlimentos.obtenerCatalogoGlobal(req, res));
 this.router.get('/', optionalAuthMiddleware, (req, res) => this.controladorAlimentos.obtenerAlimentos(req, res));
 this.router.get('/filtrar/comida', (req, res) => this.controladorAlimentos.obtenerComida(req, res));
 this.router.get('/menu-diario', (req, res) => this.controladorAlimentos.obtenerMenuDiario(req, res));

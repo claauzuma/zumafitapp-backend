@@ -19,6 +19,21 @@ const asegurarDnsParaMongoSrv = () => {
     }
 }
 
+const positiveInteger = (value, fallback, maximum) => {
+    const parsed = Number(value)
+    if (!Number.isFinite(parsed) || parsed <= 0) return fallback
+    return Math.min(Math.trunc(parsed), maximum)
+}
+
+const mongoClientOptions = () => ({
+    // Un pool acotado evita multiplicar conexiones al escalar instancias del API.
+    maxPoolSize: positiveInteger(process.env.MONGO_MAX_POOL_SIZE, 25, 200),
+    minPoolSize: 0,
+    maxIdleTimeMS: positiveInteger(process.env.MONGO_MAX_IDLE_TIME_MS, 60_000, 600_000),
+    waitQueueTimeoutMS: positiveInteger(process.env.MONGO_WAIT_QUEUE_TIMEOUT_MS, 10_000, 120_000),
+    serverSelectionTimeoutMS: positiveInteger(process.env.MONGO_SERVER_SELECTION_TIMEOUT_MS, 10_000, 120_000),
+})
+
 class CnxMongoDB {
     static client = null
     static connection = false
@@ -28,7 +43,7 @@ class CnxMongoDB {
         try {
             console.log('Conectando a la base de datos...')
             asegurarDnsParaMongoSrv()
-            CnxMongoDB.client = new MongoClient(config.STRCNX)
+            CnxMongoDB.client = new MongoClient(config.STRCNX, mongoClientOptions())
             await CnxMongoDB.client.connect()
             console.log('Base de datos conectada!')
 

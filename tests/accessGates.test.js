@@ -57,14 +57,14 @@ test("limita menus Free a un solo dia", () => {
   );
 });
 
-test("limita historial de tracking Free a los ultimos 7 dias", () => {
+test("limita el detalle de tracking a los ultimos 14 dias", () => {
   const user = { role: "cliente", plan: "free" };
   const now = new Date("2026-06-26T12:00:00.000Z");
 
-  assert.doesNotThrow(() => requireTrackingHistoryRange(user, { date: "2026-06-20", now }));
+  assert.doesNotThrow(() => requireTrackingHistoryRange(user, { date: "2026-06-13", now }));
   assert.throws(
-    () => requireTrackingHistoryRange(user, { date: "2026-06-19", now }),
-    (error) => error.code === "PLAN_CAPABILITY_REQUIRED" && error.feature === "nutrition.tracking.fullHistory"
+    () => requireTrackingHistoryRange(user, { date: "2026-06-12", now }),
+    (error) => error.code === "TRACKING_HISTORY_EXPIRED" && error.feature === "nutrition.tracking.retention"
   );
 });
 
@@ -82,17 +82,17 @@ test("el historial usa el dia calendario de Argentina y no adelanta el corte al 
   const sundayNightInArgentina = new Date("2026-08-03T01:30:00.000Z");
 
   assert.doesNotThrow(() => requireTrackingHistoryRange(user, {
-    start: "2026-07-27",
+    start: "2026-07-20",
     end: "2026-08-02",
     now: sundayNightInArgentina,
   }));
   assert.throws(
     () => requireTrackingHistoryRange(user, {
-      start: "2026-07-20",
-      end: "2026-07-26",
+      start: "2026-07-19",
+      end: "2026-07-25",
       now: sundayNightInArgentina,
     }),
-    (error) => error.code === "PLAN_CAPABILITY_REQUIRED" && error.limit === 7
+    (error) => error.code === "TRACKING_HISTORY_EXPIRED" && error.limit === 14
   );
 });
 

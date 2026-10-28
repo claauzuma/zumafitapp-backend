@@ -269,34 +269,35 @@ test("ignora consumos residuales de una planificacion que ya fue eliminada", asy
   });
 });
 
-test("D/E: Coach Pro respeta una fecha historica permitida y rechaza la que excede el limite", () => {
+test("D/E: Coach Pro respeta los 14 dias y rechaza una fecha anterior", () => {
   const user = coachClient();
   const now = new Date(SUNDAY_NIGHT_IN_ARGENTINA);
 
-  assert.doesNotThrow(() => requireTrackingHistoryRange(user, { date: "2026-07-27", now }));
+  assert.doesNotThrow(() => requireTrackingHistoryRange(user, { date: "2026-07-20", now }));
   assert.throws(
-    () => requireTrackingHistoryRange(user, { date: "2026-07-26", now }),
-    (error) => error.code === "PLAN_CAPABILITY_REQUIRED" && error.resource === "trackingHistoryDays"
+    () => requireTrackingHistoryRange(user, { date: "2026-07-19", now }),
+    (error) => error.code === "TRACKING_HISTORY_EXPIRED" && error.resource === "trackingHistoryDays"
   );
 });
 
-test("F: Pro sin coach conserva historial completo", () => {
+test("F: Pro sin coach tambien conserva solo 14 dias de detalle", () => {
   const user = selfManagedClient("pro");
-  assert.doesNotThrow(() => requireTrackingHistoryRange(user, {
-    start: "2025-01-06",
-    end: "2025-01-12",
-    now: new Date(SUNDAY_NIGHT_IN_ARGENTINA),
-  }));
+  const now = new Date(SUNDAY_NIGHT_IN_ARGENTINA);
+  assert.doesNotThrow(() => requireTrackingHistoryRange(user, { date: "2026-07-20", now }));
+  assert.throws(
+    () => requireTrackingHistoryRange(user, { date: "2026-07-19", now }),
+    (error) => error.code === "TRACKING_HISTORY_EXPIRED" && error.limit === 14
+  );
 });
 
-test("G: Free sin coach conserva exactamente siete dias de historial", () => {
+test("G: Free sin coach conserva exactamente catorce dias de historial", () => {
   const user = selfManagedClient("free");
   const now = new Date(SUNDAY_NIGHT_IN_ARGENTINA);
 
-  assert.doesNotThrow(() => requireTrackingHistoryRange(user, { date: "2026-07-27", now }));
+  assert.doesNotThrow(() => requireTrackingHistoryRange(user, { date: "2026-07-20", now }));
   assert.throws(
-    () => requireTrackingHistoryRange(user, { date: "2026-07-26", now }),
-    (error) => error.code === "PLAN_CAPABILITY_REQUIRED" && error.limit === 7
+    () => requireTrackingHistoryRange(user, { date: "2026-07-19", now }),
+    (error) => error.code === "TRACKING_HISTORY_EXPIRED" && error.limit === 14
   );
 });
 

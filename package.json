@@ -7,6 +7,10 @@
   "scripts": {
     "start": "node index.js",
     "import:alimentos": "node scripts/importarAlimentosDesdeExcel.js",
+    "retention:plan": "node scripts/optimizeDataRetention.mjs",
+    "retention:apply": "node scripts/optimizeDataRetention.mjs --apply",
+    "retention:verify": "node scripts/verifyDataRetention.mjs",
+    "storage:estimate": "node scripts/estimateStorageScale.mjs",
     "test": "node --test \"tests/**/*.test.js\""
   },
   "keywords": [

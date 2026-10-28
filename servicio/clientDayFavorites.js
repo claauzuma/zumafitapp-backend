@@ -4,6 +4,7 @@ import ModelMongoDBFoodLogs from "../model/DAO/foodLogsMongoDB.js";
 import ModelMongoDBUsuarios from "../model/DAO/usuariosMongoDB.js";
 import { normalizeClientRole } from "./clientNutritionCapabilities.js";
 import { requireQuota } from "./accessGates.js";
+import { resolveClientAccessContext } from "./clientAccessContext.js";
 import ServicioFoodLogs from "./foodLogs.js";
 import { resolveClientNutritionWeek } from "./usuarios.js";
 
@@ -114,6 +115,31 @@ function favoritePublic(doc = {}) {
 function dayKey(date) {
   const keys = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   return keys[new Date(`${date}T12:00:00Z`).getUTCDay()];
+}
+
+function hasCoachAssignmentForDate(user = {}, date = "") {
+  const key = dayKey(date);
+  const assignments = user?.menu?.weeklyPlan?.assignedMenusByDay || {};
+  const aliases = {
+    monday: ["monday", "lunes"],
+    tuesday: ["tuesday", "martes"],
+    wednesday: ["wednesday", "miercoles", "miÃ©rcoles"],
+    thursday: ["thursday", "jueves"],
+    friday: ["friday", "viernes"],
+    saturday: ["saturday", "sabado", "sÃ¡bado"],
+    sunday: ["sunday", "domingo"],
+  };
+  const normalizedEntries = Object.entries(assignments).reduce((index, [entryKey, value]) => {
+    const normalized = String(entryKey || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    index[normalized] = value;
+    return index;
+  }, {});
+  if ((aliases[key] || [key]).some((alias) => normalizedEntries[alias])) return true;
+  return user?.menu?.activeSource === "coach" && Object.keys(assignments).length === 0;
 }
 
 function normalizeDate(value = "") {
@@ -233,6 +259,16 @@ export default class ServicioClientDayFavorites {
     const favorite = await this.model.getByIdForUser(favoriteId, userId);
     if (!favorite) throw error("DAY_FAVORITE_NOT_FOUND", "No encontramos ese día guardado.");
     const date = normalizeDate(payload.date);
+    const accessContext = resolveClientAccessContext(user);
+    if (
+      hasCoachAssignmentForDate(user, date) &&
+      accessContext.capabilities?.canActivateOwnMenuOverCoachPlan !== true
+    ) {
+      throw error(
+        "COACH_MENU_ACTIVE",
+        "Ese dia tiene una planificacion asignada por tu coach. No podes reemplazarla con un dia guardado."
+      );
+    }
     const target = resolveClientNutritionWeek(user).targets[dayKey(date)] || {};
     const currentTarget = totals({ kcal: target.kcal, proteina: target.p, carbs: target.c, grasas: target.g });
     const required = totals(favorite.plannedTotals);

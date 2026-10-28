@@ -13,6 +13,13 @@ const meals = [
   { id: "dinner", label: "Cena", type: "dinner", target: { kcal: 572, p: 49.8, c: 48.6, g: 19.8 } },
 ];
 const nutritionWeek = { targets: { tuesday: target } };
+const target2240 = { kcal: 2240, p: 190, c: 235, g: 60 };
+const meals2240 = [
+  { id: "breakfast", label: "Desayuno", type: "breakfast", target: { kcal: 493, p: 41.8, c: 51.7, g: 13.2 } },
+  { id: "lunch", label: "Almuerzo", type: "lunch", target: { kcal: 739, p: 62.7, c: 77.6, g: 19.8 } },
+  { id: "snack", label: "Merienda", type: "snack", target: { kcal: 336, p: 28.5, c: 35.2, g: 9 } },
+  { id: "dinner", label: "Cena", type: "dinner", target: { kcal: 672, p: 57, c: 70.5, g: 18 } },
+];
 
 test("server-side acepta 3 a 6 metas por comida sólo cuando cierran el objetivo diario", () => {
   const normalized = normalizeWeeklyMealTargetsByDay({ tuesday: { mode: "per_meal", meals } }, nutritionWeek);
@@ -22,6 +29,81 @@ test("server-side acepta 3 a 6 metas por comida sólo cuando cierran el objetivo
     () => normalizeWeeklyMealTargetsByDay({ tuesday: { mode: "per_meal", meals: meals.map((meal, index) => index ? meal : { ...meal, target: { ...meal.target, kcal: 500 } }) } }, nutritionWeek),
     /MEAL_TARGET_TOTALS_MISMATCH/
   );
+});
+
+test("server-side acepta el reparto exacto de 2.240 kcal mostrado por el planificador", () => {
+  const normalized = normalizeWeeklyMealTargetsByDay(
+    { thursday: { mode: "per_meal", meals: meals2240 } },
+    { targets: { thursday: target2240 } }
+  );
+
+  assert.equal(normalized.thursday.meals.length, 4);
+  assert.deepEqual(
+    normalized.thursday.meals.map((meal) => meal.target),
+    meals2240.map((meal) => meal.target)
+  );
+});
+
+test("guardar un día válido no queda bloqueado por una planificación vieja de otro día", async () => {
+  const staleMondayPlan = { mode: "per_meal", meals };
+  const service = new ServicioUsuarios();
+  const client = {
+    _id: "client-2240",
+    role: "cliente",
+    metasActuales: { kcal: 2240, macros: { p: 190, c: 235, g: 60 } },
+    menu: {
+      mode: { type: "manual" },
+      weeklyPlan: { mealTargetsByDay: { monday: staleMondayPlan } },
+    },
+  };
+  const coach = { _id: "coach-1", role: "coach" };
+  let saved = null;
+  service._getCoachClientPair = async () => ({ coach, client });
+  service._assertCoachFeature = () => {};
+  service._validatedCoachAssignedMenusByDay = async (_coach, value) => value;
+  service.updateById = async (_id, patch) => {
+    saved = patch;
+    return { ...client, ...patch };
+  };
+
+  await service.coachUpdateClientMenu({
+    coachId: coach._id,
+    clientId: client._id,
+    payload: {
+      menu: {
+        mode: { type: "manual" },
+        weeklyPlan: {
+          assignedMenusByDay: {},
+          mealTargetDay: {
+            dayKey: "thursday",
+            plan: { mode: "per_meal", meals: meals2240 },
+          },
+        },
+      },
+    },
+  });
+
+  assert.equal(saved.menu.weeklyPlan.mealTargetsByDay.monday, staleMondayPlan);
+  assert.deepEqual(
+    saved.menu.weeklyPlan.mealTargetsByDay.thursday.meals.map((meal) => meal.target),
+    meals2240.map((meal) => meal.target)
+  );
+
+  await service.coachUpdateClientMenu({
+    coachId: coach._id,
+    clientId: client._id,
+    payload: {
+      menu: {
+        mode: { type: "manual" },
+        weeklyPlan: {
+          assignedMenusByDay: {},
+          mealTargetDay: { dayKey: "monday", plan: null },
+        },
+      },
+    },
+  });
+
+  assert.equal(saved.menu.weeklyPlan.mealTargetsByDay.monday, undefined);
 });
 
 test("el coach persiste metas por comida y puede retirar el menú sólo del día elegido", async () => {

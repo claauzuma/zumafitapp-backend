@@ -1104,7 +1104,7 @@ class ServicioMenus {
       grasas: macroNumber(originalRaw.grasas ?? originalRaw.fat),
       categoria: cleanString(originalRaw.categoriaSnapshot || originalRaw.categoria || originalRaw.fuente, 120),
     };
-    const alimentos = await this.alimentosModel.obtenerAlimentos();
+    const alimentos = await this.alimentosModel.obtenerAlimentos({ cache: true });
     const sourceFoods = Array.isArray(alimentos) ? alimentos : [];
     if (this._isClient(actor)) {
       const exactOriginal = sourceFoods.find((food) => idToString(food?._id || food?.id) === original.id);

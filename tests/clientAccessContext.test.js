@@ -313,6 +313,8 @@ test("cliente Free con coach recibe automatismos solo del servicio profesional e
   assert.equal(coachPro.capabilities.canAutoCalculateTrackingQuantities, true);
   assert.equal(coachPro.capabilities.canUseEquivalences, true);
   assert.equal(coachPro.capabilities.limits.equivalentMealFoods, 6);
+  assert.equal(coachPro.capabilities.canCreateCustomFoods, true);
+  assert.equal(coachPro.capabilities.limits.customFoods, 30);
   assert.equal(coachVip.capabilities.canAutoCompleteRemainingMeals, true);
   assert.equal(coachVip.capabilities.canUseFlexibleMarginRecommendations, true);
   assert.equal(coachVip.capabilities.canPlanRemainingIntake, true);

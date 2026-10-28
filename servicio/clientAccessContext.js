@@ -13,6 +13,7 @@ import { recordAccessAuditEvent } from "./accessAuditEvents.js";
 import { getRuntimeClientPlanSetting } from "./clientPlanSettings.js";
 import { resolveClientMenuAutonomyPermissions } from "./clientMenuAutonomy.js";
 import { MEAL_NUTRITION_POLICY } from "./mealNutritionPolicy.js";
+import { TRACKING_DETAIL_RETENTION_DAYS } from "../utils/trackingRetention.js";
 
 const MS_DAY = 24 * 60 * 60 * 1000;
 
@@ -46,7 +47,7 @@ export const PERSONAL_PLAN_CATALOG = {
     billingOwner: "client",
     price: { amount: 0, currency: "ARS", interval: "month", paymentMode: "free" },
     limits: {
-      trackingHistoryDays: 7,
+      trackingHistoryDays: TRACKING_DETAIL_RETENTION_DAYS,
       ownMenus: 1,
       menuDays: 1,
       ownMeals: 5,
@@ -86,7 +87,7 @@ export const PERSONAL_PLAN_CATALOG = {
     billingOwner: "client",
     price: { amount: 14900, currency: "ARS", interval: "month", paymentMode: "manual_request" },
     limits: {
-      trackingHistoryDays: null,
+      trackingHistoryDays: TRACKING_DETAIL_RETENTION_DAYS,
       ownMenus: 10,
       menuDays: 7,
       ownMeals: 100,
@@ -126,7 +127,7 @@ export const PERSONAL_PLAN_CATALOG = {
     billingOwner: "client",
     price: { amount: 29900, currency: "ARS", interval: "month", paymentMode: "manual_request" },
     limits: {
-      trackingHistoryDays: null,
+      trackingHistoryDays: TRACKING_DETAIL_RETENTION_DAYS,
       ownMenus: 50,
       menuDays: 7,
       ownMeals: 500,
@@ -168,7 +169,7 @@ export const PROFESSIONAL_SERVICE_CATALOG = {
     label: "Coach Pro",
     billingOwner: "coach",
     scopes: ["training", "nutrition"],
-    limits: { equivalentMealFoods: 6, ownMenus: 10, ownMeals: 100, favorites: 20, menuDays: 7 },
+    limits: { equivalentMealFoods: 6, ownMenus: 10, ownMeals: 100, favorites: 20, menuDays: 7, customFoods: 30 },
     library: "global",
     nutrition: {
       coachAuthority: true,
@@ -194,7 +195,7 @@ export const PROFESSIONAL_SERVICE_CATALOG = {
     label: "Coach VIP",
     billingOwner: "coach",
     scopes: ["training", "nutrition"],
-    limits: { equivalentMealFoods: 10, ownMenus: 50, ownMeals: 500, favorites: 100, menuDays: 7 },
+    limits: { equivalentMealFoods: 10, ownMenus: 50, ownMeals: 500, favorites: 100, menuDays: 7, customFoods: 30 },
     library: "premium",
     nutrition: {
       coachAuthority: true,
@@ -796,6 +797,7 @@ export function resolveClientAccessContext(user = {}, { now = new Date() } = {})
           canPlanRemainingIntake: advancedCapabilities.canPlanRemainingIntake,
           canAutoCalculateTrackingQuantities: advancedCapabilities.canAutoCalculateTrackingQuantities,
           canUseEquivalences: true,
+          canCreateCustomFoods: Number(effectiveService?.limits?.customFoods) > 0,
           limits: {
             ...(personalCapabilities.limits || {}),
             ownMenus: effectiveService?.limits?.ownMenus || personalCapabilities?.limits?.ownMenus,
@@ -803,6 +805,7 @@ export function resolveClientAccessContext(user = {}, { now = new Date() } = {})
             favorites: effectiveService?.limits?.favorites || personalCapabilities?.limits?.favorites,
             menuDays: effectiveService?.limits?.menuDays || personalCapabilities?.limits?.menuDays,
             equivalentMealFoods: effectiveService?.limits?.equivalentMealFoods || 6,
+            customFoods: effectiveService?.limits?.customFoods || personalCapabilities?.limits?.customFoods || 0,
           },
           clientMenuAutonomy: relationshipAutonomy,
           canViewCoachAdherenceBreakdown: true,

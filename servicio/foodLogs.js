@@ -164,6 +164,7 @@ function normalizeMealMetaConfirmation(raw = null, metaConfirmed = false) {
 function normalizeMealConfig(raw = {}, index = 0) {
   const tipo = normalizeMealType(raw.tipo || raw.type || raw.mealType || "snack");
   const mealId = normalizeMealId(raw.mealId || raw.id) || generatedMealId();
+  const coachTargetExecution = raw.coachTargetExecution === true;
   const meta = normalizeMealMeta(raw.meta || raw.target || {});
   const metaConfirmed = raw.metaConfirmed === true;
   const requestedTargetOrigin = cleanText(raw.targetOrigin || raw.metaOrigin, "", 20).toLowerCase();
@@ -180,7 +181,8 @@ function normalizeMealConfig(raw = {}, index = 0) {
     metaConfirmation: normalizeMealMetaConfirmation(raw.metaConfirmation, metaConfirmed),
     targetOrigin,
     targetLocked: raw.targetLocked === true,
-    personalTarget: raw.personalTarget === true || mealId.startsWith("menu_target_"),
+    personalTarget: !coachTargetExecution && (raw.personalTarget === true || mealId.startsWith("menu_target_")),
+    coachTargetExecution,
     consumptionSourceMealIds: normalizeConsumptionSourceMealIds(
       raw.consumptionSourceMealIds,
       mealId
@@ -775,7 +777,7 @@ class ServicioFoodLogs {
       if (direct) return normalizeFoodDoc(direct);
     }
 
-    const alimentos = await this.alimentosModel.obtenerAlimentos();
+    const alimentos = await this.alimentosModel.obtenerAlimentos({ cache: true });
     const normalized = (Array.isArray(alimentos) ? alimentos : []).map(normalizeFoodDoc);
     return normalized.find((food) => sameId(food.id, id) || sameId(food.alimentoId, id)) || null;
   }
@@ -1060,7 +1062,7 @@ class ServicioFoodLogs {
       ...(Array.isArray(payload.fixedFoods) ? payload.fixedFoods : []),
       ...(Array.isArray(payload.pendingFoods) ? payload.pendingFoods : []),
     ].map((food) => food?.foodId || food?.alimentoId || food?.id || food?._id).filter(Boolean);
-    const catalog = await this.alimentosModel.obtenerAlimentos();
+    const catalog = await this.alimentosModel.obtenerAlimentos({ cache: true });
     const candidates = filterEquivalentCandidateFoods(actor, catalog, {
       selectedFoodIds,
       rejectedFoodIds: payload.rejectedSuggestionFoodIds,

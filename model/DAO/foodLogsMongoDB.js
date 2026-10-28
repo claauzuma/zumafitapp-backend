@@ -309,13 +309,9 @@ class ModelMongoDBFoodLogs {
   async ensureIndexes() {
     const days = this._days();
     await days.createIndex({ userId: 1, date: 1 }, { unique: true });
-    await days.createIndex({ userId: 1, date: -1 });
-    await days.createIndex({ coachId: 1, date: -1 });
 
     const logs = this._logs();
     await logs.createIndex({ userId: 1, date: -1 });
-    await logs.createIndex({ foodLogDayId: 1 });
-    await logs.createIndex({ userId: 1, mealType: 1, date: -1 });
     await logs.createIndex({ userId: 1, date: -1, mealId: 1 });
     await logs.createIndex(
       { userId: 1, date: 1, writeRequestId: 1, writeItemIndex: 1 },
@@ -330,7 +326,6 @@ class ModelMongoDBFoodLogs {
       { userId: 1, date: 1, writeRequestId: 1 },
       { unique: true }
     );
-    await allocations.createIndex({ userId: 1, date: -1 });
   }
 }
 

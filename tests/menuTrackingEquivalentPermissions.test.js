@@ -176,6 +176,16 @@ test("cliente con coach puede crear manual si el coach habilita cambios", () => 
   assert.equal(permissions.canCreateEquivalentMeals, true);
   assert.equal(permissions.canAutoCreateEquivalentMeals, false);
   assert.equal(permissions.equivalentMealFoodsLimit, 6);
+  assert.equal(permissions.canCreateMealTargets, false);
+  assert.equal(permissions.canCreateTrackingMealTargets, false);
+});
+
+test("las metas personales requieren contexto autogestionado con acceso", () => {
+  const pro = clientMenuTrackingPermissions({ role: "cliente", personalPlan: "pro" });
+  const free = clientMenuTrackingPermissions({ role: "cliente", personalPlan: "free" });
+  assert.equal(pro.canCreateMealTargets, true);
+  assert.equal(pro.canCreateTrackingMealTargets, true);
+  assert.equal(free.canCreateMealTargets, false);
 });
 
 test("el permiso del coach bloquea alternativas manuales y automaticas", () => {

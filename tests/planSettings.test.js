@@ -109,10 +109,12 @@ test("defaults personales finales conservan Free, Pro y VIP", () => {
     maxDaysPerMenu: 1,
     maxSavedMeals: 5,
     maxFavorites: 3,
-    trackingHistoryDays: 7,
+    trackingHistoryDays: 14,
     goalChangesPerWindow: 2,
     goalChangesWindowDays: 30,
   });
   assert.equal(BASE_CLIENT_PLAN_SETTINGS.pro.libraryAccess, "global");
   assert.equal(BASE_CLIENT_PLAN_SETTINGS.vip.libraryAccess, "premium");
+  assert.equal(BASE_CLIENT_PLAN_SETTINGS.pro.limits.trackingHistoryDays, 14);
+  assert.equal(BASE_CLIENT_PLAN_SETTINGS.vip.limits.trackingHistoryDays, 14);
 });

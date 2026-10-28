@@ -561,6 +561,10 @@ const MENU_TRACKING_STATUS = new Set(["pending", "empty", "in_progress", "comple
 const DAY_COMPLETION_MODES = new Set(["menu", "manual_completion"]);
 
 function normalizeWeeklyMenuItem(item = {}) {
+  const imagenUrl = cleanString(
+    item.imagenUrl || item.imageUrl || item.imagen?.url || item.imagen || item.image,
+    500
+  );
   return {
     id: cleanString(item.id || item._id, 80) || null,
     alimentoId: item.alimentoId ? toMongoIdOrString(item.alimentoId) : null,
@@ -572,6 +576,8 @@ function normalizeWeeklyMenuItem(item = {}) {
     carbs: numberOrNull(item.carbs ?? item.carbohidratos ?? item.carbohydrates, { min: 0, max: 2000 }),
     grasas: numberOrNull(item.grasas ?? item.fat, { min: 0, max: 1000 }),
     categoriaSnapshot: cleanString(item.categoriaSnapshot || item.categoria || item.category, 120),
+    imagenUrl,
+    imageUrl: imagenUrl,
   };
 }
 
@@ -1240,6 +1246,22 @@ function normalizeWeeklyMealTargetsByDay(value = {}, nutritionWeek = null) {
   });
 
   return normalized;
+}
+
+function normalizeWeeklyMealTargetDayPatch(value = {}, nutritionWeek = null) {
+  if (!isPlainObject(value)) throw new Error("MEAL_TARGET_PLAN_INVALID");
+  const day = getWeekDayMeta(value.dayKey);
+  if (!day || !Object.prototype.hasOwnProperty.call(value, "plan")) {
+    throw new Error("MEAL_TARGET_PLAN_INVALID");
+  }
+  if (value.plan === null) return { dayKey: day.key, plan: null };
+  if (!isPlainObject(value.plan)) throw new Error("MEAL_TARGET_PLAN_INVALID");
+  const normalized = normalizeWeeklyMealTargetsByDay(
+    { [day.key]: value.plan },
+    nutritionWeek
+  );
+  if (!normalized[day.key]) throw new Error("MEAL_TARGET_PLAN_INVALID");
+  return { dayKey: day.key, plan: normalized[day.key] };
 }
 
 function isSelfGeneratedWeeklyPlan(user = {}) {
@@ -2567,11 +2589,18 @@ export function clientMenuTrackingPermissions(user = {}) {
     boolFrom(tracking.canCreateEquivalentMeals, true) &&
     accessCapabilities.canUseEquivalences === true;
   const equivalentSettings = normalizeEquivalentTrackingSettings(tracking);
+  const coachControlsNutrition = accessCapabilities.primaryAuthority === "coach";
+  const canCreateMealTargets =
+    !coachControlsNutrition &&
+    accessCapabilities.canTrack !== false &&
+    accessCapabilities.canUseMealTargets === true;
 
   return {
     canViewAssignedMenus,
     canMarkMenuMealsCompleted: canViewAssignedMenus && boolFrom(tracking.canMarkMenuMealsCompleted, true),
     canTrackFoods: canViewAssignedMenus && boolFrom(tracking.canTrackFoods, true),
+    canCreateMealTargets,
+    canCreateTrackingMealTargets: canCreateMealTargets,
     canAutoCompleteRemainingMeals: canViewAssignedMenus && accessCapabilities.canAutoCompleteRemainingMeals === true,
     canUseFlexibleMarginRecommendations:
       canViewAssignedMenus && accessCapabilities.canUseFlexibleMarginRecommendations === true,
@@ -7200,8 +7229,36 @@ class ServicioUsuarios {
 
     const weeklyPlan = isPlainObject(incoming?.weeklyPlan) ? incoming.weeklyPlan : {};
     const weeklyPlanPatch = {};
-    if (isPlainObject(weeklyPlan?.caloriesByDay)) weeklyPlanPatch.caloriesByDay = weeklyPlan.caloriesByDay;
-    if (isPlainObject(weeklyPlan?.macrosByDay)) weeklyPlanPatch.macrosByDay = weeklyPlan.macrosByDay;
+    const hasWeeklyGoalsPayload = [
+      "mode",
+      "caloriesByDay",
+      "macrosByDay",
+      "trainingDays",
+      "balanceEnabled",
+    ].some((field) => Object.prototype.hasOwnProperty.call(weeklyPlan, field));
+    if (hasWeeklyGoalsPayload) {
+      const mergedWeeklyGoals = {
+        ...(client?.menu?.weeklyPlan || {}),
+        ...weeklyPlan,
+      };
+      if (!Object.prototype.hasOwnProperty.call(weeklyPlan, "mode")) {
+        const hasDailyOverrides =
+          Object.keys(weeklyPlan.caloriesByDay || {}).length > 0 ||
+          Object.keys(weeklyPlan.macrosByDay || {}).length > 0;
+        if (
+          hasDailyOverrides &&
+          (!mergedWeeklyGoals.mode || mergedWeeklyGoals.mode === "same_all_days")
+        ) mergedWeeklyGoals.mode = "per_day";
+      }
+      const normalizedWeeklyGoals = normalizeWeeklyGoalsPayload(mergedWeeklyGoals);
+      Object.assign(weeklyPlanPatch, {
+        mode: normalizedWeeklyGoals.mode,
+        caloriesByDay: normalizedWeeklyGoals.caloriesByDay,
+        macrosByDay: normalizedWeeklyGoals.macrosByDay,
+        trainingDays: normalizedWeeklyGoals.trainingDays,
+        balanceEnabled: normalizedWeeklyGoals.balanceEnabled,
+      });
+    }
     if (Object.keys(weeklyPlanPatch).length) {
       const currentMenu = client?.menu || {};
       const coachObjectId = toMongoIdOrString(coach._id || coach.id || coachId);
@@ -7493,9 +7550,22 @@ class ServicioUsuarios {
     const mealConfig = isPlainObject(incoming?.mealConfig) ? incoming.mealConfig : {};
     const restrictions = isPlainObject(incoming?.restrictions) ? incoming.restrictions : {};
     const weeklyPlan = isPlainObject(incoming?.weeklyPlan) ? incoming.weeklyPlan : {};
-    const mealTargetsByDay = Object.prototype.hasOwnProperty.call(weeklyPlan, "mealTargetsByDay")
-      ? normalizeWeeklyMealTargetsByDay(weeklyPlan.mealTargetsByDay, resolveClientNutritionWeek(client))
+    const hasMealTargetsByDay = Object.prototype.hasOwnProperty.call(weeklyPlan, "mealTargetsByDay");
+    const hasMealTargetDayPatch = Object.prototype.hasOwnProperty.call(weeklyPlan, "mealTargetDay");
+    if (hasMealTargetsByDay && hasMealTargetDayPatch) throw new Error("MEAL_TARGET_PLAN_INVALID");
+    const nutritionWeek = resolveClientNutritionWeek(client);
+    const mealTargetsByDay = hasMealTargetsByDay
+      ? normalizeWeeklyMealTargetsByDay(weeklyPlan.mealTargetsByDay, nutritionWeek)
       : null;
+    const mealTargetDayPatch = hasMealTargetDayPatch
+      ? normalizeWeeklyMealTargetDayPatch(weeklyPlan.mealTargetDay, nutritionWeek)
+      : null;
+    let nextMealTargetsByDay = mealTargetsByDay;
+    if (mealTargetDayPatch) {
+      nextMealTargetsByDay = { ...(current?.weeklyPlan?.mealTargetsByDay || {}) };
+      if (mealTargetDayPatch.plan === null) delete nextMealTargetsByDay[mealTargetDayPatch.dayKey];
+      else nextMealTargetsByDay[mealTargetDayPatch.dayKey] = mealTargetDayPatch.plan;
+    }
     const assignedMenusByDay = isPlainObject(weeklyPlan?.assignedMenusByDay)
       ? await this._validatedCoachAssignedMenusByDay(coach, weeklyPlan.assignedMenusByDay, client)
       : null;
@@ -7569,7 +7639,7 @@ class ServicioUsuarios {
         ...(isPlainObject(weeklyPlan?.caloriesByDay) ? { caloriesByDay: weeklyPlan.caloriesByDay } : {}),
         ...(isPlainObject(weeklyPlan?.macrosByDay) ? { macrosByDay: weeklyPlan.macrosByDay } : {}),
         ...(isPlainObject(weeklyPlan?.mealsByDay) ? { mealsByDay: weeklyPlan.mealsByDay } : {}),
-        ...(mealTargetsByDay ? { mealTargetsByDay } : {}),
+        ...(nextMealTargetsByDay ? { mealTargetsByDay: nextMealTargetsByDay } : {}),
         ...(assignedMenusByDay
           ? { assignedMenusByDay }
           : {}),

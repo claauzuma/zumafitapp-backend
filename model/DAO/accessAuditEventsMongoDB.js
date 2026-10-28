@@ -1,5 +1,6 @@
 import { ObjectId } from "mongodb";
 import CnxMongoDB from "../DBMongo.js";
+import { accessAuditExpiresAt } from "../../utils/dataRetention.js";
 
 export const ACCESS_AUDIT_EVENTS_COLLECTION = "access_audit_events";
 
@@ -38,6 +39,7 @@ class ModelMongoDBAccessAuditEvents {
 
   async create(event = {}) {
     const now = new Date();
+    const createdAt = event.createdAt || now;
     const payload = {
       subjectType: cleanString(event.subjectType, 80) || "client",
       subjectId: toMongoIdOrString(event.subjectId),
@@ -53,7 +55,8 @@ class ModelMongoDBAccessAuditEvents {
       nextValue: safeObject(event.nextValue),
       reason: cleanString(event.reason, 500),
       metadata: safeObject(event.metadata),
-      createdAt: event.createdAt || now,
+      createdAt,
+      expiresAt: event.expiresAt || accessAuditExpiresAt(event.event, createdAt),
     };
 
     try {
@@ -74,10 +77,16 @@ class ModelMongoDBAccessAuditEvents {
     await col.createIndex({ actorType: 1, actorId: 1, createdAt: -1 });
     await col.createIndex(
       { dedupeKey: 1 },
-      { unique: true, partialFilterExpression: { dedupeKey: { $type: "string" } } }
+      {
+        unique: true,
+        partialFilterExpression: { dedupeKey: { $type: "string" } },
+        name: "access_audit_events_dedupe",
+      }
     );
-    await col.createIndex({ subjectType: 1, subjectId: 1, notificationVisible: 1, createdAt: -1 });
-    await col.createIndex({ subjectType: 1, subjectId: 1, includeInWeeklyDigest: 1, createdAt: -1 });
+    await col.createIndex(
+      { expiresAt: 1 },
+      { expireAfterSeconds: 0, name: "access_audit_events_ttl" }
+    );
   }
 
   async list({ subjectType = "", subjectId = "", actorType = "", actorId = "", event = "", limit = 50, skip = 0 } = {}) {

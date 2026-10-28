@@ -141,6 +141,61 @@ function filterAlimentos(alimentos = [], filters = {}) {
   return limit ? list.slice(0, limit) : list;
 }
 
+const FOOD_CATALOG_PUBLIC_FIELDS = Object.freeze([
+  "_id", "id", "alimentoId",
+  "Alimentos", "alimentos", "nombre", "name",
+  "Unidad", "unidad", "unit", "unidadBase", "cantidadUnidad", "cantidadBase",
+  "Calorias", "calorias", "kcal",
+  "Proteinas", "proteinas", "proteina", "protein",
+  "Carbohidratos", "carbohidratos", "carbs", "hidratos",
+  "Grasas", "grasas", "fat",
+  "Fibra", "fibra",
+  "kcalUnidad", "proteinaUnidad", "carbohidratosUnidad", "grasasUnidad", "fibraUnidad",
+  "kcal100", "proteina100", "carbohidratos100", "grasas100", "fibra100",
+  "kcal_100g_ml", "proteina_100g_ml", "carbohidratos_100g_ml", "grasas_100g_ml", "fibra_100g_ml",
+  "kcalPerUnitOrGram", "proteinPerUnitOrGram", "proteinaPerUnitOrGram",
+  "carbsPerUnitOrGram", "fatPerUnitOrGram", "grasasPerUnitOrGram",
+  "kcalPerUnit", "caloriesPerUnit", "proteinPerUnit", "carbsPerUnit", "fatPerUnit",
+  "kcalPerGram", "proteinPerGram", "carbsPerGram", "fatPerGram",
+  "macroBasis", "baseMacro", "Base", "base", "por", "Por", "perUnit", "porUnidad",
+  "porcionMin", "porcionMax", "porcionSugerida", "cantidadSugerida", "multiplo",
+  "minGramos", "maxGramos", "stepGramos", "minQuantity", "maxQuantity", "stepQuantity",
+  "cantidadMin", "cantidadMax", "step",
+  "Fuente", "fuente", "Categoria", "Categoría", "categoria", "categoriaZumaFit",
+  "grupo", "Grupo", "grupoOriginal", "subcategoria", "subcategoriaZumaFit", "macroGroup",
+  "tags", "alergenos",
+  "imagen", "imagenUrl", "ImagenUrl", "imagenUrlExacta", "imagenUrlGenerica",
+  "imagenExactaKey", "imagenGenericaKey", "imagenAlt", "imagenEstado", "imagenFuente",
+  "activo", "customFood", "privateFood", "ownerId",
+  "aptoDesayuno", "aptoAlmuerzo", "aptoMerienda", "aptoCena", "aptoPreEntreno", "aptoPostEntreno",
+  "aptoSinGluten", "aptoSinLactosa", "aptoVegano", "aptoVegetariano",
+  "esProteinaPrincipal", "esProteinaSecundaria", "esCarboPrincipal", "esGrasaPrincipal", "esVegetalLibre",
+  "P1", "P2", "C1", "C2", "V", "F", "G",
+  "generation",
+  "basePesaje", "descripcionBasePesaje", "requiereCoccion", "pesoUnidadGramos",
+  "alcohol100", "alcoholPorcionSugerida",
+]);
+
+export function foodForPublicCatalog(food = {}) {
+  const document = {};
+  for (const field of FOOD_CATALOG_PUBLIC_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(food || {}, field)) continue;
+    const value = food[field];
+    if (value !== undefined) document[field] = field === "_id" ? String(value) : value;
+  }
+  return document;
+}
+
+function wantsCompactCatalog(filters = {}) {
+  const value = String(filters.view || filters.format || filters.compact || "").trim().toLowerCase();
+  return value === "compact" || value === "1" || value === "true";
+}
+
+function catalogForResponse(alimentos = [], filters = {}) {
+  const filtered = filterAlimentos(preferStructuredFoodRecords(alimentos), filters);
+  return wantsCompactCatalog(filters) ? filtered.map(foodForPublicCatalog) : filtered;
+}
+
 function normalizeMode(value = "kcalProteina") {
   const mode = cleanText(value);
   if (["kcal", "calorias", "solo calorias", "solo_calorias"].includes(mode)) return "kcal";
@@ -740,7 +795,7 @@ class ServicioAlimentos {
   }
 
   _catalogForActor = async (actor = null) => {
-    const globalFoods = await this.model.obtenerAlimentos();
+    const globalFoods = await this.model.obtenerAlimentos({ cache: true });
     if (!actor?.id && !actor?._id && !actor?.targetUserId) return globalFoods;
     let customFoods = [];
     try {
@@ -757,16 +812,32 @@ class ServicioAlimentos {
   obtenerAlimentos = async (filters = {}, actor = null) => {
     try {
       const alimentosTotales = await this._catalogForActor(actor);
-      return filterAlimentos(preferStructuredFoodRecords(alimentosTotales), filters);
+      return catalogForResponse(alimentosTotales, filters);
     } catch (error) {
       console.error("Error al obtener alimentos:", error);
       throw new Error("No se pudieron obtener los alimentos");
     }
   };
 
+  obtenerCatalogoGlobal = async (filters = {}) => {
+    try {
+      const alimentos = await this.model.obtenerAlimentos({ cache: true });
+      return catalogForResponse(alimentos, { ...filters, view: filters.view || "compact" });
+    } catch (error) {
+      console.error("Error al obtener el catalogo global:", error);
+      throw new Error("No se pudo obtener el catalogo global");
+    }
+  };
+
+  obtenerEstadoCache = () => (
+    typeof this.model?.obtenerEstadoCache === "function"
+      ? this.model.obtenerEstadoCache()
+      : null
+  );
+
   obtenerComida = async (calorias, proteinas, carbohidratos, grasas, alimentos) => {
     try {
-      const alimentosTotales = await this.model.obtenerAlimentos();
+      const alimentosTotales = await this.model.obtenerAlimentos({ cache: true });
       const resultado = menu.generarMenu(
         Number(calorias),
         Number(proteinas),
@@ -788,7 +859,7 @@ class ServicioAlimentos {
 
   obtenerComidaSoloConCaloriasYProteinas = async (calorias, proteinas, alimentos) => {
     try {
-      const alimentosTotales = await this.model.obtenerAlimentos();
+      const alimentosTotales = await this.model.obtenerAlimentos({ cache: true });
       const resultado = menu.generarMenu({
         modo: "kcalProteina",
         objetivo: { calorias, proteina: proteinas, carbohidratos: 0, grasas: 0 },

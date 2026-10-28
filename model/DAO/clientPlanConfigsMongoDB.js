@@ -53,6 +53,14 @@ class ModelMongoDBClientPlanConfigs {
         },
         { upsert: true }
       );
+      await this._col().updateOne(
+        { code },
+        {
+          $set: {
+            "limits.trackingHistoryDays": BASE_CLIENT_PLAN_SETTINGS[code].limits.trackingHistoryDays,
+          },
+        }
+      );
     }
     await this.list();
   }

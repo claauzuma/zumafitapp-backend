@@ -25,9 +25,11 @@ test("calculadora produce vista previa sin guardar ni inventar datos", () => {
     goalType: "mantener_peso",
   }, { now: new Date("2026-08-09T12:00:00Z") });
   assert.equal(preview.ready, true);
-  assert.deepEqual(preview.target, { kcal: 2775, macros: { p: 128, c: 422, g: 64 } });
-  assert.equal(preview.bmr.average, 1790);
-  assert.equal(preview.maintenanceKcal, 2775);
+  assert.deepEqual(preview.target, { kcal: 2829, macros: { p: 128, c: 435, g: 64 } });
+  assert.equal(preview.formula, "Harris-Benedict revisada");
+  assert.equal(preview.bmr.average, 1825);
+  assert.equal(preview.bmr.selected, "harris_benedict_revised");
+  assert.equal(preview.maintenanceKcal, 2829);
 });
 
 test("onboarding reutiliza el mismo mantenimiento sin inventar un objetivo", () => {
@@ -39,8 +41,8 @@ test("onboarding reutiliza el mismo mantenimiento sin inventar un objetivo", () 
     activityFactor: 1.55,
   }, { now: new Date("2026-08-09T12:00:00Z") });
   assert.equal(preview.ready, true);
-  assert.equal(preview.maintenanceKcal, 2775);
-  assert.equal(preview.bmr.average, 1790);
+  assert.equal(preview.maintenanceKcal, 2829);
+  assert.equal(preview.bmr.average, 1825);
   assert.equal(Object.hasOwn(preview.usedData, "goalType"), false);
 });
 
@@ -56,7 +58,7 @@ test("un TDEE manual explicito se respeta y conserva el estimado para auditoria"
   });
   assert.equal(preview.ready, true);
   assert.equal(preview.maintenanceKcal, 2500);
-  assert.equal(preview.estimatedMaintenanceKcal, 2775);
+  assert.equal(preview.estimatedMaintenanceKcal, 2829);
   assert.equal(preview.maintenanceSource, "explicit_override");
   assert.equal(preview.target.kcal, 2500);
 });
@@ -73,7 +75,7 @@ test("objetivos de pérdida y ganancia aplican el ajuste explícito", () => {
 test("onboarding usa la misma proyección server-side para ritmo y fecha", () => {
   const now = new Date("2026-08-09T12:00:00Z");
   const projection = calculateGoalProjection({
-    maintenanceKcal: 2775,
+    maintenanceKcal: 2829,
     weightKg: 80,
     targetWeightKg: 72,
     ratePctBWPerWeek: 0.5,
@@ -81,12 +83,12 @@ test("onboarding usa la misma proyección server-side para ritmo y fecha", () =>
   }, { now });
   assert.deepEqual(projection, {
     mode: "lose",
-    targetKcal: 2335,
+    targetKcal: 2389,
     ratePctBWPerWeek: 0.5,
     kgPerWeek: 0.4,
     dailyEnergyChange: 440,
     endDate: "2026-12-27",
-    adjustmentRatio: -440 / 2775,
+    adjustmentRatio: -440 / 2829,
   });
   const preview = calculateNutritionGoalPreview({
     age: 35,

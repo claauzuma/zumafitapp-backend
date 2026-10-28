@@ -38,6 +38,12 @@ const users = {
   pro1: { _id: "pro1", role: "cliente", personalPlan: "pro" },
   pro2: { _id: "pro2", role: "cliente", personalPlan: "pro" },
   free1: { _id: "free1", role: "cliente", personalPlan: "free" },
+  coached1: {
+    _id: "coached1",
+    role: "cliente",
+    personalPlan: "free",
+    coachAccess: { status: "active", coachId: "coach-1", servicePackage: "service_pro" },
+  },
 };
 
 function serviceWith(seed = []) {
@@ -79,6 +85,21 @@ test("Pro puede crear datos por 100 y Free queda bloqueado", async () => {
     service.create({ id: "free1", role: "cliente" }, { nombre: "No permitido", unidad: "g", calorias: 10, proteinas: 1, carbohidratos: 1, grasas: 0 }),
     (error) => error.code === "CUSTOM_FOOD_PLAN_REQUIRED" && error.status === 403
   );
+});
+
+test("un cliente Free con Coach Pro puede crear su biblioteca privada", async () => {
+  const service = serviceWith();
+  const created = await service.create({ id: "coached1", role: "cliente" }, {
+    nombre: "Comida del cliente",
+    unidad: "g",
+    proteinas: 10,
+    carbohidratos: 20,
+    grasas: 5,
+  });
+  assert.equal(created.ownerId, "coached1");
+  const access = await service.access({ id: "coached1", role: "cliente" });
+  assert.equal(access.canCreate, true);
+  assert.equal(access.limit, 30);
 });
 
 test("una unidad usa base 1 y calcula kcal exclusivamente desde P/C/G", async () => {

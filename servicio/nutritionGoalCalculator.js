@@ -146,7 +146,7 @@ export function calculateMaintenancePreview(input = {}, { now = new Date() } = {
   const harris = sex === "masculino"
     ? 88.362 + 13.397 * weightKg + 4.799 * heightCm - 5.677 * age
     : 447.593 + 9.247 * weightKg + 3.098 * heightCm - 4.33 * age;
-  const bmr = (mifflin + harris) / 2;
+  const bmr = harris;
   const estimatedMaintenanceKcal = Math.round(bmr * activityFactor);
   const maintenanceOverride = finite(input.maintenanceKcalOverride ?? input.tdeeCustom);
   const hasMaintenanceOverride = maintenanceOverride !== null && maintenanceOverride >= 800 && maintenanceOverride <= 6000;
@@ -155,12 +155,13 @@ export function calculateMaintenancePreview(input = {}, { now = new Date() } = {
   return {
     ready: true,
     missingFields: [],
-    formula: "Promedio Mifflin-St Jeor + Harris-Benedict revisada",
+    formula: "Harris-Benedict revisada",
     usedData: { age, sex, weightKg, heightCm, activityFactor },
     bmr: {
       mifflin: Math.round(mifflin),
       harrisBenedict: Math.round(harris),
       average: Math.round(bmr),
+      selected: "harris_benedict_revised",
     },
     estimatedMaintenanceKcal,
     maintenanceKcal,

@@ -130,3 +130,19 @@ test("si falla la segunda escritura restaura planificación y metas anteriores",
   assert.equal(writes[1].favoriteName, "Anterior");
   assert.equal(calls, 2);
 });
+
+test("un dia guardado no reemplaza la asignacion del coach sin autonomia explicita", async () => {
+  const actor = {
+    ...user(),
+    coachAccess: { status: "active", coachId: "coach-1", servicePackage: "service_pro" },
+    menu: {
+      activeSource: "coach",
+      weeklyPlan: { assignedMenusByDay: { thursday: { primaryMenu: { menuId: "coach-menu" } } } },
+    },
+  };
+  const service = serviceFor({ actor });
+  await assert.rejects(
+    service.apply({ id: actor.id }, "66d000000000000000000001", { date: "2026-10-15" }),
+    (failure) => failure.code === "COACH_MENU_ACTIVE"
+  );
+});

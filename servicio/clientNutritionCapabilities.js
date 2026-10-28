@@ -1,4 +1,5 @@
 import { getRuntimeClientPlanSetting } from "./clientPlanSettings.js";
+import { TRACKING_DETAIL_RETENTION_DAYS } from "../utils/trackingRetention.js";
 
 function token(value = "") {
   return String(value || "")
@@ -21,7 +22,7 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     ownMealsLimit: 5,
     menuDaysLimit: 1,
     favoritesLimit: 3,
-    trackingHistoryDays: 7,
+    trackingHistoryDays: TRACKING_DETAIL_RETENTION_DAYS,
     manualObjectiveChangeDays: 30,
     manualObjectiveChangesPerWindow: 2,
     basicLibrary: true,
@@ -49,7 +50,7 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     ownMealsLimit: 100,
     menuDaysLimit: 7,
     favoritesLimit: 20,
-    trackingHistoryDays: null,
+    trackingHistoryDays: TRACKING_DETAIL_RETENTION_DAYS,
     manualObjectiveChangeDays: null,
     manualObjectiveChangesPerWindow: null,
     basicLibrary: true,
@@ -77,7 +78,7 @@ export const CLIENT_NUTRITION_CAPABILITIES = {
     ownMealsLimit: 500,
     menuDaysLimit: 7,
     favoritesLimit: 100,
-    trackingHistoryDays: null,
+    trackingHistoryDays: TRACKING_DETAIL_RETENTION_DAYS,
     manualObjectiveChangeDays: null,
     manualObjectiveChangesPerWindow: null,
     basicLibrary: true,
