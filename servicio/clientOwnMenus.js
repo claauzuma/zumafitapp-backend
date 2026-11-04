@@ -838,8 +838,8 @@ class ServicioClientOwnMenus {
     };
   }
 
-  async capabilities(user) {
-    const actor = await this._actor(user);
+  async capabilities(user, { actorResolved = false } = {}) {
+    const actor = actorResolved ? user : await this._actor(user);
     const hasCoachMenu = await this._hasCoachMenuActive(actor);
     const activeSource = hasCoachMenu ? "coach" : actor?.menu?.activeSource || "none";
     return this._capabilitiesFromAccessContext(actor, { activeMenuSource: activeSource });
@@ -847,7 +847,7 @@ class ServicioClientOwnMenus {
 
   async authorizeAutomaticGeneration(user) {
     const actor = await this._actor(user);
-    const capabilities = await this.capabilities(actor);
+    const capabilities = await this.capabilities(actor, { actorResolved: true });
     if (capabilities.canGenerateAutomaticMenu !== true || capabilities.canAutoCalculateTrackingQuantities !== true) {
       throw serviceError("PLAN_CAPABILITY_REQUIRED", "La generacion automatica esta disponible en Pro y VIP", {
         resource: "nutrition.autoMenus",
@@ -865,7 +865,7 @@ class ServicioClientOwnMenus {
 
   async generateAutomaticMenuMeal(user, payload = {}) {
     const actor = await this._actor(user);
-    const capabilities = await this.capabilities(actor);
+    const capabilities = await this.capabilities(actor, { actorResolved: true });
     if (capabilities.canGenerateAutomaticMenu !== true || capabilities.canAutoCalculateTrackingQuantities !== true) {
       throw serviceError("PLAN_CAPABILITY_REQUIRED", "La generacion automatica esta disponible en Pro y VIP", {
         resource: "nutrition.autoMenus",

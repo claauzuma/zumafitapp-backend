@@ -83,6 +83,35 @@ function resolveUnrestrictedTarget({
     return { objective: base, target: targetShape(base), balance: null };
   }
 
+  // Una fecha futura todavía no conoce el cierre del día actual. Mostrarle
+  // el carry acumulado hasta hoy repetiría el mismo ajuste en jueves, viernes,
+  // etc. El saldo se materializa recién cuando esa fecha pasa a ser el día
+  // vigente; hasta entonces su objetivo es solamente la base configurada.
+  const futureProjection = Boolean(closedBeforeDate && date > closedBeforeDate);
+  if (futureProjection) {
+    const objective = base;
+    return {
+      objective,
+      target: targetShape(objective),
+      balance: {
+        active: true,
+        mode: UNRESTRICTED_WEEKLY_MODE,
+        weekStart,
+        weekEnd,
+        closesOn: weekEnd,
+        isClosingDay: date === weekEnd,
+        baseTarget: targetShape(base),
+        calorieCarry: 0,
+        proteinCarry: 0,
+        trackedDays: 0,
+        proteinWindowDays: 0,
+        sources: [],
+        energyWarning: objective.proteina * 4 > objective.kcal + 1,
+        provisional: true,
+      },
+    };
+  }
+
   let calorieCarry = 0;
   let trackedDays = 0;
   const sources = [];

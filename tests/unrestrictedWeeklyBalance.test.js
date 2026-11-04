@@ -65,7 +65,7 @@ test("does not invent debt for untracked days", () => {
   assert.equal(result.balance.trackedDays, 1);
 });
 
-test("does not close the current day early when previewing tomorrow", () => {
+test("future dates keep their base target until they become current", () => {
   const result = resolveUnrestrictedTarget({
     date: "2026-10-14",
     closedBeforeDate: "2026-10-13",
@@ -75,9 +75,27 @@ test("does not close the current day early when previewing tomorrow", () => {
       "2026-10-13": { tracked: true, kcal: 800, proteina: 60 },
     },
   });
-  assert.equal(result.objective.kcal, 2300);
+  assert.equal(result.objective.kcal, 2200);
   assert.equal(result.objective.proteina, 170);
-  assert.equal(result.balance.trackedDays, 1);
+  assert.equal(result.objective.carbs, 280);
+  assert.equal(result.objective.grasas, 65);
+  assert.equal(result.balance.calorieCarry, 0);
+  assert.equal(result.balance.trackedDays, 0);
+  assert.equal(result.balance.provisional, true);
+});
+
+test("the carry is applied only when that date becomes current", () => {
+  const result = resolveUnrestrictedTarget({
+    date: "2026-10-14",
+    closedBeforeDate: "2026-10-14",
+    baseTarget: base,
+    consumptionByDate: {
+      "2026-10-13": { tracked: true, kcal: 2178, proteina: 160 },
+    },
+  });
+  assert.equal(result.objective.kcal, 2222);
+  assert.equal(result.balance.calorieCarry, 22);
+  assert.equal(result.balance.provisional, undefined);
 });
 
 test("uses each day's configured base while carrying into a different target", () => {

@@ -595,3 +595,25 @@ test("eliminar un menu diario limpia su override y el consumo derivado de esa pl
   assert.equal(dailyActivation.planningState.remainingTotals.kcal, 1820);
   assert.equal(dailyActivation.planningState.nutrition.completedMealsCount, 0);
 });
+
+test("autorizar generacion automatica reutiliza el actor resuelto y evita una lectura duplicada", async () => {
+  const servicio = new ServicioClientOwnMenus();
+  const actor = { _id: "cliente-1", role: "cliente", menu: { activeSource: "own" } };
+  let actorReads = 0;
+  servicio._actor = async () => {
+    actorReads += 1;
+    return actor;
+  };
+  servicio._hasCoachMenuActive = async () => false;
+  servicio._capabilitiesFromAccessContext = () => ({
+    plan: "pro",
+    canGenerateAutomaticMenu: true,
+    canAutoCalculateTrackingQuantities: true,
+    limits: { automaticMealFoods: 6 },
+  });
+
+  const authorization = await servicio.authorizeAutomaticGeneration({ id: "cliente-1" });
+
+  assert.equal(authorization.authorized, true);
+  assert.equal(actorReads, 1);
+});
