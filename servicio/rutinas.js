@@ -166,16 +166,33 @@ function normalizeExercisePayload(payload = {}, context = {}) {
 }
 
 function normalizeBaseExercise(raw = {}, index = 0) {
-  return {
+  const detailedSeriesCount = Array.isArray(raw.seriesDetalle) && raw.seriesDetalle.length
+    ? raw.seriesDetalle.length
+    : 3;
+  const normalized = {
     ejercicioId: raw.ejercicioId ? toMongoIdOrString(raw.ejercicioId) : null,
     nombreSnapshot: cleanText(raw.nombreSnapshot || raw.nombre || raw.name, `Ejercicio ${index + 1}`, 160),
     grupoMuscularSnapshot: normalizeToken(raw.grupoMuscularSnapshot || raw.grupoMuscular, "general"),
-    series: intOrDefault(raw.series, 3, { min: 1, max: 20 }),
+    // El editor actual envia ambos campos, pero inferir la cantidad desde el
+    // detalle evita truncar payloads validos de otros clientes o migraciones.
+    series: intOrDefault(raw.series, detailedSeriesCount, { min: 1, max: 20 }),
     reps: cleanText(raw.reps, "8-10", 80),
     rir: cleanString(raw.rir, 40),
     descansoSeg: intOrDefault(raw.descansoSeg, 90, { min: 0, max: 1200 }),
     tempo: cleanString(raw.tempo, 80),
     notas: cleanString(raw.notas, 1000),
+  };
+
+  // Las plantillas legacy guardaban una única dupla reps/RIR para todas las
+  // series. Conservamos esos campos y sumamos el detalle por serie para que
+  // las nuevas rutinas puedan expresar variaciones sin romper documentos viejos.
+  return {
+    ...normalized,
+    seriesDetalle: seriesDetalleForExercise(raw, normalized).map((serie) => ({
+      serie: serie.serie,
+      reps: serie.reps,
+      rir: serie.rir,
+    })),
   };
 }
 
@@ -232,10 +249,13 @@ function normalizeProgression(raw = {}) {
 }
 
 function normalizeSerieDetalle(raw = {}, index = 0, parent = {}) {
+  const hasOwnRir = Object.prototype.hasOwnProperty.call(raw || {}, "rir");
   return {
     serie: intOrDefault(raw.serie, index + 1, { min: 1, max: 99 }),
     reps: cleanText(raw.reps, parent.reps || "8-10", 80),
-    rir: cleanText(raw.rir, parent.rir || "", 40),
+    // Un string vacío es válido: permite que una serie concreta quede sin RIR
+    // aunque otra serie del mismo ejercicio sí lo tenga configurado.
+    rir: hasOwnRir ? cleanString(raw.rir, 40) : cleanString(parent.rir, 40),
     pesoKg:
       raw.pesoKg === null || raw.pesoKg === undefined || raw.pesoKg === ""
         ? null
@@ -762,4 +782,5 @@ class ServicioRutinas {
   }
 }
 
+export { normalizeRoutineBasePayload };
 export default ServicioRutinas;

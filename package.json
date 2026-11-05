@@ -11,6 +11,8 @@
     "retention:apply": "node scripts/optimizeDataRetention.mjs --apply",
     "retention:verify": "node scripts/verifyDataRetention.mjs",
     "storage:estimate": "node scripts/estimateStorageScale.mjs",
+    "nutrition:tracking:audit": "node scripts/reconcileFoodLogNutrition.mjs",
+    "nutrition:tracking:repair": "node scripts/reconcileFoodLogNutrition.mjs --apply",
     "test": "node --test \"tests/**/*.test.js\""
   },
   "keywords": [

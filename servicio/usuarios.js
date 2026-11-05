@@ -6738,6 +6738,33 @@ class ServicioUsuarios {
 
     const patch = { ...updates };
 
+    if (patch.profile !== undefined) {
+      if (!isPlainObject(patch.profile)) throw new Error("PAYLOAD_INVALIDO");
+      const incomingProfile = patch.profile;
+      const nextProfile = {
+        ...(current?.profile || {}),
+        ...incomingProfile,
+        basics: isPlainObject(incomingProfile.basics)
+          ? { ...(current?.profile?.basics || {}), ...incomingProfile.basics }
+          : current?.profile?.basics,
+      };
+
+      if (incomingProfile.nombre !== undefined) {
+        const nombre = cleanString(incomingProfile.nombre, 61).trim().replace(/\s+/g, " ");
+        if (!nombre) throw new Error("NOMBRE_REQUERIDO");
+        if (nombre.length > 60) throw new Error("PAYLOAD_INVALIDO");
+        nextProfile.nombre = nombre;
+      }
+      if (incomingProfile.apellido !== undefined) {
+        const apellido = cleanString(incomingProfile.apellido, 61).trim().replace(/\s+/g, " ");
+        if (!apellido) throw new Error("APELLIDO_REQUERIDO");
+        if (apellido.length > 60) throw new Error("PAYLOAD_INVALIDO");
+        nextProfile.apellido = apellido;
+      }
+
+      patch.profile = nextProfile;
+    }
+
     if (patch.email !== undefined) {
       const email = String(patch.email || "").trim().toLowerCase();
       if (!email) {

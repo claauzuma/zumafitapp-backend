@@ -279,7 +279,10 @@ class ModelMongoDBRutinas {
   ownerVisibilityForCoach(coachId) {
     return {
       $or: [
-        { visibilidad: { $in: ["publica", "sistema"] } },
+        {
+          estado: "activa",
+          visibilidad: { $in: ["publica", "sistema"] },
+        },
         {
           ownerType: "coach",
           ownerId: { $in: idValues(coachId) },

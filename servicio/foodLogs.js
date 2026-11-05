@@ -4,6 +4,7 @@ import ModelMongoDBFoodLogs from "../model/DAO/foodLogsMongoDB.js";
 import ModelMongoDBUsuarios from "../model/DAO/usuariosMongoDB.js";
 import ModelMongoDBMenus from "../model/DAO/menusMongoDB.js";
 import ModelMongoDBAlimentos from "../model/DAO/alimentosMongoDB.js";
+import ModelMongoDBClientCustomFoods from "../model/DAO/clientCustomFoodsMongoDB.js";
 import { TRACKING_OPTIMIZATION_POLICY } from "../menu2.js";
 import ServiciosAlimentos, {
   TRACKING_QUANTITY_INTERNAL_CONTEXT,
@@ -11,6 +12,11 @@ import ServiciosAlimentos, {
 import { requireCapability, requireTrackingHistoryRange } from "./accessGates.js";
 import { filterEquivalentCandidateFoods, isEquivalentFoodAllowed } from "./trackingEquivalences.js";
 import { normalizeFoodGenerationForRead } from "./foodGenerationMetadata.js";
+import {
+  calculateCatalogFoodNutrition,
+  catalogFoodNutrition,
+  normalizeFoodUnit,
+} from "./foodNutrition.js";
 import {
   UNRESTRICTED_WEEKLY_MODE,
   addIsoDays,
@@ -223,30 +229,14 @@ function addTotals(a = emptyTotals(), b = emptyTotals()) {
   };
 }
 
-function normalizeUnit(unit = "") {
-  return cleanString(unit, 40).toLowerCase().replace(".", "");
-}
-
-function inferMacroBasis(unit = "", raw = {}) {
-  const explicit = normalizeToken(raw?.macroBasis || raw?.baseMacro || raw?.Base || raw?.base || raw?.por || raw?.Por);
-  if (explicit.includes("100")) return "per100";
-  if (explicit.includes("unidad") || explicit.includes("porcion") || explicit.includes("porci")) return "perUnit";
-
-  const normalizedUnit = normalizeUnit(unit);
-  if (["g", "gr", "gramo", "gramos", "ml"].includes(normalizedUnit)) return "per100";
-  return "perUnit";
-}
-
 function normalizeFoodDoc(raw = {}) {
   const name = raw.Alimentos || raw.alimentos || raw.nombre || raw.name || "Sin nombre";
   const id = idToString(raw._id || raw.id || raw.alimentoId || name);
   const unitRaw = cleanString(raw.Unidad || raw.unidad || raw.unit || raw.unidadBase, 40);
   const unitLower = unitRaw.toLowerCase();
   const unidad = unitLower.startsWith("gr") || unitLower === "g" ? "g" : unitRaw || "unidad";
-  const kcal = macroNumber(raw.Calorias ?? raw.calorias ?? raw.kcal ?? raw.calories ?? raw.kcalUnidad ?? raw.kcal100);
-  const proteina = macroNumber(raw.Proteinas ?? raw.proteinas ?? raw.proteina ?? raw.protein ?? raw.proteinaUnidad ?? raw.proteina100);
-  const carbs = macroNumber(raw.Carbohidratos ?? raw.carbohidratos ?? raw.carbs ?? raw.carbohydrates ?? raw.hidratos ?? raw.carbohidratosUnidad ?? raw.carbohidratos100);
-  const grasas = macroNumber(raw.Grasas ?? raw.grasas ?? raw.fat ?? raw.fats ?? raw.grasasUnidad ?? raw.grasas100);
+  const nutrition = catalogFoodNutrition(raw, unidad);
+  const { kcal, proteina, carbs, grasas, fibra } = nutrition;
   const fuente =
     cleanString(
       raw.Fuente || raw.fuente || raw.Categoria || raw.categoria || raw.categoriaZumaFit || raw["Categoria"] || raw.Grupo || raw.grupo,
@@ -265,7 +255,8 @@ function normalizeFoodDoc(raw = {}) {
     grasas,
     fuente,
     categoria: fuente,
-    macroBasis: raw.macroBasis || inferMacroBasis(unidad, raw),
+    fibra,
+    macroBasis: nutrition.macroBasis,
     imagen,
     imagenUrl: imagen.url,
     raw,
@@ -305,18 +296,7 @@ function inferFoodCategory({ source = "", name = "", proteina = 0, carbs = 0, gr
 }
 
 function calculateFoodMacros(food = {}, cantidad = 100, unidad = food?.unidad || "g") {
-  const qty = toNumber(cantidad, 0);
-  const sourceUnit = normalizeUnit(unidad || food?.unidad);
-  const basis = food?.macroBasis || inferMacroBasis(food?.unidad || unidad, food?.raw || food);
-  const shouldScaleBy100 = basis === "per100" && ["g", "gr", "gramo", "gramos", "ml"].includes(sourceUnit);
-  const factor = qty > 0 ? (shouldScaleBy100 ? qty / 100 : qty) : 0;
-
-  return {
-    kcal: roundMacro(toNumber(food.kcal, 0) * factor),
-    proteina: roundMacro(toNumber(food.proteina ?? food.protein, 0) * factor),
-    carbs: roundMacro(toNumber(food.carbs, 0) * factor),
-    grasas: roundMacro(toNumber(food.grasas ?? food.fat, 0) * factor),
-  };
+  return calculateCatalogFoodNutrition(food, cantidad, normalizeFoodUnit(unidad || food?.unidad));
 }
 
 function buildFoodSnapshot(food = {}, cantidad = 100, unidad = food?.unidad || "g") {
@@ -333,6 +313,7 @@ function buildFoodSnapshot(food = {}, cantidad = 100, unidad = food?.unidad || "
     proteina: macros.proteina,
     carbs: macros.carbs,
     grasas: macros.grasas,
+    fibra: macros.fibra,
     fuente: cleanString(normalized.fuente || normalized.categoria, 120),
     categoriaSnapshot: cleanString(normalized.categoria || normalized.fuente, 120),
     imagen: normalized.imagen || null,
@@ -659,6 +640,7 @@ class ServicioFoodLogs {
     this.usuariosModel = new ModelMongoDBUsuarios();
     this.menusModel = new ModelMongoDBMenus();
     this.alimentosModel = new ModelMongoDBAlimentos();
+    this.customFoodsModel = new ModelMongoDBClientCustomFoods();
     this.alimentosService = new ServiciosAlimentos();
   }
 
@@ -769,7 +751,7 @@ class ServicioFoodLogs {
     };
   }
 
-  async _findFoodById(foodId = "") {
+  async _findFoodById(foodId = "", ownerId = "") {
     const id = cleanString(foodId, 120);
     if (!id) return null;
     if (typeof this.alimentosModel.obtenerAlimentoPorId === "function") {
@@ -777,18 +759,23 @@ class ServicioFoodLogs {
       if (direct) return normalizeFoodDoc(direct);
     }
 
+    if (ownerId && typeof this.customFoodsModel?.findById === "function") {
+      const custom = await this.customFoodsModel.findById(id);
+      if (custom && sameId(custom.ownerId, ownerId)) return normalizeFoodDoc(custom);
+    }
+
     const alimentos = await this.alimentosModel.obtenerAlimentos({ cache: true });
     const normalized = (Array.isArray(alimentos) ? alimentos : []).map(normalizeFoodDoc);
     return normalized.find((food) => sameId(food.id, id) || sameId(food.alimentoId, id)) || null;
   }
 
-  async _snapshotFromPayload(payload = {}, previousLog = null) {
+  async _snapshotFromPayload(payload = {}, previousLog = null, actor = null) {
     const cantidad = payload.cantidad ?? payload.amount ?? previousLog?.cantidad ?? 100;
     const unidad = payload.unidad || payload.unit || payload.food?.unidad || payload.food?.unit || previousLog?.unidad || "g";
     const foodPayload = payload.food || payload.alimento || payload.item || {};
     const foodId = foodPayload.alimentoId || foodPayload.id || foodPayload._id || payload.alimentoId || previousLog?.alimentoId;
 
-    const dbFood = await this._findFoodById(foodId);
+    const dbFood = await this._findFoodById(foodId, this._actorId(actor));
     if (dbFood) return buildFoodSnapshot(dbFood, cantidad, unidad || dbFood.unidad);
 
     if (foodPayload.nombre || foodPayload.name || foodPayload.nombreSnapshot) {
@@ -800,7 +787,9 @@ class ServicioFoodLogs {
           proteina: foodPayload.proteina ?? foodPayload.protein,
           carbs: foodPayload.carbs,
           grasas: foodPayload.grasas ?? foodPayload.fat,
+          fibra: foodPayload.fibra,
           unidad,
+          macroBasis: foodPayload.macroBasis,
           fuente: foodPayload.fuente || foodPayload.categoria || foodPayload.categoriaSnapshot,
         }),
         cantidad,
@@ -810,6 +799,23 @@ class ServicioFoodLogs {
 
     if (previousLog) return scaleExistingSnapshot(previousLog, cantidad, unidad);
     throw new Error("FOOD_REQUIRED");
+  }
+
+  async _snapshotFromSavedMealItem(item = {}, actor = null) {
+    const fallback = snapshotFromSavedMealItem(item);
+    const foodId = item.alimentoId || item.alimentoObjectId || item.foodId || item.id || item._id;
+    const dbFood = await this._findFoodById(foodId, this._actorId(actor));
+    if (!dbFood) return fallback;
+
+    const canonical = buildFoodSnapshot(
+      dbFood,
+      fallback.cantidad,
+      fallback.unidad || dbFood.unidad
+    );
+    return {
+      ...canonical,
+      ...(fallback.quantitySource ? { quantitySource: fallback.quantitySource } : {}),
+    };
   }
 
   async validateEquivalentItems(user, items = [], { maxItems = 10 } = {}) {
@@ -822,7 +828,7 @@ class ServicioFoodLogs {
     for (const item of source) {
       const id = cleanString(item?.id || item?.alimentoId || item?.foodId, 120);
       if (!id || seen.has(id)) throw new Error("EQUIVALENT_FOOD_ID_INVALID");
-      const dbFood = await this._findFoodById(id);
+      const dbFood = await this._findFoodById(id, this._actorId(actor));
       if (!dbFood || !isEquivalentFoodAllowed(actor, dbFood)) throw new Error("EQUIVALENT_FOOD_NOT_ALLOWED");
       const snapshot = buildFoodSnapshot(
         dbFood,
@@ -1193,7 +1199,7 @@ class ServicioFoodLogs {
     });
     await this._ensureMealConfig(day, { mealId, tipo: mealType, nombre: payload.mealName || payload.nombreComida });
 
-    const snapshot = await this._snapshotFromPayload(payload);
+    const snapshot = await this._snapshotFromPayload(payload, null, actor);
     await this.foodLogsModel.insertLog({
       userId: this._actorId(actor),
       foodLogDayId: day._id,
@@ -1234,7 +1240,7 @@ class ServicioFoodLogs {
 
     let insertedCount = 0;
     for (const [writeItemIndex, item] of items.slice(0, 80).entries()) {
-      const snapshot = snapshotFromSavedMealItem(item);
+      const snapshot = await this._snapshotFromSavedMealItem(item, actor);
       if (snapshot.cantidad <= 0) continue;
       try {
         await this.foodLogsModel.insertLog({
@@ -1318,7 +1324,7 @@ class ServicioFoodLogs {
       payload.alimento !== undefined ||
       payload.item !== undefined
     ) {
-      Object.assign(patch, await this._snapshotFromPayload(payload, current));
+      Object.assign(patch, await this._snapshotFromPayload(payload, current, actor));
     }
 
     if (payload.notas !== undefined || payload.notes !== undefined) {
